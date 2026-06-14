@@ -45,6 +45,19 @@ describe('каталог: загрузка и индексы', () => {
     expect(catalog.byId.get('Массив.Добавить')?.names.ru).toBe('Добавить');
     expect(catalog.byId.get('Массив')?.kind).toBe('type');
   });
+
+  it('byName ищет по ru/en и собирает омонимы (hover/signature)', () => {
+    // метод по имени (ru) — для hover/signature после точки
+    const dobavit = catalog.byName.get('добавить') ?? [];
+    expect(dobavit.some((e) => e.id === 'Массив.Добавить' && e.kind === 'method')).toBe(true);
+    // по английскому имени
+    const add = catalog.byName.get('add') ?? [];
+    expect(add.some((e) => e.id === 'Массив.Добавить')).toBe(true);
+    // «Строка» — омоним: и тип, и функция-конвертация
+    const stroka = catalog.byName.get('строка') ?? [];
+    expect(stroka.some((e) => e.kind === 'type')).toBe(true);
+    expect(stroka.some((e) => e.kind === 'function')).toBe(true);
+  });
 });
 
 describe('methodTypeOf', () => {

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import type { OnMount } from '@monaco-editor/react';
 import type { Catalog } from '@core/index';
-import { registerCatalogProviders } from '../monaco/completion';
+import { registerCatalogProviders } from '../monaco/providers';
 
 type CodeEditor = Parameters<OnMount>[0];
 type MonacoApi = Parameters<OnMount>[1];
@@ -24,8 +24,8 @@ interface EditorProps {
 
 /**
  * Обёртка над Monaco. Подсветку пока берём от `vb` как близкую к BSL (впереди
- * TextMate-грамматика 1c-syntax). Автодополнение функций и методов берётся из
- * каталога языка (см. ../monaco/completion); следом — hover и signature help.
+ * TextMate-грамматика 1c-syntax). Автодополнение, hover и signature help берутся
+ * из каталога языка (см. ../monaco/providers).
  *
  * Глиф-маржа кликабельна: клик по ней ставит/снимает точку останова.
  * Текущая строка отладки подсвечивается через коллекцию декораций.

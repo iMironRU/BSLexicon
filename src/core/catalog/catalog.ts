@@ -23,6 +23,12 @@ export interface Catalog {
   functionByName: Map<string, CatalogEntry>;
   /** Методы по имени типа: «Массив» → [Добавить, Количество, …]. */
   methodsByType: Map<string, CatalogEntry[]>;
+  /**
+   * Любые записи по имени в нижнем регистре (ru и en). Значение — массив:
+   * одно имя бывает у нескольких записей (метод повторяется у разных типов;
+   * «Строка» — и тип, и функция-конвертация). Для hover/signature help.
+   */
+  byName: Map<string, CatalogEntry[]>;
 }
 
 /** Имя типа, к которому относится метод: «Массив.Добавить» → «Массив». */
@@ -64,7 +70,19 @@ export function buildCatalog(entries: CatalogEntry[]): Catalog {
     else methodsByType.set(type, [m]);
   }
 
-  return { entries, functions, types, methods, byId, functionByName, methodsByType };
+  const byName = new Map<string, CatalogEntry[]>();
+  const indexName = (name: string, entry: CatalogEntry): void => {
+    const key = name.toLowerCase();
+    const list = byName.get(key);
+    if (list) list.push(entry);
+    else byName.set(key, [entry]);
+  };
+  for (const e of entries) {
+    indexName(e.names.ru, e);
+    if (e.names.en.toLowerCase() !== e.names.ru.toLowerCase()) indexName(e.names.en, e);
+  }
+
+  return { entries, functions, types, methods, byId, functionByName, methodsByType, byName };
 }
 
 /** Удобная обёртка: сырые YAML-файлы → индексированный каталог. */
