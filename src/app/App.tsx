@@ -124,10 +124,12 @@ export function App() {
           {status && <span className="app__status">{status}</span>}
           <div className="app__debug">
             <button className="app__step" onClick={handleStep} type="button" title="Шаг по оператору">
-              ⏭ Шаг
+              <span aria-hidden="true">⏭</span>
+              <span className="btn-label">Шаг</span>
             </button>
             <button className="app__step" onClick={handleContinue} type="button" title="Продолжить до точки останова">
-              ▷ Продолжить
+              <span aria-hidden="true">▷</span>
+              <span className="btn-label">Продолжить</span>
             </button>
             <button
               className="app__step"
@@ -136,11 +138,13 @@ export function App() {
               title="Остановить отладку"
               disabled={snap === null}
             >
-              ⏹ Стоп
+              <span aria-hidden="true">⏹</span>
+              <span className="btn-label">Стоп</span>
             </button>
           </div>
-          <button className="app__run" onClick={handleRun} type="button">
-            ▶ Запустить
+          <button className="app__run" onClick={handleRun} type="button" title="Запустить целиком">
+            <span aria-hidden="true">▶</span>
+            <span className="btn-label">Запустить</span>
           </button>
         </div>
       </header>
