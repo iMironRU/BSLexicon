@@ -1,32 +1,31 @@
-import type { RunResult } from '@core/index';
+import type { RunError } from '@core/index';
 
 interface OutputPanelProps {
-  result: RunResult | null;
+  /** Строки вывода `Сообщить`; `null` — ещё ничего не запускали. */
+  output: string[] | null;
+  error: RunError | null;
 }
 
-export function OutputPanel({ result }: OutputPanelProps) {
+export function OutputPanel({ output, error }: OutputPanelProps) {
+  const idle = output === null && error === null;
+
   return (
     <div className="panel">
       <div className="panel__title">Вывод</div>
       <div className="panel__body panel__body--mono">
-        {result === null && <span className="panel__hint">Нажмите «Запустить».</span>}
+        {idle && <span className="panel__hint">Нажмите «Запустить» или «Шаг».</span>}
 
-        {result?.ok &&
-          result.output.map((line, i) => (
-            <div key={i} className="output__line">
-              {line}
-            </div>
-          ))}
+        {output?.map((line, i) => (
+          <div key={i} className="output__line">
+            {line}
+          </div>
+        ))}
 
-        {result?.ok && result.output.length === 0 && (
-          <span className="panel__hint">Код выполнен, вывода нет.</span>
-        )}
-
-        {result && !result.ok && (
+        {error && (
           <div className="output__error">
-            <strong>Ошибка ({result.error.stage}):</strong> {result.error.message}
-            {result.error.line !== undefined && (
-              <span className="output__pos"> — строка {result.error.line}</span>
+            <strong>Ошибка ({error.stage}):</strong> {error.message}
+            {error.line !== undefined && (
+              <span className="output__pos"> — строка {error.line}</span>
             )}
           </div>
         )}

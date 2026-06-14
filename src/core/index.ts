@@ -1,26 +1,23 @@
-import { BslError } from './errors';
 import { Interpreter } from './interpreter/interpreter';
 import type { VariableView } from './interpreter/interpreter';
 import { lex } from './lexer/lexer';
 import type { Token } from './lexer/token';
 import type { Program } from './parser/ast';
 import { parse } from './parser/parser';
+import { toRunError } from './run-error';
+import type { RunError } from './run-error';
 
 export { lex } from './lexer/lexer';
 export { parse } from './parser/parser';
 export { Interpreter } from './interpreter/interpreter';
 export { builtinIds, BUILTINS } from './interpreter/builtins';
 export { BslError, LexError, ParseError, RuntimeError } from './errors';
+export { DebugSession } from './debugger/session';
+export { toRunError } from './run-error';
 export type { StepEvent, VariableView } from './interpreter/interpreter';
 export type { Token } from './lexer/token';
-
-export type RunStage = 'lexer' | 'parser' | 'runtime';
-
-export interface RunError {
-  stage: RunStage;
-  message: string;
-  line?: number;
-}
+export type { RunStage, RunError } from './run-error';
+export type { DebugState, DebugSnapshot } from './debugger/session';
 
 export type RunResult =
   | { ok: true; output: string[]; variables: VariableView[] }
@@ -55,11 +52,4 @@ export function run(source: string): RunResult {
   }
 
   return { ok: true, output: interp.output, variables: interp.inspectGlobals() };
-}
-
-function toRunError(stage: RunStage, e: unknown): RunError {
-  if (e instanceof BslError) {
-    return { stage, message: e.message, line: e.line };
-  }
-  return { stage, message: e instanceof Error ? e.message : String(e) };
 }

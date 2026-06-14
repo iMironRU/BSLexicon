@@ -64,6 +64,45 @@ body {
   color: var(--fg-dim);
 }
 
+.app__controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app__status {
+  font-size: 12px;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.app__debug {
+  display: flex;
+  gap: 6px;
+}
+
+.app__step {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.app__step:hover:not(:disabled) {
+  background: var(--bg-panel);
+  border-color: var(--fg-dim);
+}
+
+.app__step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .app__run {
   font: inherit;
   font-size: 13px;
@@ -78,6 +117,30 @@ body {
 
 .app__run:hover {
   background: var(--accent-run-hover);
+}
+
+/* Точка останова в глиф-марже Monaco. */
+.bp-glyph {
+  background: var(--error);
+  border-radius: 50%;
+  width: 12px !important;
+  height: 12px !important;
+  margin: auto 0 auto 4px;
+}
+
+/* Текущая строка отладки. */
+.debug-line {
+  background: rgba(78, 201, 176, 0.12);
+}
+
+.debug-glyph {
+  color: var(--accent);
+}
+
+.debug-glyph::after {
+  content: '▶';
+  margin-left: 2px;
+  font-size: 11px;
 }
 
 .app__body {
