@@ -15,16 +15,23 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# До перехода раннеров на Node 24 по умолчанию (16.06.2026) форсим Node 24 для
+# JS-экшенов, иначе сыплются предупреждения о Node 20. После перехода флаг —
+# безобидный no-op. Нужен, в частности, для Pages-экшенов (configure-pages /
+# upload-pages-artifact / deploy-pages), у которых Node 24-мажоров ещё нет.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     name: Сборка
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci

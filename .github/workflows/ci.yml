@@ -6,16 +6,23 @@ on:
   pull_request:
     branches: [main]
 
+# До перехода раннеров на Node 24 по умолчанию (16.06.2026) форсим Node 24 для
+# JS-экшенов, иначе сыплются предупреждения о Node 20. После перехода флаг —
+# безобидный no-op. Нужен, в частности, для Pages-экшенов, у которых Node 24-
+# мажоров ещё нет.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   verify:
     name: Проверки и сборка
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Установка зависимостей
