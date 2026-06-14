@@ -1,0 +1,191 @@
+:root {
+  --bg: #1e1e1e;
+  --bg-panel: #252526;
+  --bg-header: #333333;
+  --border: #3c3c3c;
+  --fg: #d4d4d4;
+  --fg-dim: #8a8a8a;
+  --accent: #4ec9b0;
+  --accent-run: #0e639c;
+  --accent-run-hover: #1177bb;
+  --error: #f48771;
+  --mono: 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--sans);
+  color: var(--fg);
+  background: var(--bg);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 48px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border);
+}
+
+.app__brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.app__logo {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--accent);
+  letter-spacing: 0.3px;
+}
+
+.app__tagline {
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+
+.app__run {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-run);
+  border: none;
+  border-radius: 4px;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+
+.app__run:hover {
+  background: var(--accent-run-hover);
+}
+
+.app__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.app__editor {
+  flex: 1 1 60%;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+}
+
+.app__panels {
+  flex: 1 1 40%;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel__title {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.panel__body {
+  flex: 1;
+  overflow: auto;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.panel__body--mono {
+  font-family: var(--mono);
+}
+
+.panel__hint {
+  color: var(--fg-dim);
+  font-style: italic;
+}
+
+.output__line {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.output__error {
+  color: var(--error);
+  line-height: 1.5;
+}
+
+.output__pos {
+  color: var(--fg-dim);
+}
+
+.vars {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.vars th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--fg-dim);
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.vars td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.vars__name {
+  color: var(--accent);
+  font-family: var(--mono);
+}
+
+.vars__type {
+  color: var(--fg-dim);
+}
+
+.vars__value {
+  font-family: var(--mono);
+  white-space: pre-wrap;
+}
+
+.app__footer {
+  padding: 6px 16px;
+  font-size: 11px;
+  color: var(--fg-dim);
+  background: var(--bg-header);
+  border-top: 1px solid var(--border);
+}

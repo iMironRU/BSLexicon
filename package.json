@@ -1,0 +1,45 @@
+{
+  "name": "bslexicon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Браузерный тренажёр языка 1С (BSL) с пошаговой отладкой и синтакс-помощником",
+  "license": "MIT",
+  "homepage": "https://imironru.github.io/BSLexicon/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iMironRU/BSLexicon.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:catalog": "tsx scripts/check-catalog.ts",
+    "lint": "eslint . --ext .ts,.tsx",
+    "verify": "npm run typecheck && npm run check:catalog && npm run test"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "ajv": "^8.17.1",
+    "js-yaml": "^4.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

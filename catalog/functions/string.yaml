@@ -1,0 +1,52 @@
+# Строковые функции
+- id: СокрЛП
+  kind: function
+  names: { ru: СокрЛП, en: TrimAll }
+  category: Строки
+  signature: "СокрЛП(Строка): Строка"
+  description: Удаляет незначащие пробельные символы в начале и конце строки.
+  params:
+    - { name: Строка, type: Строка, optional: false, description: Исходная строка }
+  returns: { type: Строка, description: Строка без крайних пробелов }
+  examples:
+    - code: Сообщить("[" + СокрЛП("  ок  ") + "]");
+      expect: "[ок]"
+
+- id: ВРег
+  kind: function
+  names: { ru: ВРег, en: Upper }
+  category: Строки
+  signature: "ВРег(Строка): Строка"
+  description: Переводит все символы строки в верхний регистр.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить(ВРег("абвGd"));
+      expect: "АБВGD"
+
+- id: НРег
+  kind: function
+  names: { ru: НРег, en: Lower }
+  category: Строки
+  signature: "НРег(Строка): Строка"
+  description: Переводит все символы строки в нижний регистр.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить(НРег("АБВGd"));
+      expect: "абвgd"
+
+- id: СтрДлина
+  kind: function
+  names: { ru: СтрДлина, en: StrLen }
+  category: Строки
+  signature: "СтрДлина(Строка): Число"
+  description: Возвращает количество символов в строке.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(СтрДлина("привет"));
+      expect: "6"

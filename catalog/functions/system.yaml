@@ -1,0 +1,29 @@
+# Системные / прочие глобальные функции
+- id: Сообщить
+  kind: function
+  names: { ru: Сообщить, en: Message }
+  category: Прочее
+  signature: "Сообщить(Сообщение)"
+  description: Выводит значение в окно сообщений (в тренажёре — в панель «Вывод»).
+  params:
+    - { name: Сообщение, type: Произвольный, optional: false, description: Выводимое значение }
+  examples:
+    - code: Сообщить("Привет, мир!");
+      expect: "Привет, мир!"
+
+- id: ТипЗнч
+  kind: function
+  names: { ru: ТипЗнч, en: TypeOf }
+  category: Прочее
+  signature: "ТипЗнч(Значение): Тип"
+  description: >-
+    Возвращает тип переданного значения. В тренажёре-скелете результат —
+    имя типа строкой (в реальном BSL — объект «Тип»).
+  params:
+    - { name: Значение, type: Произвольный, optional: false }
+  returns: { type: Тип, description: Тип переданного значения }
+  examples:
+    - code: Сообщить(ТипЗнч(123));
+      expect: "Число"
+    - code: Сообщить(ТипЗнч("текст"));
+      expect: "Строка"

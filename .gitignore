@@ -1,0 +1,35 @@
+# Зависимости
+node_modules/
+
+# Сборка
+dist/
+*.tsbuildinfo
+
+# Логи
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# Кэши инструментов
+.vite/
+.cache/
+coverage/
+.eslintcache
+
+# Окружение / секреты (на будущее — Фаза 2, AI-прокси)
+.env
+.env.local
+.env.*.local
+
+# ОС / редакторы
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Локальные настройки Claude Code
+.claude/

@@ -1,0 +1,26 @@
+# Функции преобразования типов
+- id: Строка
+  kind: function
+  names: { ru: Строка, en: String }
+  category: Преобразование
+  signature: "Строка(Значение): Строка"
+  description: Преобразует значение к строке (булево → «Да»/«Нет», Неопределено → пустая строка).
+  params:
+    - { name: Значение, type: Произвольный, optional: false }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить(Строка(Истина));
+      expect: "Да"
+
+- id: Число
+  kind: function
+  names: { ru: Число, en: Number }
+  category: Преобразование
+  signature: "Число(Значение): Число"
+  description: Преобразует значение к числу. Нечисловая строка даёт 0.
+  params:
+    - { name: Значение, type: Произвольный, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Число("42") + 8);
+      expect: "50"

@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BSLexicon — файл каталога языка",
+  "description": "Массив записей каталога: типы, функции, методы. Единый источник правды для рантайма, Monaco-провайдеров и панели-справочника.",
+  "type": "array",
+  "items": { "$ref": "#/definitions/entry" },
+  "definitions": {
+    "entry": {
+      "type": "object",
+      "required": ["id", "kind", "names", "category", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["function", "type", "method"] },
+        "names": {
+          "type": "object",
+          "required": ["ru", "en"],
+          "additionalProperties": false,
+          "properties": {
+            "ru": { "type": "string" },
+            "en": { "type": "string" }
+          }
+        },
+        "category": { "type": "string" },
+        "signature": { "type": "string" },
+        "description": { "type": "string" },
+        "params": { "type": "array", "items": { "$ref": "#/definitions/param" } },
+        "returns": { "$ref": "#/definitions/returns" },
+        "examples": { "type": "array", "items": { "$ref": "#/definitions/example" } }
+      }
+    },
+    "param": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "optional": { "type": "boolean" },
+        "default": {},
+        "description": { "type": "string" }
+      }
+    },
+    "returns": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "example": {
+      "type": "object",
+      "required": ["code"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "code": { "type": "string" },
+        "expect": {
+          "type": "string",
+          "description": "Ожидаемый вывод (строки через \\n). Прогоняется как doctest в CI."
+        }
+      }
+    }
+  }
+}
