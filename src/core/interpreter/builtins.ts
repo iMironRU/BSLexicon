@@ -1,9 +1,11 @@
 import { UNDEFINED, toBslString, toNumber, typeName } from './values';
 import type { BslValue } from './values';
 
-/** Контекст исполнения, доступный встроенной функции (вывод и т.п.). */
+/** Контекст исполнения, доступный встроенной функции (вывод, текущая ошибка). */
 export interface BuiltinContext {
   print(text: string): void;
+  /** Описание ошибки, пойманной текущим блоком «Исключение» (иначе пустая строка). */
+  errorDescription(): string;
 }
 
 export interface Builtin {
@@ -74,6 +76,13 @@ export const BUILTINS: readonly Builtin[] = [
     arity: [1, 1],
     // Скелет: возвращаем имя типа строкой. В реальном BSL результат — объект `Тип`.
     impl: (args) => typeName(args[0]),
+  },
+  {
+    id: 'ОписаниеОшибки',
+    aliases: ['errordescription'],
+    arity: [0, 0],
+    // Текст ошибки, пойманной текущим «Исключение»; вне обработчика — пустая строка.
+    impl: (_args, ctx) => ctx.errorDescription(),
   },
 ];
 

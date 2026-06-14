@@ -17,3 +17,10 @@ export class ParseError extends BslError {}
 
 /** Ошибка времени исполнения (неизвестная функция, неверный тип операнда). */
 export class RuntimeError extends BslError {}
+
+/**
+ * Срабатывание watchdog'а бюджета шагов (вероятный бесконечный цикл).
+ * Подкласс `RuntimeError`, но фатальный: `Попытка` его НЕ ловит — иначе
+ * обработчик мог бы проглотить зацикливание.
+ */
+export class StepLimitError extends RuntimeError {}

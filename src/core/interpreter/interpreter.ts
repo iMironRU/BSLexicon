@@ -1,4 +1,4 @@
-import { RuntimeError } from '../errors';
+import { RuntimeError, StepLimitError } from '../errors';
 import type { Binary, Expr, LValue, ProcDecl, Program, Stmt } from '../parser/ast';
 import { resolveBuiltin } from './builtins';
 import type { BuiltinContext } from './builtins';
@@ -74,8 +74,11 @@ export class Interpreter {
   readonly globals = new Scope();
   private readonly frames: Frame[] = [];
   private readonly procedures = new Map<string, ProcDecl>();
+  /** Стек описаний пойманных ошибок — верхушка отдаётся `ОписаниеОшибки()`. */
+  private readonly errorStack: string[] = [];
   private readonly ctx: BuiltinContext = {
     print: (text) => this.output.push(text),
+    errorDescription: () => this.errorStack[this.errorStack.length - 1] ?? '',
   };
   private steps = 0;
   private readonly stepLimit: number;
@@ -93,7 +96,7 @@ export class Interpreter {
   private tick(line: number): void {
     this.steps += 1;
     if (this.steps > this.stepLimit) {
-      throw new RuntimeError(
+      throw new StepLimitError(
         `Превышен лимит шагов (${this.stepLimit}) — похоже на бесконечный цикл`,
         line,
       );
@@ -218,6 +221,38 @@ export class Interpreter {
 
       case 'Continue':
         throw new ContinueSignal();
+
+      case 'Try': {
+        try {
+          yield* this.execBlock(s.body, scope);
+        } catch (e) {
+          // Не ловим: watchdog (фатальный) и сигналы Прервать/Продолжить/Возврат.
+          if (!(e instanceof RuntimeError) || e instanceof StepLimitError) throw e;
+          this.errorStack.push(e.message);
+          try {
+            yield* this.execBlock(s.handler, scope);
+          } finally {
+            this.errorStack.pop();
+          }
+        }
+        return;
+      }
+
+      case 'Raise': {
+        if (s.message) {
+          const v = yield* this.evaluate(s.message, scope);
+          throw new RuntimeError(toBslString(v), s.line);
+        }
+        // «ВызватьИсключение;» без аргумента — переподнять текущую (только в обработчике).
+        const current = this.errorStack[this.errorStack.length - 1];
+        if (current === undefined) {
+          throw new RuntimeError(
+            '«ВызватьИсключение» без описания допустимо только внутри блока «Исключение»',
+            s.line,
+          );
+        }
+        throw new RuntimeError(current, s.line);
+      }
     }
   }
 

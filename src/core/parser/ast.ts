@@ -194,6 +194,19 @@ export interface Continue {
   kind: 'Continue';
   line: number;
 }
+/** `Попытка … Исключение … КонецПопытки`. */
+export interface Try {
+  kind: 'Try';
+  body: Stmt[];
+  handler: Stmt[];
+  line: number;
+}
+/** `ВызватьИсключение [выражение]` — поднять (или переподнять) исключение. */
+export interface Raise {
+  kind: 'Raise';
+  message?: Expr;
+  line: number;
+}
 
 export type Stmt =
   | VarDecl
@@ -206,6 +219,8 @@ export type Stmt =
   | ForEach
   | Return
   | Break
-  | Continue;
+  | Continue
+  | Try
+  | Raise;
 
 export type Program = Stmt[];

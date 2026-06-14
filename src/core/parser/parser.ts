@@ -117,6 +117,10 @@ class Parser {
           this.expect('semicolon', '«;»');
           return { kind: 'Continue', line };
         }
+        case 'Try':
+          return this.parseTry();
+        case 'Raise':
+          return this.parseRaise();
         default:
           throw new ParseError(
             `Конструкция «${t.lexeme}» пока не поддерживается ядром-скелетом`,
@@ -252,6 +256,25 @@ class Parser {
     }
     this.expect('semicolon', '«;»');
     return { kind: 'Return', value, line };
+  }
+
+  private parseTry(): Stmt {
+    const line = this.advance().line; // Попытка
+    const body = this.parseBlock(['Except']);
+    this.expectKeyword('Except', '«Исключение»');
+    const handler = this.parseBlock(['EndTry']);
+    this.expectKeyword('EndTry', '«КонецПопытки»');
+    return { kind: 'Try', body, handler, line };
+  }
+
+  private parseRaise(): Stmt {
+    const line = this.advance().line; // ВызватьИсключение
+    let message: Expr | undefined;
+    if (!this.check('semicolon')) {
+      message = this.parseExpression();
+    }
+    this.expect('semicolon', '«;»');
+    return { kind: 'Raise', message, line };
   }
 
   /** Считывает операторы, пока не встретит один из терминаторов-ключевых слов. */
