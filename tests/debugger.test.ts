@@ -6,6 +6,19 @@ const PROGRAM = ['Перем Итог;', 'Итог = 0;', 'Итог = Итог +
   '\n',
 );
 
+/** Программа с функцией: строки 1–3 — объявление, 5 — вызов, 6 — вывод. */
+const FUNC_PROGRAM = [
+  'Функция Удвоить(Знач Х)', // 1
+  '  Возврат Х * 2;', //        2
+  'КонецФункции', //            3
+  '', //                        4
+  'Рез = Удвоить(21);', //      5
+  'Сообщить(Рез);', //          6
+].join('\n');
+
+const names = (snap: ReturnType<DebugSession['snapshot']>): string[] =>
+  snap.callStack.map((f) => f.name);
+
 function valueOf(session: ReturnType<DebugSession['snapshot']>, name: string): string | undefined {
   return session.variables.find((v) => v.name === name)?.display;
 }
@@ -94,5 +107,53 @@ describe('DebugSession: ошибки', () => {
     const session = new DebugSession('Сообщить(@);');
     expect(session.state).toBe('error');
     expect(session.snapshot().error?.stage).toBe('lexer');
+  });
+});
+
+describe('DebugSession: шаг внутрь функций', () => {
+  it('stepInto ныряет в тело функции и возвращается в вызывающего', () => {
+    const s = new DebugSession(FUNC_PROGRAM);
+
+    let snap = s.stepInto(); // строка 5 — вызов Удвоить(21)
+    expect(snap.line).toBe(5);
+    expect(names(snap)).toEqual(['<Модуль>']);
+
+    snap = s.stepInto(); // ныряем в тело функции, строка 2
+    expect(snap.line).toBe(2);
+    expect(names(snap)).toEqual(['Удвоить', '<Модуль>']);
+    expect(valueOf(snap, 'Х')).toBe('21');
+
+    snap = s.stepInto(); // функция вернулась, строка 6, Рез = 42
+    expect(snap.line).toBe(6);
+    expect(names(snap)).toEqual(['<Модуль>']);
+    expect(valueOf(snap, 'Рез')).toBe('42');
+  });
+
+  it('stepOver проходит вызов не заходя внутрь', () => {
+    const s = new DebugSession(FUNC_PROGRAM);
+    expect(s.stepInto().line).toBe(5); // на вызове
+    const snap = s.stepOver(); // через вызов целиком
+    expect(snap.line).toBe(6);
+    expect(names(snap)).toEqual(['<Модуль>']);
+    expect(valueOf(snap, 'Рез')).toBe('42');
+  });
+
+  it('stepOut доисполняет функцию и встаёт в вызывающем', () => {
+    const s = new DebugSession(FUNC_PROGRAM);
+    s.stepInto(); // строка 5
+    expect(s.stepInto().line).toBe(2); // внутри функции
+    const snap = s.stepOut(); // наружу
+    expect(snap.line).toBe(6);
+    expect(names(snap)).toEqual(['<Модуль>']);
+  });
+
+  it('точка останова срабатывает внутри функции', () => {
+    const s = new DebugSession(FUNC_PROGRAM);
+    s.toggleBreakpoint(2);
+    const snap = s.continueRun();
+    expect(snap.state).toBe('paused');
+    expect(snap.line).toBe(2);
+    expect(names(snap)).toEqual(['Удвоить', '<Модуль>']);
+    expect(snap.output).toEqual([]);
   });
 });

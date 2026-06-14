@@ -2,40 +2,39 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Editor } from './components/Editor';
 import { OutputPanel } from './components/OutputPanel';
 import { VariablesPanel } from './components/VariablesPanel';
+import { CallStackPanel } from './components/CallStackPanel';
 import { DebugSession, run } from '@core/index';
-import type { DebugSnapshot, RunError, RunResult, VariableView } from '@core/index';
+import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } from '@core/index';
 
-const SAMPLE = `// Простой пример. Нажмите «Запустить» или «Шаг».
-Перем Итог;
+const SAMPLE = `// Пример с функцией. «Войти» зайдёт внутрь Удвоить.
+Функция Удвоить(Знач Х)
+    Возврат Х * 2;
+КонецФункции
 
 Итог = 0;
-Для Сч = 1 По 5 Цикл
-    Итог = Итог + Сч;
+Для Сч = 1 По 3 Цикл
+    Итог = Итог + Удвоить(Сч);
 КонецЦикла;
 
-Сообщить("Сумма 1..5 = " + Итог);
-
-Если Итог > 10 Тогда
-    Сообщить("Больше десяти");
-Иначе
-    Сообщить("Не больше");
-КонецЕсли;
+Сообщить("Итог = " + Итог);
 `;
 
 interface PanelView {
   output: string[] | null;
   error: RunError | null;
   variables: VariableView[];
+  callStack: DebugFrame[];
   line: number | null;
 }
 
-const IDLE: PanelView = { output: null, error: null, variables: [], line: null };
+const IDLE: PanelView = { output: null, error: null, variables: [], callStack: [], line: null };
 
 export function App() {
   const [source, setSource] = useState<string>(SAMPLE);
   const [batch, setBatch] = useState<RunResult | null>(null);
   const [snap, setSnap] = useState<DebugSnapshot | null>(null);
   const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set());
+  const [selectedFrame, setSelectedFrame] = useState(0);
   const sessionRef = useRef<DebugSession | null>(null);
 
   /** Новая сессия из текущего кода с перенесёнными точками останова. */
@@ -49,37 +48,48 @@ export function App() {
     return sessionRef.current;
   }, [source, breakpoints]);
 
-  /** После шага: завершённую/ошибочную сессию сбрасываем — следующий «Шаг» начнёт заново. */
+  /** После шага: сбрасываем выбор кадра на текущий; завершённую сессию закрываем. */
   const applyStep = useCallback((next: DebugSnapshot) => {
     setSnap(next);
+    setSelectedFrame(0);
     if (next.state === 'finished' || next.state === 'error') sessionRef.current = null;
   }, []);
 
-  const handleRun = useCallback(() => {
+  const reset = useCallback(() => {
     sessionRef.current = null;
     setSnap(null);
-    setBatch(run(source));
-  }, [source]);
+    setSelectedFrame(0);
+  }, []);
 
-  const handleStep = useCallback(() => {
+  const handleRun = useCallback(() => {
+    reset();
+    setBatch(run(source));
+  }, [reset, source]);
+
+  const handleStepOver = useCallback(() => {
     applyStep(ensureSession().stepOver());
+  }, [ensureSession, applyStep]);
+
+  const handleStepInto = useCallback(() => {
+    applyStep(ensureSession().stepInto());
+  }, [ensureSession, applyStep]);
+
+  const handleStepOut = useCallback(() => {
+    applyStep(ensureSession().stepOut());
   }, [ensureSession, applyStep]);
 
   const handleContinue = useCallback(() => {
     applyStep(ensureSession().continueRun());
   }, [ensureSession, applyStep]);
 
-  const handleStop = useCallback(() => {
-    sessionRef.current = null;
-    setSnap(null);
-  }, []);
-
-  const handleSourceChange = useCallback((next: string) => {
-    setSource(next);
-    // Правка кода съезжает с номеров строк — гасим активную сессию (брейкпоинты храним).
-    sessionRef.current = null;
-    setSnap(null);
-  }, []);
+  const handleSourceChange = useCallback(
+    (next: string) => {
+      setSource(next);
+      // Правка кода съезжает с номеров строк — гасим активную сессию (брейкпоинты храним).
+      reset();
+    },
+    [reset],
+  );
 
   const handleToggleBreakpoint = useCallback((line: number) => {
     setBreakpoints((prev) => {
@@ -97,6 +107,7 @@ export function App() {
         output: snap.output,
         error: snap.error,
         variables: snap.variables,
+        callStack: snap.callStack,
         line: snap.state === 'paused' ? snap.line : null,
       };
     }
@@ -105,6 +116,7 @@ export function App() {
         output: batch.output,
         error: batch.ok ? null : batch.error,
         variables: batch.ok ? batch.variables : [],
+        callStack: [],
         line: null,
       };
     }
@@ -112,6 +124,10 @@ export function App() {
   }, [snap, batch]);
 
   const status = useMemo(() => describeStatus(snap), [snap]);
+
+  // Стек показываем только когда зашли в функцию (на уровне модуля он бесполезен).
+  const showStack = view.callStack.length > 1;
+  const shownVariables = view.callStack[selectedFrame]?.variables ?? view.variables;
 
   return (
     <div className="app">
@@ -123,9 +139,17 @@ export function App() {
         <div className="app__controls">
           {status && <span className="app__status">{status}</span>}
           <div className="app__debug">
-            <button className="app__step" onClick={handleStep} type="button" title="Шаг по оператору">
+            <button className="app__step" onClick={handleStepOver} type="button" title="Шаг через вызов (step over)">
               <span aria-hidden="true">⏭</span>
               <span className="btn-label">Шаг</span>
+            </button>
+            <button className="app__step" onClick={handleStepInto} type="button" title="Войти в функцию (step into)">
+              <span aria-hidden="true">⤵</span>
+              <span className="btn-label">Войти</span>
+            </button>
+            <button className="app__step" onClick={handleStepOut} type="button" title="Выйти из функции (step out)">
+              <span aria-hidden="true">⤴</span>
+              <span className="btn-label">Выйти</span>
             </button>
             <button className="app__step" onClick={handleContinue} type="button" title="Продолжить до точки останова">
               <span aria-hidden="true">▷</span>
@@ -133,7 +157,7 @@ export function App() {
             </button>
             <button
               className="app__step"
-              onClick={handleStop}
+              onClick={reset}
               type="button"
               title="Остановить отладку"
               disabled={snap === null}
@@ -162,12 +186,19 @@ export function App() {
 
         <aside className="app__panels">
           <OutputPanel output={view.output} error={view.error} />
-          <VariablesPanel variables={view.variables} />
+          {showStack && (
+            <CallStackPanel
+              frames={view.callStack}
+              selected={selectedFrame}
+              onSelect={setSelectedFrame}
+            />
+          )}
+          <VariablesPanel variables={shownVariables} />
         </aside>
       </main>
 
       <footer className="app__footer">
-        Клик в левом поле — точка останова · «Шаг»/«Продолжить» — пошаговое исполнение · Фаза&nbsp;1
+        Клик в левом поле — точка останова · Шаг / Войти / Выйти / Продолжить · Фаза&nbsp;1
       </footer>
     </div>
   );

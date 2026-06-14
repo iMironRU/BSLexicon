@@ -7,12 +7,19 @@ import type { RunError } from '../run-error';
 
 /**
  * Состояние пошаговой сессии:
- * - `ready`    — программа разобрана, ещё не начали (или начали и стоим перед первым оператором);
+ * - `ready`    — программа разобрана, ещё не начали;
  * - `paused`   — стоим перед очередным оператором (он ещё НЕ исполнен);
  * - `finished` — программа доработала до конца;
  * - `error`    — ошибка лексера/парсера/рантайма, дальше не идём.
  */
 export type DebugState = 'ready' | 'paused' | 'finished' | 'error';
+
+/** Кадр стека вызовов со срезом своих переменных. */
+export interface DebugFrame {
+  name: string;
+  line: number;
+  variables: VariableView[];
+}
 
 /** Снимок сессии для UI. Иммутабелен: панели рендерят его напрямую. */
 export interface DebugSnapshot {
@@ -20,7 +27,10 @@ export interface DebugSnapshot {
   /** Текущая (ещё не исполненная) строка, когда `paused`; иначе `null`. */
   line: number | null;
   output: string[];
+  /** Переменные текущего (верхнего) кадра — для панели по умолчанию. */
   variables: VariableView[];
+  /** Стек вызовов: индекс 0 — текущий кадр, дальше — вызывающие. */
+  callStack: DebugFrame[];
   error: RunError | null;
 }
 
@@ -29,9 +39,9 @@ export interface DebugSnapshot {
  * (концепт §6, вариант A). Сам решает, когда звать `gen.next()`:
  * пауза = просто не двигаем генератор. Главный поток не блокируется.
  *
- * Срез без step-into: интерпретатор yield-ит перед каждым оператором и
- * исполняет тела функций атомарно, поэтому «шаг» == один `next()`, а стека
- * вызовов и захода внутрь функций здесь нет — это следующий заход.
+ * Шаг over/out строится на `depth` события: интерпретатор yield-ит глубину
+ * стека кадров, и драйвер пропускает более глубокие кадры (over) или ждёт
+ * выхода в вызывающего (out).
  */
 export class DebugSession {
   readonly breakpoints = new Set<number>();
@@ -40,6 +50,7 @@ export class DebugSession {
   private gen: Generator<StepEvent, void, void> | null = null;
   private _state: DebugState = 'ready';
   private _line: number | null = null;
+  private _depth = 0;
   private _error: RunError | null = null;
 
   constructor(source: string) {
@@ -67,9 +78,27 @@ export class DebugSession {
     else this.breakpoints.add(line);
   }
 
-  /** Шаг по оператору (step over): один такт генератора. */
-  stepOver(): DebugSnapshot {
+  /** Шаг с заходом внутрь вызываемых функций (step into): один такт. */
+  stepInto(): DebugSnapshot {
     this.advance();
+    return this.snapshot();
+  }
+
+  /** Шаг через вызов (step over): вызовы исполняются целиком, не заходя внутрь. */
+  stepOver(): DebugSnapshot {
+    if (this._state === 'ready') return this.stepInto(); // ещё не на операторе — нечего проходить
+    const start = this._depth;
+    this.advance();
+    while (this._state === 'paused' && this._depth > start) this.advance();
+    return this.snapshot();
+  }
+
+  /** Шаг наружу (step out): доисполнить текущий кадр и встать в вызывающем. */
+  stepOut(): DebugSnapshot {
+    if (this._state === 'ready') return this.stepInto(); // ещё не на операторе — нечего выходить
+    const start = this._depth;
+    this.advance();
+    while (this._state === 'paused' && this._depth >= start) this.advance();
     return this.snapshot();
   }
 
@@ -90,11 +119,19 @@ export class DebugSession {
 
   /** Текущий снимок без продвижения. */
   snapshot(): DebugSnapshot {
+    // callStack интерпретатора: [модуль, …, текущий]; для UI разворачиваем —
+    // текущий кадр сверху.
+    const callStack: DebugFrame[] = this.interp
+      .callStack()
+      .map((f, i) => ({ name: f.name, line: f.line, variables: this.interp.inspectFrame(i) }))
+      .reverse();
+
     return {
       state: this._state,
       line: this._line,
       output: [...this.interp.output],
-      variables: this.interp.inspectGlobals(),
+      variables: callStack.length ? callStack[0].variables : this.interp.inspectGlobals(),
+      callStack,
       error: this._error,
     };
   }
@@ -108,13 +145,16 @@ export class DebugSession {
       if (res.done) {
         this._state = 'finished';
         this._line = null;
+        this._depth = 0;
       } else {
         this._state = 'paused';
         this._line = res.value.line;
+        this._depth = res.value.depth;
       }
     } catch (e) {
       this._state = 'error';
       this._line = null;
+      this._depth = 0;
       this._error = toRunError('runtime', e);
     }
   }

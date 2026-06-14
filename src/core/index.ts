@@ -14,10 +14,10 @@ export { builtinIds, BUILTINS } from './interpreter/builtins';
 export { BslError, LexError, ParseError, RuntimeError } from './errors';
 export { DebugSession } from './debugger/session';
 export { toRunError } from './run-error';
-export type { StepEvent, VariableView } from './interpreter/interpreter';
+export type { StepEvent, VariableView, FrameView } from './interpreter/interpreter';
 export type { Token } from './lexer/token';
 export type { RunStage, RunError } from './run-error';
-export type { DebugState, DebugSnapshot } from './debugger/session';
+export type { DebugState, DebugSnapshot, DebugFrame } from './debugger/session';
 
 export type RunResult =
   | { ok: true; output: string[]; variables: VariableView[] }

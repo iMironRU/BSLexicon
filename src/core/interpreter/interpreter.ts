@@ -17,12 +17,16 @@ import type { BslValue } from './values';
 
 /**
  * Событие шага. Интерпретатор — генератор: он `yield`-ит перед каждым
- * оператором. Драйвер (run / будущая пошаговая сессия) сам решает, когда
- * звать `.next()` — отсюда «бесплатная» пошаговая отладка (концепция §6, вариант A).
+ * оператором. Драйвер (run / пошаговая сессия) сам решает, когда звать
+ * `.next()` — отсюда «бесплатная» пошаговая отладка (концепция §6, вариант A).
+ *
+ * `depth` — глубина стека кадров на момент yield (1 = модуль, 2 = внутри
+ * функции, и т.д.); на нём драйвер строит step over/out.
  */
 export interface StepEvent {
   kind: 'statement';
   line: number;
+  depth: number;
 }
 
 /** Срез переменной для панели инспекции. */
@@ -32,9 +36,25 @@ export interface VariableView {
   display: string;
 }
 
+/** Кадр стека вызовов: имя, своя область видимости, текущая строка. */
+interface Frame {
+  name: string;
+  scope: Scope;
+  line: number;
+}
+
+/** Срез кадра для панели «Стек вызовов». */
+export interface FrameView {
+  name: string;
+  line: number;
+}
+
+const MODULE_FRAME = '<Модуль>';
+
 export class Interpreter {
   readonly output: string[] = [];
   readonly globals = new Scope();
+  private readonly frames: Frame[] = [];
   private readonly procedures = new Map<string, ProcDecl>();
   private readonly ctx: BuiltinContext = {
     print: (text) => this.output.push(text),
@@ -46,6 +66,7 @@ export class Interpreter {
     for (const s of program) {
       if (s.kind === 'ProcDecl') this.procedures.set(s.name.toLowerCase(), s);
     }
+    this.frames.push({ name: MODULE_FRAME, scope: this.globals, line: 0 });
     try {
       yield* this.execBlock(program, this.globals);
     } catch (e) {
@@ -54,6 +75,8 @@ export class Interpreter {
         throw new RuntimeError('«Прервать»/«Продолжить» вне цикла');
       }
       throw e;
+    } finally {
+      this.frames.pop();
     }
   }
 
@@ -62,7 +85,10 @@ export class Interpreter {
   }
 
   private *execStatement(s: Stmt, scope: Scope): Generator<StepEvent, void, void> {
-    if (s.kind !== 'ProcDecl') yield { kind: 'statement', line: s.line };
+    if (s.kind !== 'ProcDecl') {
+      this.frames[this.frames.length - 1].line = s.line;
+      yield { kind: 'statement', line: s.line, depth: this.frames.length };
+    }
 
     switch (s.kind) {
       case 'ProcDecl':
@@ -73,16 +99,16 @@ export class Interpreter {
         return;
 
       case 'Assign':
-        scope.set(s.target, this.evaluate(s.value, scope));
+        scope.set(s.target, yield* this.evaluate(s.value, scope));
         return;
 
       case 'CallStmt':
-        this.evaluate(s.call, scope);
+        yield* this.evaluate(s.call, scope);
         return;
 
       case 'If': {
         for (const branch of s.branches) {
-          if (isTruthy(this.evaluate(branch.cond, scope))) {
+          if (isTruthy(yield* this.evaluate(branch.cond, scope))) {
             yield* this.execBlock(branch.body, scope);
             return;
           }
@@ -92,7 +118,7 @@ export class Interpreter {
       }
 
       case 'While':
-        while (isTruthy(this.evaluate(s.cond, scope))) {
+        while (isTruthy(yield* this.evaluate(s.cond, scope))) {
           try {
             yield* this.execBlock(s.body, scope);
           } catch (e) {
@@ -104,8 +130,8 @@ export class Interpreter {
         return;
 
       case 'For': {
-        const from = toNumber(this.evaluate(s.from, scope));
-        const to = toNumber(this.evaluate(s.to, scope));
+        const from = toNumber(yield* this.evaluate(s.from, scope));
+        const to = toNumber(yield* this.evaluate(s.to, scope));
         scope.declare(s.varName, from);
         for (let i = from; i <= to; i += 1) {
           scope.set(s.varName, i);
@@ -120,8 +146,10 @@ export class Interpreter {
         return;
       }
 
-      case 'Return':
-        throw new ReturnSignal(s.value ? this.evaluate(s.value, scope) : undefined);
+      case 'Return': {
+        const value = s.value ? yield* this.evaluate(s.value, scope) : undefined;
+        throw new ReturnSignal(value);
+      }
 
       case 'Break':
         throw new BreakSignal();
@@ -131,9 +159,9 @@ export class Interpreter {
     }
   }
 
-  // --- Выражения (синхронны; шаг внутрь функций — следующий этап) ---
+  // --- Выражения: генераторы, чтобы вызовы внутри них раскрывались пошагово ---
 
-  private evaluate(e: Expr, scope: Scope): BslValue {
+  private *evaluate(e: Expr, scope: Scope): Generator<StepEvent, BslValue, void> {
     switch (e.kind) {
       case 'NumberLit':
         return e.value;
@@ -152,39 +180,38 @@ export class Interpreter {
         return scope.get(e.name) as BslValue;
       }
       case 'Unary': {
-        const v = this.evaluate(e.operand, scope);
+        const v = yield* this.evaluate(e.operand, scope);
         return e.op === 'neg' ? -toNumber(v) : !isTruthy(v);
       }
       case 'Binary':
-        return this.evalBinary(e, scope);
+        return yield* this.evalBinary(e, scope);
       case 'Ternary':
-        return isTruthy(this.evaluate(e.cond, scope))
-          ? this.evaluate(e.whenTrue, scope)
-          : this.evaluate(e.whenFalse, scope);
-      case 'Call':
-        return this.callFunction(
-          e.callee,
-          e.args.map((a) => this.evaluate(a, scope)),
-          e.line,
-        );
+        return isTruthy(yield* this.evaluate(e.cond, scope))
+          ? yield* this.evaluate(e.whenTrue, scope)
+          : yield* this.evaluate(e.whenFalse, scope);
+      case 'Call': {
+        const args: BslValue[] = [];
+        for (const a of e.args) args.push(yield* this.evaluate(a, scope));
+        return yield* this.callFunction(e.callee, args, e.line);
+      }
     }
   }
 
-  private evalBinary(e: Binary, scope: Scope): BslValue {
+  private *evalBinary(e: Binary, scope: Scope): Generator<StepEvent, BslValue, void> {
     // Короткое замыкание логических операторов
     if (e.op === 'and') {
-      return isTruthy(this.evaluate(e.left, scope))
-        ? isTruthy(this.evaluate(e.right, scope))
+      return isTruthy(yield* this.evaluate(e.left, scope))
+        ? isTruthy(yield* this.evaluate(e.right, scope))
         : false;
     }
     if (e.op === 'or') {
-      return isTruthy(this.evaluate(e.left, scope))
+      return isTruthy(yield* this.evaluate(e.left, scope))
         ? true
-        : isTruthy(this.evaluate(e.right, scope));
+        : isTruthy(yield* this.evaluate(e.right, scope));
     }
 
-    const l = this.evaluate(e.left, scope);
-    const r = this.evaluate(e.right, scope);
+    const l = yield* this.evaluate(e.left, scope);
+    const r = yield* this.evaluate(e.right, scope);
 
     switch (e.op) {
       case 'add':
@@ -216,7 +243,11 @@ export class Interpreter {
     }
   }
 
-  private callFunction(name: string, args: BslValue[], line: number): BslValue {
+  private *callFunction(
+    name: string,
+    args: BslValue[],
+    line: number,
+  ): Generator<StepEvent, BslValue, void> {
     const builtin = resolveBuiltin(name);
     if (builtin) {
       const [min, max] = builtin.arity;
@@ -226,47 +257,63 @@ export class Interpreter {
           line,
         );
       }
-      return builtin.impl(args, this.ctx);
+      return builtin.impl(args, this.ctx); // во встроенные функции не шагаем
     }
 
     const proc = this.procedures.get(name.toLowerCase());
-    if (proc) return this.callUser(proc, args);
+    if (proc) return yield* this.callUser(proc, args);
 
     throw new RuntimeError(`Неизвестная процедура или функция «${name}»`, line);
   }
 
-  private callUser(decl: ProcDecl, args: BslValue[]): BslValue {
+  private *callUser(decl: ProcDecl, args: BslValue[]): Generator<StepEvent, BslValue, void> {
     const frame = new Scope();
-    decl.params.forEach((p, i) => {
-      const value =
-        i < args.length
-          ? args[i]
-          : p.default
-            ? this.evaluate(p.default, this.globals)
-            : UNDEFINED;
+    for (let i = 0; i < decl.params.length; i += 1) {
+      const p = decl.params[i];
+      let value: BslValue;
+      if (i < args.length) value = args[i];
+      else if (p.default) value = yield* this.evaluate(p.default, this.globals);
+      else value = UNDEFINED;
       frame.declare(p.name, value);
-    });
+    }
 
-    // Скелет: тело функции исполняется до конца без шага внутрь.
-    // Генератор-плумбинг уже на месте — step-into добавится позже.
+    // Кадр на стеке во время исполнения тела — отсюда шаг внутрь и стек вызовов.
+    this.frames.push({ name: decl.name, scope: frame, line: decl.line });
     try {
-      const gen = this.execBlock(decl.body, frame);
-      let res = gen.next();
-      while (!res.done) res = gen.next();
+      yield* this.execBlock(decl.body, frame);
     } catch (e) {
       if (e instanceof ReturnSignal) return e.value ?? UNDEFINED;
       throw e;
+    } finally {
+      this.frames.pop();
     }
     return UNDEFINED;
   }
 
-  /** Срез глобальной области для панели переменных. */
-  inspectGlobals(): VariableView[] {
-    return this.globals.entries().map(({ name, value }) => ({
+  // --- Инспекция ---
+
+  private viewScope(scope: Scope): VariableView[] {
+    return scope.entries().map(({ name, value }) => ({
       name,
       type: typeName(value),
       display: displayValue(value),
     }));
+  }
+
+  /** Срез глобальной области (батч-режим и завершённая программа). */
+  inspectGlobals(): VariableView[] {
+    return this.viewScope(this.globals);
+  }
+
+  /** Срез переменных кадра по индексу (0 — модуль). Пусто, если кадра нет. */
+  inspectFrame(index: number): VariableView[] {
+    const frame = this.frames[index];
+    return frame ? this.viewScope(frame.scope) : [];
+  }
+
+  /** Снимок стека вызовов: индекс 0 — модуль, последний — текущий кадр. */
+  callStack(): FrameView[] {
+    return this.frames.map((f) => ({ name: f.name, line: f.line }));
   }
 }
 
