@@ -6,6 +6,7 @@ import type {
   Call,
   Expr,
   IfBranch,
+  LValue,
   Param,
   Program,
   Stmt,
@@ -125,16 +126,33 @@ class Parser {
     }
 
     if (t.type === 'ident') {
-      // Вызов процедуры как оператор либо присваивание
-      if (this.next().type === 'lparen') {
-        const call = this.parsePrimaryCall();
-        this.expect('semicolon', '«;»');
-        return { kind: 'CallStmt', call, line: call.line };
-      }
-      return this.parseAssign();
+      return this.parseAssignOrCall();
     }
 
     throw new ParseError(`Неожиданный токен «${t.lexeme || t.type}»`, t.line);
+  }
+
+  /** Оператор, начинающийся с идентификатора: присваивание (в т.ч. по члену/индексу) или вызов. */
+  private parseAssignOrCall(): Stmt {
+    const expr = this.parsePostfix();
+    if (this.check('eq')) {
+      this.advance();
+      const value = this.parseExpression();
+      this.expect('semicolon', '«;»');
+      return { kind: 'Assign', target: this.asLValue(expr), value, line: expr.line };
+    }
+    this.expect('semicolon', '«;»');
+    if (expr.kind !== 'Call' && expr.kind !== 'MethodCall') {
+      throw new ParseError('Ожидалось присваивание «=» или вызов', expr.line);
+    }
+    return { kind: 'ExprStmt', expr, line: expr.line };
+  }
+
+  private asLValue(expr: Expr): LValue {
+    if (expr.kind === 'Ident' || expr.kind === 'Member' || expr.kind === 'Index') {
+      return expr;
+    }
+    throw new ParseError('Слева от «=» должна быть переменная, свойство или элемент', expr.line);
   }
 
   private parseVarDecl(): Stmt {
@@ -174,14 +192,6 @@ class Parser {
     return { kind: 'ProcDecl', name, params, body, isFunction, exported, line };
   }
 
-  private parseAssign(): Stmt {
-    const target = this.advance(); // ident
-    this.expect('eq', '«=»');
-    const value = this.parseExpression();
-    this.expect('semicolon', '«;»');
-    return { kind: 'Assign', target: target.lexeme, value, line: target.line };
-  }
-
   private parseIf(): Stmt {
     const line = this.advance().line; // Если
     const branches: IfBranch[] = [];
@@ -214,8 +224,14 @@ class Parser {
 
   private parseFor(): Stmt {
     const line = this.advance().line; // Для
-    if (this.checkKeyword('Each')) {
-      throw new ParseError('«Для Каждого» пока не поддерживается ядром-скелетом', line);
+    if (this.matchKeyword('Each')) {
+      const eachVar = this.expect('ident', 'имя переменной обхода').lexeme;
+      this.expectKeyword('In', '«Из»');
+      const iterable = this.parseExpression();
+      this.expectKeyword('Do', '«Цикл»');
+      const eachBody = this.parseBlock(['EndDo']);
+      this.expectKeyword('EndDo', '«КонецЦикла»');
+      return { kind: 'ForEach', varName: eachVar, iterable, body: eachBody, line };
     }
     const varName = this.expect('ident', 'имя счётчика').lexeme;
     this.expect('eq', '«=»');
@@ -323,7 +339,30 @@ class Parser {
       const line = this.advance().line;
       return { kind: 'Unary', op: 'neg', operand: this.parseUnary(), line };
     }
-    return this.parsePrimary();
+    return this.parsePostfix();
+  }
+
+  /** Постфиксная цепочка: `.свойство`, `.Метод(...)`, `[индекс]`. */
+  private parsePostfix(): Expr {
+    let expr = this.parsePrimary();
+    for (;;) {
+      if (this.check('dot')) {
+        const line = this.advance().line;
+        const name = this.expect('ident', 'имя свойства или метода').lexeme;
+        if (this.check('lparen')) {
+          expr = { kind: 'MethodCall', object: expr, method: name, args: this.parseArgList(), line };
+        } else {
+          expr = { kind: 'Member', object: expr, name, line };
+        }
+      } else if (this.check('lbracket')) {
+        const line = this.advance().line;
+        const index = this.parseExpression();
+        this.expect('rbracket', '«]»');
+        expr = { kind: 'Index', object: expr, index, line };
+      } else {
+        return expr;
+      }
+    }
   }
 
   private parsePrimary(): Expr {
@@ -364,6 +403,8 @@ class Parser {
           case 'Null':
             this.advance();
             return { kind: 'NullLit', line: t.line };
+          case 'New':
+            return this.parseNew();
           default:
             throw new ParseError(
               `«${t.lexeme}» пока не поддерживается в выражениях`,
@@ -389,6 +430,19 @@ class Parser {
 
   private parsePrimaryCall(): Call {
     const nameTok = this.advance(); // ident
+    return { kind: 'Call', callee: nameTok.lexeme, args: this.parseArgList(), line: nameTok.line };
+  }
+
+  /** Конструктор: `Новый Тип` или `Новый Тип(аргументы)`. */
+  private parseNew(): Expr {
+    const line = this.advance().line; // Новый
+    const typeName = this.expect('ident', 'имя типа').lexeme;
+    const args = this.check('lparen') ? this.parseArgList() : [];
+    return { kind: 'New', typeName, args, line };
+  }
+
+  /** Список аргументов в скобках: `( a, b, c )`. */
+  private parseArgList(): Expr[] {
     this.expect('lparen', '«(»');
     const args: Expr[] = [];
     if (!this.check('rparen')) {
@@ -397,7 +451,7 @@ class Parser {
       } while (this.check('comma') && this.advance());
     }
     this.expect('rparen', '«)»');
-    return { kind: 'Call', callee: nameTok.lexeme, args, line: nameTok.line };
+    return args;
   }
 }
 

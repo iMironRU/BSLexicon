@@ -1,0 +1,85 @@
+# Методы типа Массив
+- id: Массив.Добавить
+  kind: method
+  names: { ru: Добавить, en: Add }
+  category: Массив
+  signature: "Добавить(Значение)"
+  description: Добавляет значение в конец массива.
+  params:
+    - { name: Значение, type: Произвольный, optional: false }
+  examples:
+    - code: |
+        М = Новый Массив;
+        М.Добавить(10);
+        М.Добавить(20);
+        Сообщить(М.Количество());
+      expect: "2"
+
+- id: Массив.Количество
+  kind: method
+  names: { ru: Количество, en: Count }
+  category: Массив
+  signature: "Количество(): Число"
+  description: Возвращает число элементов массива.
+  returns: { type: Число }
+
+- id: Массив.Получить
+  kind: method
+  names: { ru: Получить, en: Get }
+  category: Массив
+  signature: "Получить(Индекс): Произвольный"
+  description: Возвращает элемент по индексу (с нуля). Аналог Массив[Индекс].
+  params:
+    - { name: Индекс, type: Число, optional: false }
+  examples:
+    - code: |
+        М = Новый Массив;
+        М.Добавить("а");
+        М.Добавить("б");
+        Сообщить(М.Получить(1) + М[0]);
+      expect: "ба"
+
+- id: Массив.Установить
+  kind: method
+  names: { ru: Установить, en: Set }
+  category: Массив
+  signature: "Установить(Индекс, Значение)"
+  description: Заменяет элемент по индексу. Аналог «Массив[Индекс] = Значение».
+  params:
+    - { name: Индекс, type: Число, optional: false }
+    - { name: Значение, type: Произвольный, optional: false }
+
+- id: Массив.Вставить
+  kind: method
+  names: { ru: Вставить, en: Insert }
+  category: Массив
+  signature: "Вставить(Индекс, Значение)"
+  description: Вставляет значение в указанную позицию, сдвигая последующие элементы.
+  params:
+    - { name: Индекс, type: Число, optional: false }
+    - { name: Значение, type: Произвольный, optional: false }
+
+- id: Массив.Удалить
+  kind: method
+  names: { ru: Удалить, en: Delete }
+  category: Массив
+  signature: "Удалить(Индекс)"
+  description: Удаляет элемент по индексу.
+  params:
+    - { name: Индекс, type: Число, optional: false }
+
+- id: Массив.Найти
+  kind: method
+  names: { ru: Найти, en: Find }
+  category: Массив
+  signature: "Найти(Значение): Число"
+  description: Возвращает индекс первого совпадения или Неопределено, если не найдено.
+  params:
+    - { name: Значение, type: Произвольный, optional: false }
+
+- id: Массив.Очистить
+  kind: method
+  names: { ru: Очистить, en: Clear }
+  category: Массив
+  signature: "Очистить()"
+  description: Удаляет все элементы массива.

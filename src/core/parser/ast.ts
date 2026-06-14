@@ -68,6 +68,35 @@ export interface Ternary {
   whenFalse: Expr;
   line: number;
 }
+/** Конструктор: `Новый Массив`, `Новый Структура("А,Б", 1, 2)`. */
+export interface New {
+  kind: 'New';
+  typeName: string;
+  args: Expr[];
+  line: number;
+}
+/** Обращение к свойству через точку: `Структура.Ключ`, `КлючИЗначение.Значение`. */
+export interface Member {
+  kind: 'Member';
+  object: Expr;
+  name: string;
+  line: number;
+}
+/** Обращение по индексу/ключу: `Массив[0]`, `Соответствие[Ключ]`. */
+export interface Index {
+  kind: 'Index';
+  object: Expr;
+  index: Expr;
+  line: number;
+}
+/** Вызов метода: `Массив.Добавить(Знач)`, `Структура.Количество()`. */
+export interface MethodCall {
+  kind: 'MethodCall';
+  object: Expr;
+  method: string;
+  args: Expr[];
+  line: number;
+}
 
 export type Expr =
   | NumberLit
@@ -79,7 +108,14 @@ export type Expr =
   | Unary
   | Binary
   | Call
-  | Ternary;
+  | Ternary
+  | New
+  | Member
+  | Index
+  | MethodCall;
+
+/** Допустимая левая часть присваивания. */
+export type LValue = Ident | Member | Index;
 
 export interface Param {
   name: string;
@@ -103,13 +139,14 @@ export interface ProcDecl {
 }
 export interface Assign {
   kind: 'Assign';
-  target: string;
+  target: LValue;
   value: Expr;
   line: number;
 }
-export interface CallStmt {
-  kind: 'CallStmt';
-  call: Call;
+/** Оператор-выражение: вызов с побочным эффектом (`Сообщить(…)`, `Массив.Добавить(…)`). */
+export interface ExprStmt {
+  kind: 'ExprStmt';
+  expr: Expr;
   line: number;
 }
 export interface IfBranch {
@@ -136,6 +173,14 @@ export interface For {
   body: Stmt[];
   line: number;
 }
+/** `Для Каждого Элемент Из Коллекция Цикл … КонецЦикла`. */
+export interface ForEach {
+  kind: 'ForEach';
+  varName: string;
+  iterable: Expr;
+  body: Stmt[];
+  line: number;
+}
 export interface Return {
   kind: 'Return';
   value?: Expr;
@@ -154,10 +199,11 @@ export type Stmt =
   | VarDecl
   | ProcDecl
   | Assign
-  | CallStmt
+  | ExprStmt
   | If
   | While
   | For
+  | ForEach
   | Return
   | Break
   | Continue;

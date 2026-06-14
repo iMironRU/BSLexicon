@@ -1,0 +1,52 @@
+# Методы типа Структура
+- id: Структура.Вставить
+  kind: method
+  names: { ru: Вставить, en: Insert }
+  category: Структура
+  signature: "Вставить(Ключ, Значение)"
+  description: Добавляет или заменяет свойство с указанным строковым ключом.
+  params:
+    - { name: Ключ, type: Строка, optional: false }
+    - { name: Значение, type: Произвольный, optional: false }
+  examples:
+    - code: |
+        С = Новый Структура;
+        С.Вставить("Имя", "Иван");
+        Сообщить(С.Имя);
+      expect: "Иван"
+
+- id: Структура.Свойство
+  kind: method
+  names: { ru: Свойство, en: Property }
+  category: Структура
+  signature: "Свойство(Ключ): Булево"
+  description: >-
+    Возвращает Истина, если свойство с таким ключом есть в структуре
+    (подмножество: без out-параметра значения, как в полном BSL).
+  params:
+    - { name: Ключ, type: Строка, optional: false }
+  returns: { type: Булево }
+
+- id: Структура.Удалить
+  kind: method
+  names: { ru: Удалить, en: Delete }
+  category: Структура
+  signature: "Удалить(Ключ)"
+  description: Удаляет свойство по ключу.
+  params:
+    - { name: Ключ, type: Строка, optional: false }
+
+- id: Структура.Количество
+  kind: method
+  names: { ru: Количество, en: Count }
+  category: Структура
+  signature: "Количество(): Число"
+  description: Возвращает число свойств структуры.
+  returns: { type: Число }
+
+- id: Структура.Очистить
+  kind: method
+  names: { ru: Очистить, en: Clear }
+  category: Структура
+  signature: "Очистить()"
+  description: Удаляет все свойства структуры.

@@ -130,7 +130,10 @@ export function lex(source: string): Token[] {
       '>': 'gt',
       '(': 'lparen',
       ')': 'rparen',
+      '[': 'lbracket',
+      ']': 'rbracket',
       ',': 'comma',
+      '.': 'dot',
       ';': 'semicolon',
       '?': 'question',
     };

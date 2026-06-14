@@ -11,6 +11,7 @@ export { lex } from './lexer/lexer';
 export { parse } from './parser/parser';
 export { Interpreter } from './interpreter/interpreter';
 export { builtinIds, BUILTINS } from './interpreter/builtins';
+export { methodIds } from './interpreter/collections';
 export { BslError, LexError, ParseError, RuntimeError } from './errors';
 export { DebugSession } from './debugger/session';
 export { toRunError } from './run-error';

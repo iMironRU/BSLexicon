@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv';
 import { load } from 'js-yaml';
-import { builtinIds, run } from '../src/core/index';
+import { builtinIds, methodIds, run } from '../src/core/index';
 
 interface CatalogExample {
   title?: string;
@@ -72,16 +72,24 @@ for (const file of files) {
   entries.push(...(data as CatalogEntry[]));
 }
 
-// --- Инвариант рантайм ↔ каталог (только функции) ---
+// --- Инвариант рантайм ↔ каталог ---
+/** Сверяет два множества идентификаторов в обе стороны. */
+function checkInvariant(kindLabel: string, runtime: Set<string>, catalog: Set<string>): void {
+  for (const id of runtime) {
+    if (!catalog.has(id)) note(`рантайм↔каталог: ${kindLabel} «${id}» есть в рантайме, но нет в каталоге`);
+  }
+  for (const id of catalog) {
+    if (!runtime.has(id)) note(`рантайм↔каталог: ${kindLabel} «${id}» есть в каталоге, но нет в рантайме`);
+  }
+}
+
 const catalogFns = new Set(entries.filter((e) => e.kind === 'function').map((e) => e.id));
 const runtimeFns = new Set(builtinIds);
+checkInvariant('функция', runtimeFns, catalogFns);
 
-for (const id of runtimeFns) {
-  if (!catalogFns.has(id)) note(`рантайм↔каталог: функция «${id}» есть в рантайме, но нет в каталоге`);
-}
-for (const id of catalogFns) {
-  if (!runtimeFns.has(id)) note(`рантайм↔каталог: функция «${id}» есть в каталоге, но нет в рантайме`);
-}
+const catalogMethods = new Set(entries.filter((e) => e.kind === 'method').map((e) => e.id));
+const runtimeMethods = new Set(methodIds);
+checkInvariant('метод', runtimeMethods, catalogMethods);
 
 // --- Doctest примеров ---
 let doctests = 0;
@@ -111,5 +119,6 @@ if (errors.length > 0) {
 
 console.log(
   `✓ Каталог в порядке: ${entries.length} записей, ` +
-    `${runtimeFns.size} функций совпадают с рантаймом, ${doctests} doctest пройдено.`,
+    `${runtimeFns.size} функций и ${runtimeMethods.size} методов совпадают с рантаймом, ` +
+    `${doctests} doctest пройдено.`,
 );

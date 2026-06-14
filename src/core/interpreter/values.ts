@@ -3,11 +3,31 @@
  *
  * Примитивы маппятся на нативные типы JS; `Неопределено` и `Null` —
  * уникальные синглтоны, чтобы их нельзя было спутать с `undefined`/`null` JS.
+ * Коллекции (`Массив`, `Структура`, …) — ссылочные объекты, наследники
+ * `BslObject` (конкретные классы — в `collections.ts`).
  */
 export const UNDEFINED = Symbol('Неопределено');
 export const NULL = Symbol('Null');
 
-export type BslValue = number | string | boolean | typeof UNDEFINED | typeof NULL;
+/**
+ * База для всех ссылочных типов BSL (коллекции, КлючИЗначение).
+ * Ссылочная семантика «бесплатна»: две переменные с одним объектом видят
+ * изменения друг друга — учебный акцент концепции §4.
+ */
+export abstract class BslObject {
+  /** Имя типа на русском (как у `ТипЗнч`). */
+  abstract readonly typeName: string;
+  /** Человекочитаемое содержимое для панели переменных; `depth` ограничивает вложенность. */
+  abstract display(depth: number): string;
+}
+
+export type BslValue =
+  | number
+  | string
+  | boolean
+  | typeof UNDEFINED
+  | typeof NULL
+  | BslObject;
 
 /** Имя типа значения на русском (как возвращал бы `ТипЗнч`). */
 export function typeName(value: BslValue): string {
@@ -19,6 +39,7 @@ export function typeName(value: BslValue): string {
     case 'boolean':
       return 'Булево';
     default:
+      if (value instanceof BslObject) return value.typeName;
       return value === NULL ? 'Null' : 'Неопределено';
   }
 }
@@ -27,8 +48,9 @@ export function typeName(value: BslValue): string {
 export function isTruthy(value: BslValue): boolean {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;
-  if (value === UNDEFINED || value === NULL) return false;
-  return value !== '';
+  if (typeof value === 'string') return value !== '';
+  if (value instanceof BslObject) return true;
+  return false; // Неопределено / Null
 }
 
 /**
@@ -44,6 +66,7 @@ export function toBslString(value: BslValue): string {
     case 'boolean':
       return value ? 'Да' : 'Нет';
     default:
+      if (value instanceof BslObject) return value.display(0);
       return '';
   }
 }
@@ -59,8 +82,9 @@ export function toNumber(value: BslValue): number {
   return 0;
 }
 
-/** Отображение значения в панели переменных (строки в кавычках). */
-export function displayValue(value: BslValue): string {
+/** Отображение значения в панели переменных (строки в кавычках, объекты — кратко). */
+export function displayValue(value: BslValue, depth = 0): string {
   if (typeof value === 'string') return `"${value}"`;
+  if (value instanceof BslObject) return value.display(depth);
   return toBslString(value);
 }

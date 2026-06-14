@@ -1,10 +1,20 @@
 import { RuntimeError } from '../errors';
-import type { Binary, Expr, ProcDecl, Program, Stmt } from '../parser/ast';
+import type { Binary, Expr, LValue, ProcDecl, Program, Stmt } from '../parser/ast';
 import { resolveBuiltin } from './builtins';
 import type { BuiltinContext } from './builtins';
+import {
+  getIndex,
+  getMember,
+  iterate,
+  resolveConstructor,
+  resolveMethod,
+  setIndex,
+  setMember,
+} from './collections';
 import { Scope } from './scope';
 import { BreakSignal, ContinueSignal, ReturnSignal } from './signals';
 import {
+  BslObject,
   NULL,
   UNDEFINED,
   displayValue,
@@ -98,12 +108,14 @@ export class Interpreter {
         for (const name of s.names) if (!scope.has(name)) scope.declare(name);
         return;
 
-      case 'Assign':
-        scope.set(s.target, yield* this.evaluate(s.value, scope));
+      case 'Assign': {
+        const value = yield* this.evaluate(s.value, scope);
+        yield* this.assignTo(s.target, value, scope);
         return;
+      }
 
-      case 'CallStmt':
-        yield* this.evaluate(s.call, scope);
+      case 'ExprStmt':
+        yield* this.evaluate(s.expr, scope);
         return;
 
       case 'If': {
@@ -135,6 +147,22 @@ export class Interpreter {
         scope.declare(s.varName, from);
         for (let i = from; i <= to; i += 1) {
           scope.set(s.varName, i);
+          try {
+            yield* this.execBlock(s.body, scope);
+          } catch (e) {
+            if (e instanceof BreakSignal) break;
+            if (e instanceof ContinueSignal) continue;
+            throw e;
+          }
+        }
+        return;
+      }
+
+      case 'ForEach': {
+        const iterable = yield* this.evaluate(s.iterable, scope);
+        scope.declare(s.varName, UNDEFINED);
+        for (const item of iterate(iterable, s.line)) {
+          scope.set(s.varName, item);
           try {
             yield* this.execBlock(s.body, scope);
           } catch (e) {
@@ -194,7 +222,71 @@ export class Interpreter {
         for (const a of e.args) args.push(yield* this.evaluate(a, scope));
         return yield* this.callFunction(e.callee, args, e.line);
       }
+      case 'New': {
+        const ctor = resolveConstructor(e.typeName);
+        if (!ctor) throw new RuntimeError(`«Новый»: неизвестный тип «${e.typeName}»`, e.line);
+        const args: BslValue[] = [];
+        for (const a of e.args) args.push(yield* this.evaluate(a, scope));
+        return ctor.build(args);
+      }
+      case 'Member': {
+        const obj = yield* this.evaluate(e.object, scope);
+        return getMember(obj, e.name, e.line);
+      }
+      case 'Index': {
+        const obj = yield* this.evaluate(e.object, scope);
+        const key = yield* this.evaluate(e.index, scope);
+        return getIndex(obj, key, e.line);
+      }
+      case 'MethodCall': {
+        const obj = yield* this.evaluate(e.object, scope);
+        const args: BslValue[] = [];
+        for (const a of e.args) args.push(yield* this.evaluate(a, scope));
+        return this.callMethod(obj, e.method, args, e.line);
+      }
     }
+  }
+
+  /** Присваивание по l-value: переменная, свойство (`Стр.Ключ`) или элемент (`Масс[i]`). */
+  private *assignTo(
+    target: LValue,
+    value: BslValue,
+    scope: Scope,
+  ): Generator<StepEvent, void, void> {
+    switch (target.kind) {
+      case 'Ident':
+        scope.set(target.name, value);
+        return;
+      case 'Member': {
+        const obj = yield* this.evaluate(target.object, scope);
+        setMember(obj, target.name, value, target.line);
+        return;
+      }
+      case 'Index': {
+        const obj = yield* this.evaluate(target.object, scope);
+        const key = yield* this.evaluate(target.index, scope);
+        setIndex(obj, key, value, target.line);
+        return;
+      }
+    }
+  }
+
+  private callMethod(obj: BslValue, method: string, args: BslValue[], line: number): BslValue {
+    if (!(obj instanceof BslObject)) {
+      throw new RuntimeError(`У значения типа «${typeName(obj)}» нет методов`, line);
+    }
+    const def = resolveMethod(obj.typeName, method);
+    if (!def) {
+      throw new RuntimeError(`У типа «${obj.typeName}» нет метода «${method}»`, line);
+    }
+    const [min, max] = def.arity;
+    if (args.length < min || args.length > max) {
+      throw new RuntimeError(
+        `«${method}»: ожидалось аргументов ${min}..${max}, передано ${args.length}`,
+        line,
+      );
+    }
+    return def.impl(obj, args, line);
   }
 
   private *evalBinary(e: Binary, scope: Scope): Generator<StepEvent, BslValue, void> {

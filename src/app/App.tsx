@@ -6,17 +6,22 @@ import { CallStackPanel } from './components/CallStackPanel';
 import { DebugSession, run } from '@core/index';
 import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } from '@core/index';
 
-const SAMPLE = `// Пример с функцией. «Войти» зайдёт внутрь Удвоить.
+const SAMPLE = `// «Войти» зайдёт внутрь Удвоить. Клик слева — точка останова.
 Функция Удвоить(Знач Х)
     Возврат Х * 2;
 КонецФункции
 
-Итог = 0;
+Числа = Новый Массив;
 Для Сч = 1 По 3 Цикл
-    Итог = Итог + Удвоить(Сч);
+    Числа.Добавить(Удвоить(Сч));
 КонецЦикла;
 
-Сообщить("Итог = " + Итог);
+Итог = 0;
+Для Каждого Н Из Числа Цикл
+    Итог = Итог + Н;
+КонецЦикла;
+
+Сообщить("Элементов: " + Числа.Количество() + ", сумма = " + Итог);
 `;
 
 interface PanelView {

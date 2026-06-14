@@ -17,7 +17,10 @@ export type TokenType =
   | 'gte'
   | 'lparen'
   | 'rparen'
+  | 'lbracket'
+  | 'rbracket'
   | 'comma'
+  | 'dot'
   | 'semicolon'
   | 'question'
   | 'eof';

@@ -1,0 +1,49 @@
+# Методы типа Соответствие
+- id: Соответствие.Вставить
+  kind: method
+  names: { ru: Вставить, en: Insert }
+  category: Соответствие
+  signature: "Вставить(Ключ, Значение)"
+  description: Добавляет или заменяет значение по ключу. Аналог «Соответствие[Ключ] = Значение».
+  params:
+    - { name: Ключ, type: Произвольный, optional: false }
+    - { name: Значение, type: Произвольный, optional: false }
+  examples:
+    - code: |
+        С = Новый Соответствие;
+        С.Вставить("цвет", "красный");
+        Сообщить(С["цвет"]);
+      expect: "красный"
+
+- id: Соответствие.Получить
+  kind: method
+  names: { ru: Получить, en: Get }
+  category: Соответствие
+  signature: "Получить(Ключ): Произвольный"
+  description: Возвращает значение по ключу или Неопределено, если ключа нет. Аналог Соответствие[Ключ].
+  params:
+    - { name: Ключ, type: Произвольный, optional: false }
+
+- id: Соответствие.Удалить
+  kind: method
+  names: { ru: Удалить, en: Delete }
+  category: Соответствие
+  signature: "Удалить(Ключ)"
+  description: Удаляет пару по ключу.
+  params:
+    - { name: Ключ, type: Произвольный, optional: false }
+
+- id: Соответствие.Количество
+  kind: method
+  names: { ru: Количество, en: Count }
+  category: Соответствие
+  signature: "Количество(): Число"
+  description: Возвращает число пар в соответствии.
+  returns: { type: Число }
+
+- id: Соответствие.Очистить
+  kind: method
+  names: { ru: Очистить, en: Clear }
+  category: Соответствие
+  signature: "Очистить()"
+  description: Удаляет все пары соответствия.
