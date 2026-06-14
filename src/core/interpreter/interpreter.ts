@@ -11,6 +11,7 @@ import {
   setIndex,
   setMember,
 } from './collections';
+import { BslDate, makeDateTime } from './dates';
 import { Scope } from './scope';
 import { BreakSignal, ContinueSignal, ReturnSignal } from './signals';
 import {
@@ -270,6 +271,8 @@ export class Interpreter {
         return UNDEFINED;
       case 'NullLit':
         return NULL;
+      case 'DateLit':
+        return new BslDate(makeDateTime(e.y, e.mo, e.d, e.h, e.mi, e.s));
       case 'Ident': {
         if (!scope.has(e.name)) {
           throw new RuntimeError(`Переменная «${e.name}» не определена`, e.line);
@@ -379,8 +382,10 @@ export class Interpreter {
         if (typeof l === 'string' || typeof r === 'string') {
           return toBslString(l) + toBslString(r);
         }
+        if (l instanceof BslDate || r instanceof BslDate) return dateAdd(l, r, e.line);
         return toNumber(l) + toNumber(r);
       case 'sub':
+        if (l instanceof BslDate || r instanceof BslDate) return dateSub(l, r, e.line);
         return toNumber(l) - toNumber(r);
       case 'mul':
         return toNumber(l) * toNumber(r);
@@ -390,9 +395,9 @@ export class Interpreter {
         return toNumber(l) / d;
       }
       case 'eq':
-        return l === r;
+        return valuesEqual(l, r);
       case 'neq':
-        return l !== r;
+        return !valuesEqual(l, r);
       case 'lt':
         return compare(l, r, e.line) < 0;
       case 'lte':
@@ -487,5 +492,31 @@ function compare(l: BslValue, r: BslValue, line: number): number {
   if (typeof l === 'string' && typeof r === 'string') {
     return l < r ? -1 : l > r ? 1 : 0;
   }
+  if (l instanceof BslDate && r instanceof BslDate) {
+    return l.time < r.time ? -1 : l.time > r.time ? 1 : 0;
+  }
   throw new RuntimeError('Невозможно сравнить значения разных типов', line);
+}
+
+/** Равенство значений: даты — по моменту времени, остальное — по ссылке/значению JS. */
+function valuesEqual(l: BslValue, r: BslValue): boolean {
+  if (l instanceof BslDate && r instanceof BslDate) return l.time === r.time;
+  return l === r;
+}
+
+/** `Дата + Число` (секунды) → `Дата`; две даты складывать нельзя. */
+function dateAdd(l: BslValue, r: BslValue, line: number): BslValue {
+  if (l instanceof BslDate && r instanceof BslDate) {
+    throw new RuntimeError('Нельзя сложить две даты', line);
+  }
+  const date = (l instanceof BslDate ? l : r) as BslDate;
+  const other = l instanceof BslDate ? r : l;
+  return new BslDate(date.time + toNumber(other) * 1000);
+}
+
+/** `Дата - Дата` → секунды; `Дата - Число` → `Дата`; `Число - Дата` — ошибка. */
+function dateSub(l: BslValue, r: BslValue, line: number): BslValue {
+  if (l instanceof BslDate && r instanceof BslDate) return (l.time - r.time) / 1000;
+  if (l instanceof BslDate) return new BslDate(l.time - toNumber(r) * 1000);
+  throw new RuntimeError('Из числа нельзя вычесть дату', line);
 }

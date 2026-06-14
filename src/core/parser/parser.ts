@@ -398,6 +398,22 @@ class Parser {
       case 'string':
         this.advance();
         return { kind: 'StringLit', value: t.value as string, line: t.line };
+      case 'date': {
+        this.advance();
+        const ds = t.value as string; // нормализованные цифры из лексера
+        const part = (a: number, b: number): number => Number(ds.slice(a, b));
+        const hasTime = ds.length === 14;
+        return {
+          kind: 'DateLit',
+          y: part(0, 4),
+          mo: part(4, 6),
+          d: part(6, 8),
+          h: hasTime ? part(8, 10) : 0,
+          mi: hasTime ? part(10, 12) : 0,
+          s: hasTime ? part(12, 14) : 0,
+          line: t.line,
+        };
+      }
       case 'question':
         return this.parseTernary();
       case 'lparen': {

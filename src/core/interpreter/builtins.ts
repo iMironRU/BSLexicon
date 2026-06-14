@@ -1,5 +1,26 @@
+import { RuntimeError } from '../errors';
+import {
+  BslDate,
+  addMonths,
+  dateDay,
+  dateHour,
+  dateMinute,
+  dateMonth,
+  dateSecond,
+  dateYear,
+  endOfDay,
+  makeDateTime,
+  nowDate,
+  startOfDay,
+} from './dates';
 import { UNDEFINED, toBslString, toNumber, typeName } from './values';
 import type { BslValue } from './values';
+
+/** Требует Дату; иначе — ошибка рантайма (у дат-функций один аргумент-дата). */
+function asDate(value: BslValue, fn: string): BslDate {
+  if (value instanceof BslDate) return value;
+  throw new RuntimeError(`«${fn}»: ожидалась Дата, получено «${typeName(value)}»`);
+}
 
 /** Контекст исполнения, доступный встроенной функции (вывод, текущая ошибка). */
 export interface BuiltinContext {
@@ -83,6 +104,78 @@ export const BUILTINS: readonly Builtin[] = [
     arity: [0, 0],
     // Текст ошибки, пойманной текущим «Исключение»; вне обработчика — пустая строка.
     impl: (_args, ctx) => ctx.errorDescription(),
+  },
+
+  // ── Даты ──────────────────────────────────────────────────────
+  {
+    id: 'Дата',
+    aliases: ['date'],
+    arity: [3, 6],
+    // Дата(Год, Месяц, День[, Час, Минута, Секунда]). Строковая форма — литерал '…'.
+    impl: (args) => {
+      const at = (i: number): number => (i < args.length ? toNumber(args[i]) : 0);
+      return new BslDate(makeDateTime(at(0), at(1), at(2), at(3), at(4), at(5)));
+    },
+  },
+  {
+    id: 'ТекущаяДата',
+    aliases: ['currentdate'],
+    arity: [0, 0],
+    impl: () => nowDate(),
+  },
+  {
+    id: 'Год',
+    aliases: ['year'],
+    arity: [1, 1],
+    impl: (args) => dateYear(asDate(args[0], 'Год')),
+  },
+  {
+    id: 'Месяц',
+    aliases: ['month'],
+    arity: [1, 1],
+    impl: (args) => dateMonth(asDate(args[0], 'Месяц')),
+  },
+  {
+    id: 'День',
+    aliases: ['day'],
+    arity: [1, 1],
+    impl: (args) => dateDay(asDate(args[0], 'День')),
+  },
+  {
+    id: 'Час',
+    aliases: ['hour'],
+    arity: [1, 1],
+    impl: (args) => dateHour(asDate(args[0], 'Час')),
+  },
+  {
+    id: 'Минута',
+    aliases: ['minute'],
+    arity: [1, 1],
+    impl: (args) => dateMinute(asDate(args[0], 'Минута')),
+  },
+  {
+    id: 'Секунда',
+    aliases: ['second'],
+    arity: [1, 1],
+    impl: (args) => dateSecond(asDate(args[0], 'Секунда')),
+  },
+  {
+    id: 'НачалоДня',
+    aliases: ['begofday'],
+    arity: [1, 1],
+    impl: (args) => startOfDay(asDate(args[0], 'НачалоДня')),
+  },
+  {
+    id: 'КонецДня',
+    aliases: ['endofday'],
+    arity: [1, 1],
+    impl: (args) => endOfDay(asDate(args[0], 'КонецДня')),
+  },
+  {
+    id: 'ДобавитьМесяц',
+    aliases: ['addmonth'],
+    arity: [2, 2],
+    impl: (args) => addMonths(asDate(args[0], 'ДобавитьМесяц'), toNumber(args[1])),
   },
 ];
 

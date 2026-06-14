@@ -1,0 +1,146 @@
+# Функции для работы с датами.
+# Литералы дат: '20240101' (дата) и '20240101120000' (дата со временем).
+# Арифметика: Дата + Число = Дата (Число — секунды); Дата - Дата = Число (секунды).
+- id: Дата
+  kind: function
+  names: { ru: Дата, en: Date }
+  category: Дата
+  signature: "Дата(Год, Месяц, День, Час, Минута, Секунда): Дата"
+  description: >-
+    Собирает дату из компонентов. Час, Минута и Секунда необязательны (по
+    умолчанию 0). Строковую форму даёт литерал вида '20240101'.
+  params:
+    - { name: Год, type: Число, optional: false }
+    - { name: Месяц, type: Число, optional: false }
+    - { name: День, type: Число, optional: false }
+    - { name: Час, type: Число, optional: true }
+    - { name: Минута, type: Число, optional: true }
+    - { name: Секунда, type: Число, optional: true }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(Дата(2024, 3, 15, 12, 5, 30));
+      expect: "15.03.2024 12:05:30"
+    - code: Сообщить(('20240102' - '20240101') / 86400);
+      expect: "1"
+
+- id: ТекущаяДата
+  kind: function
+  names: { ru: ТекущаяДата, en: CurrentDate }
+  category: Дата
+  signature: "ТекущаяДата(): Дата"
+  description: Возвращает текущую дату и время сеанса.
+  returns: { type: Дата }
+
+- id: Год
+  kind: function
+  names: { ru: Год, en: Year }
+  category: Дата
+  signature: "Год(Дата): Число"
+  description: Возвращает год указанной даты.
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Год('20240315'));
+      expect: "2024"
+
+- id: Месяц
+  kind: function
+  names: { ru: Месяц, en: Month }
+  category: Дата
+  signature: "Месяц(Дата): Число"
+  description: Возвращает номер месяца (1..12) указанной даты.
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Месяц('20240315'));
+      expect: "3"
+
+- id: День
+  kind: function
+  names: { ru: День, en: Day }
+  category: Дата
+  signature: "День(Дата): Число"
+  description: Возвращает день месяца (1..31) указанной даты.
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(День('20240101' + 86400));
+      expect: "2"
+
+- id: Час
+  kind: function
+  names: { ru: Час, en: Hour }
+  category: Дата
+  signature: "Час(Дата): Число"
+  description: Возвращает час (0..23) указанной даты.
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Час('20240101153000'));
+      expect: "15"
+
+- id: Минута
+  kind: function
+  names: { ru: Минута, en: Minute }
+  category: Дата
+  signature: "Минута(Дата): Число"
+  description: Возвращает минуту (0..59) указанной даты.
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Число }
+
+- id: Секунда
+  kind: function
+  names: { ru: Секунда, en: Second }
+  category: Дата
+  signature: "Секунда(Дата): Число"
+  description: Возвращает секунду (0..59) указанной даты.
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Число }
+
+- id: НачалоДня
+  kind: function
+  names: { ru: НачалоДня, en: BegOfDay }
+  category: Дата
+  signature: "НачалоДня(Дата): Дата"
+  description: Возвращает начало суток (00:00:00) указанной даты.
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(НачалоДня('20240315120000'));
+      expect: "15.03.2024 0:00:00"
+
+- id: КонецДня
+  kind: function
+  names: { ru: КонецДня, en: EndOfDay }
+  category: Дата
+  signature: "КонецДня(Дата): Дата"
+  description: Возвращает конец суток (23:59:59) указанной даты.
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(КонецДня('20240315'));
+      expect: "15.03.2024 23:59:59"
+
+- id: ДобавитьМесяц
+  kind: function
+  names: { ru: ДобавитьМесяц, en: AddMonth }
+  category: Дата
+  signature: "ДобавитьМесяц(Дата, КоличествоМесяцев): Дата"
+  description: >-
+    Прибавляет к дате указанное число месяцев (может быть отрицательным). День
+    обрезается до последнего дня целевого месяца.
+  params:
+    - { name: Дата, type: Дата, optional: false }
+    - { name: КоличествоМесяцев, type: Число, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(Месяц(ДобавитьМесяц(Дата(2024, 1, 31), 1)));
+      expect: "2"

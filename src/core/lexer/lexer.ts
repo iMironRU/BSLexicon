@@ -88,6 +88,29 @@ export function lex(source: string): Token[] {
       continue;
     }
 
+    // Литерал даты: '20240101' или '20240101120000' (8 или 14 цифр)
+    if (ch === "'") {
+      const startLine = line;
+      pos += 1;
+      let raw = '';
+      while (pos < source.length && source[pos] !== "'") {
+        if (source[pos] === '\n') throw new LexError('Незакрытая константа даты', startLine);
+        raw += source[pos];
+        pos += 1;
+      }
+      if (pos >= source.length) throw new LexError('Незакрытая константа даты', startLine);
+      pos += 1; // закрывающая кавычка
+      const digits = raw.replace(/[.:\- ]/g, '');
+      if ((digits.length !== 8 && digits.length !== 14) || !/^\d+$/.test(digits)) {
+        throw new LexError(
+          `Неверный литерал даты «'${raw}'» — нужно 8 или 14 цифр (ГГГГММДД[ЧЧММСС])`,
+          startLine,
+        );
+      }
+      push('date', raw, digits);
+      continue;
+    }
+
     // Идентификатор или ключевое слово
     if (isIdentStart(ch)) {
       const start = pos;

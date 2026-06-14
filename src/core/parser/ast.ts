@@ -37,6 +37,17 @@ export interface NullLit {
   kind: 'NullLit';
   line: number;
 }
+/** Литерал даты: `'20240101'` / `'20240101120000'` (компоненты уже разобраны). */
+export interface DateLit {
+  kind: 'DateLit';
+  y: number;
+  mo: number;
+  d: number;
+  h: number;
+  mi: number;
+  s: number;
+  line: number;
+}
 export interface Ident {
   kind: 'Ident';
   name: string;
@@ -104,6 +115,7 @@ export type Expr =
   | BoolLit
   | UndefinedLit
   | NullLit
+  | DateLit
   | Ident
   | Unary
   | Binary

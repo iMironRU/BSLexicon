@@ -3,6 +3,7 @@ import type { KeywordKind } from './keywords';
 export type TokenType =
   | 'number'
   | 'string'
+  | 'date'
   | 'ident'
   | 'keyword'
   | 'plus'

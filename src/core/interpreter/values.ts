@@ -6,6 +6,8 @@
  * Коллекции (`Массив`, `Структура`, …) — ссылочные объекты, наследники
  * `BslObject` (конкретные классы — в `collections.ts`).
  */
+import { BslDate, formatDate } from './dates';
+
 export const UNDEFINED = Symbol('Неопределено');
 export const NULL = Symbol('Null');
 
@@ -34,7 +36,8 @@ export type BslValue =
   | boolean
   | typeof UNDEFINED
   | typeof NULL
-  | BslObject;
+  | BslObject
+  | BslDate;
 
 /**
  * Глубоко копирует значение для передачи по `Знач`: примитивы — как есть,
@@ -57,6 +60,7 @@ export function typeName(value: BslValue): string {
     case 'boolean':
       return 'Булево';
     default:
+      if (value instanceof BslDate) return 'Дата';
       if (value instanceof BslObject) return value.typeName;
       return value === NULL ? 'Null' : 'Неопределено';
   }
@@ -67,7 +71,7 @@ export function isTruthy(value: BslValue): boolean {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;
   if (typeof value === 'string') return value !== '';
-  if (value instanceof BslObject) return true;
+  if (value instanceof BslObject || value instanceof BslDate) return true;
   return false; // Неопределено / Null
 }
 
@@ -84,6 +88,7 @@ export function toBslString(value: BslValue): string {
     case 'boolean':
       return value ? 'Да' : 'Нет';
     default:
+      if (value instanceof BslDate) return formatDate(value);
       if (value instanceof BslObject) return value.display(0);
       return '';
   }
@@ -103,6 +108,7 @@ export function toNumber(value: BslValue): number {
 /** Отображение значения в панели переменных (строки в кавычках, объекты — кратко). */
 export function displayValue(value: BslValue, depth = 0): string {
   if (typeof value === 'string') return `"${value}"`;
+  if (value instanceof BslDate) return formatDate(value);
   if (value instanceof BslObject) return value.display(depth);
   return toBslString(value);
 }
