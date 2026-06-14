@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import type { OnMount } from '@monaco-editor/react';
+import type { Catalog } from '@core/index';
+import { registerCatalogProviders } from '../monaco/completion';
 
 type CodeEditor = Parameters<OnMount>[0];
 type MonacoApi = Parameters<OnMount>[1];
@@ -10,6 +12,8 @@ type ModelDecoration = Parameters<Decorations['set']>[0][number];
 interface EditorProps {
   value: string;
   onChange: (value: string) => void;
+  /** Каталог языка — источник автодополнения функций и методов. */
+  catalog: Catalog;
   /** Номера строк с точками останова. */
   breakpoints: Set<number>;
   /** Тоггл точки останова кликом в глиф-марже. */
@@ -19,9 +23,9 @@ interface EditorProps {
 }
 
 /**
- * Обёртка над Monaco. Пока используем подсветку `vb` как близкую к BSL —
- * на следующем шаге подключим TextMate-грамматику 1c-syntax и провайдеры
- * автодополнения/hover/signature help из каталога языка.
+ * Обёртка над Monaco. Подсветку пока берём от `vb` как близкую к BSL (впереди
+ * TextMate-грамматика 1c-syntax). Автодополнение функций и методов берётся из
+ * каталога языка (см. ../monaco/completion); следом — hover и signature help.
  *
  * Глиф-маржа кликабельна: клик по ней ставит/снимает точку останова.
  * Текущая строка отладки подсвечивается через коллекцию декораций.
@@ -29,6 +33,7 @@ interface EditorProps {
 export function Editor({
   value,
   onChange,
+  catalog,
   breakpoints,
   onToggleBreakpoint,
   currentLine,
@@ -45,6 +50,7 @@ export function Editor({
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
+    registerCatalogProviders(monaco, catalog);
     decorationsRef.current = editor.createDecorationsCollection();
     editor.onMouseDown((e) => {
       if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {

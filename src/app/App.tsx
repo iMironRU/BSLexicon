@@ -6,6 +6,7 @@ import { CallStackPanel } from './components/CallStackPanel';
 import { ReferencePanel } from './components/ReferencePanel';
 import { DebugSession, run } from '@core/index';
 import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } from '@core/index';
+import { loadCatalog } from './catalog';
 
 const SAMPLE = `// «Войти» зайдёт внутрь Удвоить. Клик слева — точка останова.
 Функция Удвоить(Знач Х)
@@ -43,6 +44,7 @@ export function App() {
   const [selectedFrame, setSelectedFrame] = useState(0);
   const [showReference, setShowReference] = useState(false);
   const sessionRef = useRef<DebugSession | null>(null);
+  const catalog = useMemo(() => loadCatalog(), []);
 
   /** Новая сессия из текущего кода с перенесёнными точками останова. */
   const ensureSession = useCallback((): DebugSession => {
@@ -194,6 +196,7 @@ export function App() {
           <Editor
             value={source}
             onChange={handleSourceChange}
+            catalog={catalog}
             breakpoints={breakpoints}
             onToggleBreakpoint={handleToggleBreakpoint}
             currentLine={view.line}

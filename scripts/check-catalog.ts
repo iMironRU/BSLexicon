@@ -13,20 +13,7 @@ import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv';
 import { load } from 'js-yaml';
 import { builtinIds, methodIds, run } from '../src/core/index';
-
-interface CatalogExample {
-  title?: string;
-  code: string;
-  expect?: string;
-}
-interface CatalogEntry {
-  id: string;
-  kind: 'function' | 'type' | 'method';
-  names: { ru: string; en: string };
-  category: string;
-  description: string;
-  examples?: CatalogExample[];
-}
+import type { CatalogEntry } from '../src/core/catalog/types';
 
 const catalogDir = fileURLToPath(new URL('../catalog', import.meta.url));
 const schemaPath = join(catalogDir, 'schema.json');

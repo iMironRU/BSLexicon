@@ -15,6 +15,16 @@ export { methodIds } from './interpreter/collections';
 export { BslError, LexError, ParseError, RuntimeError } from './errors';
 export { DebugSession } from './debugger/session';
 export { toRunError } from './run-error';
+export { parseCatalog, buildCatalog, loadCatalogFrom, methodTypeOf } from './catalog';
+export type {
+  Catalog,
+  CatalogEntry,
+  CatalogKind,
+  CatalogNames,
+  CatalogParam,
+  CatalogReturns,
+  CatalogExample,
+} from './catalog';
 export type { StepEvent, VariableView, FrameView } from './interpreter/interpreter';
 export type { Token } from './lexer/token';
 export type { RunStage, RunError } from './run-error';
