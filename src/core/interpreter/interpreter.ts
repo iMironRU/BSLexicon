@@ -17,6 +17,7 @@ import {
   BslObject,
   NULL,
   UNDEFINED,
+  copyValue,
   displayValue,
   isTruthy,
   toBslString,
@@ -399,6 +400,8 @@ export class Interpreter {
       if (i < args.length) value = args[i];
       else if (p.default) value = yield* this.evaluate(p.default, this.globals);
       else value = UNDEFINED;
+      // «Знач»: коллекция копируется (иначе передаётся по ссылке) — учебный акцент §4.
+      if (p.byVal) value = copyValue(value);
       frame.declare(p.name, value);
     }
 

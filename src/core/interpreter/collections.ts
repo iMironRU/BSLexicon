@@ -7,7 +7,15 @@
  * (см. scripts/check-catalog.ts). И реестр конструкторов для оператора `Новый`.
  */
 import { RuntimeError } from '../errors';
-import { BslObject, UNDEFINED, displayValue, toBslString, toNumber, typeName } from './values';
+import {
+  BslObject,
+  UNDEFINED,
+  copyValue,
+  displayValue,
+  toBslString,
+  toNumber,
+  typeName,
+} from './values';
 import type { BslValue } from './values';
 
 const MAX_SHOWN = 8;
@@ -30,6 +38,12 @@ export class BslArray extends BslObject {
     if (this.items.length > MAX_SHOWN) shown.push('…');
     return `Массив [${shown.join(', ')}]`;
   }
+  copy(seen: Map<BslObject, BslObject>): BslArray {
+    const out = new BslArray();
+    seen.set(this, out); // до рекурсии — на случай цикла
+    for (const item of this.items) out.items.push(copyValue(item, seen));
+    return out;
+  }
 }
 
 export class BslStructure extends BslObject {
@@ -43,6 +57,14 @@ export class BslStructure extends BslObject {
       .map(({ display, value }) => `${display}: ${cell(value, depth + 1)}`);
     if (this.props.size > MAX_SHOWN) shown.push('…');
     return `Структура {${shown.join('; ')}}`;
+  }
+  copy(seen: Map<BslObject, BslObject>): BslStructure {
+    const out = new BslStructure();
+    seen.set(this, out);
+    for (const [key, { display, value }] of this.props) {
+      out.props.set(key, { display, value: copyValue(value, seen) });
+    }
+    return out;
   }
 }
 
@@ -58,6 +80,14 @@ export class BslMap extends BslObject {
     if (this.pairs.length > MAX_SHOWN) shown.push('…');
     return `Соответствие {${shown.join('; ')}}`;
   }
+  copy(seen: Map<BslObject, BslObject>): BslMap {
+    const out = new BslMap();
+    seen.set(this, out);
+    for (const { key, value } of this.pairs) {
+      out.pairs.push({ key: copyValue(key, seen), value: copyValue(value, seen) });
+    }
+    return out;
+  }
 }
 
 export class BslKeyValue extends BslObject {
@@ -70,6 +100,9 @@ export class BslKeyValue extends BslObject {
   }
   display(depth: number): string {
     return `${cell(this.key, depth + 1)}: ${cell(this.value, depth + 1)}`;
+  }
+  copy(seen: Map<BslObject, BslObject>): BslKeyValue {
+    return new BslKeyValue(copyValue(this.key, seen), copyValue(this.value, seen));
   }
 }
 

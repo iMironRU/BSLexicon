@@ -19,6 +19,13 @@ export abstract class BslObject {
   abstract readonly typeName: string;
   /** Человекочитаемое содержимое для панели переменных; `depth` ограничивает вложенность. */
   abstract display(depth: number): string;
+  /**
+   * Глубокая копия для передачи по `Знач`. `seen` хранит уже скопированные
+   * объекты — защита от бесконечной рекурсии на циклических ссылках
+   * (напр. массив, добавленный в самого себя). Реализация ОБЯЗАНА положить
+   * себя в `seen` до копирования вложенных значений.
+   */
+  abstract copy(seen: Map<BslObject, BslObject>): BslObject;
 }
 
 export type BslValue =
@@ -28,6 +35,17 @@ export type BslValue =
   | typeof UNDEFINED
   | typeof NULL
   | BslObject;
+
+/**
+ * Глубоко копирует значение для передачи по `Знач`: примитивы — как есть,
+ * ссылочные объекты — через `copy()` с разделяемой картой `seen` (одинаковые
+ * вложенные ссылки остаются одной ссылкой и в копии, циклы не зацикливают).
+ */
+export function copyValue(value: BslValue, seen: Map<BslObject, BslObject> = new Map()): BslValue {
+  if (!(value instanceof BslObject)) return value;
+  const already = seen.get(value);
+  return already ?? value.copy(seen);
+}
 
 /** Имя типа значения на русском (как возвращал бы `ТипЗнч`). */
 export function typeName(value: BslValue): string {
