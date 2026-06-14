@@ -61,6 +61,13 @@ export interface FrameView {
 
 const MODULE_FRAME = '<Модуль>';
 
+/**
+ * Предел исполненных шагов по умолчанию. Исполнение синхронное в главном потоке
+ * (концепция §6, вариант A), поэтому бесконечный цикл иначе вешает вкладку.
+ * Порог заведомо выше любого учебного примера — ловит именно зацикливание.
+ */
+const DEFAULT_STEP_LIMIT = 1_000_000;
+
 export class Interpreter {
   readonly output: string[] = [];
   readonly globals = new Scope();
@@ -69,6 +76,28 @@ export class Interpreter {
   private readonly ctx: BuiltinContext = {
     print: (text) => this.output.push(text),
   };
+  private steps = 0;
+  private readonly stepLimit: number;
+
+  /** @param options.stepLimit — бюджет шагов-операторов и итераций циклов. */
+  constructor(options: { stepLimit?: number } = {}) {
+    this.stepLimit = options.stepLimit ?? DEFAULT_STEP_LIMIT;
+  }
+
+  /**
+   * Такт «бюджета шагов»: один на каждый исполненный оператор и на каждую
+   * итерацию цикла. Превышение — почти наверняка бесконечный цикл: роняем
+   * рантайм-ошибкой, а не подвешиваем главный поток.
+   */
+  private tick(line: number): void {
+    this.steps += 1;
+    if (this.steps > this.stepLimit) {
+      throw new RuntimeError(
+        `Превышен лимит шагов (${this.stepLimit}) — похоже на бесконечный цикл`,
+        line,
+      );
+    }
+  }
 
   /** Главный генератор исполнения программы. */
   *run(program: Program): Generator<StepEvent, void, void> {
@@ -96,6 +125,7 @@ export class Interpreter {
 
   private *execStatement(s: Stmt, scope: Scope): Generator<StepEvent, void, void> {
     if (s.kind !== 'ProcDecl') {
+      this.tick(s.line);
       this.frames[this.frames.length - 1].line = s.line;
       yield { kind: 'statement', line: s.line, depth: this.frames.length };
     }
@@ -131,6 +161,7 @@ export class Interpreter {
 
       case 'While':
         while (isTruthy(yield* this.evaluate(s.cond, scope))) {
+          this.tick(s.line);
           try {
             yield* this.execBlock(s.body, scope);
           } catch (e) {
@@ -146,6 +177,7 @@ export class Interpreter {
         const to = toNumber(yield* this.evaluate(s.to, scope));
         scope.declare(s.varName, from);
         for (let i = from; i <= to; i += 1) {
+          this.tick(s.line);
           scope.set(s.varName, i);
           try {
             yield* this.execBlock(s.body, scope);
@@ -162,6 +194,7 @@ export class Interpreter {
         const iterable = yield* this.evaluate(s.iterable, scope);
         scope.declare(s.varName, UNDEFINED);
         for (const item of iterate(iterable, s.line)) {
+          this.tick(s.line);
           scope.set(s.varName, item);
           try {
             yield* this.execBlock(s.body, scope);
