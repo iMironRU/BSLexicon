@@ -3,6 +3,7 @@ import { Editor } from './components/Editor';
 import { OutputPanel } from './components/OutputPanel';
 import { VariablesPanel } from './components/VariablesPanel';
 import { CallStackPanel } from './components/CallStackPanel';
+import { ReferencePanel } from './components/ReferencePanel';
 import { DebugSession, run } from '@core/index';
 import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } from '@core/index';
 
@@ -40,6 +41,7 @@ export function App() {
   const [snap, setSnap] = useState<DebugSnapshot | null>(null);
   const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set());
   const [selectedFrame, setSelectedFrame] = useState(0);
+  const [showReference, setShowReference] = useState(false);
   const sessionRef = useRef<DebugSession | null>(null);
 
   /** Новая сессия из текущего кода с перенесёнными точками останова. */
@@ -171,6 +173,15 @@ export function App() {
               <span className="btn-label">Стоп</span>
             </button>
           </div>
+          <button
+            className={'app__step' + (showReference ? ' app__step--on' : '')}
+            onClick={() => setShowReference((v) => !v)}
+            type="button"
+            title="Справочник по функциям и типам"
+          >
+            <span aria-hidden="true">📖</span>
+            <span className="btn-label">Справочник</span>
+          </button>
           <button className="app__run" onClick={handleRun} type="button" title="Запустить целиком">
             <span aria-hidden="true">▶</span>
             <span className="btn-label">Запустить</span>
@@ -200,6 +211,8 @@ export function App() {
           )}
           <VariablesPanel variables={shownVariables} />
         </aside>
+
+        {showReference && <ReferencePanel onClose={() => setShowReference(false)} />}
       </main>
 
       <footer className="app__footer">

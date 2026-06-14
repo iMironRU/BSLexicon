@@ -18,6 +18,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:catalog": "tsx scripts/check-catalog.ts",
+    "extract:sp": "tsx scripts/extract-syntax-help.ts",
     "lint": "eslint . --ext .ts,.tsx",
     "verify": "npm run typecheck && npm run check:catalog && npm run test"
   },
