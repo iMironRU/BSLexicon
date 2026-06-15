@@ -1,0 +1,60 @@
+# Числовые функции
+- id: Цел
+  kind: function
+  names: { ru: Цел, en: Int }
+  category: Числа
+  signature: "Цел(Число): Число"
+  description: Возвращает целую часть числа (отбрасывает дробную, к нулю).
+  params:
+    - { name: Число, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Цел(7.9));
+      expect: "7"
+    - code: Сообщить(Цел(-7.9));
+      expect: "-7"
+
+- id: Окр
+  kind: function
+  names: { ru: Окр, en: Round }
+  category: Числа
+  signature: "Окр(Число, Разрядность, РежимОкругления): Число"
+  description: >-
+    Округляет число до указанной разрядности (по умолчанию 0). Дробная часть .5
+    округляется от нуля. (РежимОкругления пока не поддержан.)
+  params:
+    - { name: Число, type: Число, optional: false }
+    - { name: Разрядность, type: Число, optional: true }
+    - { name: РежимОкругления, type: Число, optional: true }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Окр(2.5));
+      expect: "3"
+    - code: Сообщить(Окр(3.14159, 2));
+      expect: "3.14"
+
+- id: Макс
+  kind: function
+  names: { ru: Макс, en: Max }
+  category: Числа
+  signature: "Макс(Значение1, Значение2, …): Произвольный"
+  description: Возвращает наибольшее из переданных значений (числа, строки или даты).
+  params:
+    - { name: Значение1, type: Произвольный, optional: false }
+  returns: { type: Произвольный }
+  examples:
+    - code: Сообщить(Макс(3, 7, 5));
+      expect: "7"
+
+- id: Мин
+  kind: function
+  names: { ru: Мин, en: Min }
+  category: Числа
+  signature: "Мин(Значение1, Значение2, …): Произвольный"
+  description: Возвращает наименьшее из переданных значений (числа, строки или даты).
+  params:
+    - { name: Значение1, type: Произвольный, optional: false }
+  returns: { type: Произвольный }
+  examples:
+    - code: Сообщить(Мин(3, 7, 5));
+      expect: "3"

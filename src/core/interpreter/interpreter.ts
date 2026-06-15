@@ -18,6 +18,7 @@ import {
   BslObject,
   NULL,
   UNDEFINED,
+  compareValues,
   copyValue,
   displayValue,
   isTruthy,
@@ -487,16 +488,9 @@ export class Interpreter {
 }
 
 function compare(l: BslValue, r: BslValue, line: number): number {
-  if (typeof l === 'number' && typeof r === 'number') {
-    return l < r ? -1 : l > r ? 1 : 0;
-  }
-  if (typeof l === 'string' && typeof r === 'string') {
-    return l < r ? -1 : l > r ? 1 : 0;
-  }
-  if (l instanceof BslDate && r instanceof BslDate) {
-    return l.time < r.time ? -1 : l.time > r.time ? 1 : 0;
-  }
-  throw new RuntimeError('Невозможно сравнить значения разных типов', line);
+  const c = compareValues(l, r);
+  if (c === undefined) throw new RuntimeError('Невозможно сравнить значения разных типов', line);
+  return c;
 }
 
 /** `Дата + Число` (секунды) → `Дата`; две даты складывать нельзя. */

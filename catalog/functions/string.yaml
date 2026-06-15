@@ -50,3 +50,151 @@
   examples:
     - code: Сообщить(СтрДлина("привет"));
       expect: "6"
+
+- id: СокрЛ
+  kind: function
+  names: { ru: СокрЛ, en: TrimL }
+  category: Строки
+  signature: "СокрЛ(Строка): Строка"
+  description: Удаляет незначащие пробельные символы в начале строки.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить("[" + СокрЛ("  ок  ") + "]");
+      expect: "[ок  ]"
+
+- id: СокрП
+  kind: function
+  names: { ru: СокрП, en: TrimR }
+  category: Строки
+  signature: "СокрП(Строка): Строка"
+  description: Удаляет незначащие пробельные символы в конце строки.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить("[" + СокрП("  ок  ") + "]");
+      expect: "[  ок]"
+
+- id: Лев
+  kind: function
+  names: { ru: Лев, en: Left }
+  category: Строки
+  signature: "Лев(Строка, ЧислоСимволов): Строка"
+  description: Возвращает первые ЧислоСимволов символов строки.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+    - { name: ЧислоСимволов, type: Число, optional: false }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить(Лев("привет", 3));
+      expect: "при"
+
+- id: Прав
+  kind: function
+  names: { ru: Прав, en: Right }
+  category: Строки
+  signature: "Прав(Строка, ЧислоСимволов): Строка"
+  description: Возвращает последние ЧислоСимволов символов строки.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+    - { name: ЧислоСимволов, type: Число, optional: false }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить(Прав("привет", 2));
+      expect: "ет"
+
+- id: Сред
+  kind: function
+  names: { ru: Сред, en: Mid }
+  category: Строки
+  signature: "Сред(Строка, НачальныйНомер, ЧислоСимволов): Строка"
+  description: >-
+    Возвращает подстроку начиная с позиции НачальныйНомер (с 1). Без
+    ЧислоСимволов — до конца строки.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+    - { name: НачальныйНомер, type: Число, optional: false }
+    - { name: ЧислоСимволов, type: Число, optional: true }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить(Сред("привет", 2, 3));
+      expect: "рив"
+
+- id: СтрНайти
+  kind: function
+  names: { ru: СтрНайти, en: StrFind }
+  category: Строки
+  signature: "СтрНайти(Строка, ПодстрокаПоиска): Число"
+  description: >-
+    Возвращает позицию (с 1) первого вхождения подстроки или 0, если не найдено.
+    (Направление поиска и начальная позиция пока не поддержаны.)
+  params:
+    - { name: Строка, type: Строка, optional: false }
+    - { name: ПодстрокаПоиска, type: Строка, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(СтрНайти("привет", "ив"));
+      expect: "3"
+    - code: Сообщить(СтрНайти("привет", "xx"));
+      expect: "0"
+
+- id: СтрЗаменить
+  kind: function
+  names: { ru: СтрЗаменить, en: StrReplace }
+  category: Строки
+  signature: "СтрЗаменить(Строка, ПодстрокаПоиска, ПодстрокаЗамены): Строка"
+  description: Заменяет все вхождения подстроки на строку замены.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+    - { name: ПодстрокаПоиска, type: Строка, optional: false }
+    - { name: ПодстрокаЗамены, type: Строка, optional: false }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить(СтрЗаменить("а-б-в", "-", "+"));
+      expect: "а+б+в"
+
+- id: СтрРазделить
+  kind: function
+  names: { ru: СтрРазделить, en: StrSplit }
+  category: Строки
+  signature: "СтрРазделить(Строка, Разделитель, ВключатьПустые): Массив"
+  description: >-
+    Разбивает строку на Массив подстрок. Каждый символ Разделителя — отдельный
+    разделитель. ВключатьПустые (по умолчанию Истина) — оставлять ли пустые части.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+    - { name: Разделитель, type: Строка, optional: false }
+    - { name: ВключатьПустые, type: Булево, optional: true }
+  returns: { type: Массив }
+  examples:
+    - code: Сообщить(СтрРазделить("a,b,c", ",").Количество());
+      expect: "3"
+
+- id: СтрСоединить
+  kind: function
+  names: { ru: СтрСоединить, en: StrConcat }
+  category: Строки
+  signature: "СтрСоединить(Строки, Разделитель): Строка"
+  description: Соединяет элементы Массива в строку через Разделитель (по умолчанию пустой).
+  params:
+    - { name: Строки, type: Массив, optional: false }
+    - { name: Разделитель, type: Строка, optional: true }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить(СтрСоединить(СтрРазделить("a,b,c", ","), "|"));
+      expect: "a|b|c"
+
+- id: СтрЧислоСтрок
+  kind: function
+  names: { ru: СтрЧислоСтрок, en: StrLineCount }
+  category: Строки
+  signature: "СтрЧислоСтрок(Строка): Число"
+  description: Возвращает число строк (разделённых переводом строки) в тексте.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(СтрЧислоСтрок("одна строка"));
+      expect: "1"

@@ -61,6 +61,20 @@ export function valuesEqual(l: BslValue, r: BslValue): boolean {
   return l === r;
 }
 
+/**
+ * Сравнение значений для операторов `< > <= >=` и функций `Макс`/`Мин`:
+ * числа и строки — естественно, даты — по моменту. `undefined` — значения
+ * несравнимы (разные типы): вызывающий решает, как сообщить об ошибке.
+ */
+export function compareValues(l: BslValue, r: BslValue): number | undefined {
+  if (typeof l === 'number' && typeof r === 'number') return l < r ? -1 : l > r ? 1 : 0;
+  if (typeof l === 'string' && typeof r === 'string') return l < r ? -1 : l > r ? 1 : 0;
+  if (l instanceof BslDate && r instanceof BslDate) {
+    return l.time < r.time ? -1 : l.time > r.time ? 1 : 0;
+  }
+  return undefined;
+}
+
 /** Имя типа значения на русском (как возвращал бы `ТипЗнч`). */
 export function typeName(value: BslValue): string {
   switch (typeof value) {

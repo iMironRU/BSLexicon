@@ -1,4 +1,5 @@
 import { RuntimeError } from '../errors';
+import { BslArray } from './collections';
 import {
   BslDate,
   addMonths,
@@ -13,13 +14,18 @@ import {
   nowDate,
   startOfDay,
 } from './dates';
-import { UNDEFINED, toBslString, toNumber, typeName } from './values';
+import { UNDEFINED, compareValues, isTruthy, toBslString, toNumber, typeName } from './values';
 import type { BslValue } from './values';
 
 /** Требует Дату; иначе — ошибка рантайма (у дат-функций один аргумент-дата). */
 function asDate(value: BslValue, fn: string): BslDate {
   if (value instanceof BslDate) return value;
   throw new RuntimeError(`«${fn}»: ожидалась Дата, получено «${typeName(value)}»`);
+}
+
+/** Экранирует символы для использования внутри класса регулярного выражения [ ]. */
+function escapeForCharClass(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
 }
 
 /** Контекст исполнения, доступный встроенной функции (вывод, текущая ошибка). */
@@ -177,7 +183,154 @@ export const BUILTINS: readonly Builtin[] = [
     arity: [2, 2],
     impl: (args) => addMonths(asDate(args[0], 'ДобавитьМесяц'), toNumber(args[1])),
   },
+
+  // ── Строковые ─────────────────────────────────────────────────
+  {
+    id: 'СокрЛ',
+    aliases: ['triml'],
+    arity: [1, 1],
+    impl: (args) => toBslString(args[0]).replace(/^\s+/, ''),
+  },
+  {
+    id: 'СокрП',
+    aliases: ['trimr'],
+    arity: [1, 1],
+    impl: (args) => toBslString(args[0]).replace(/\s+$/, ''),
+  },
+  {
+    id: 'Лев',
+    aliases: ['left'],
+    arity: [2, 2],
+    impl: (args) => {
+      const n = Math.trunc(toNumber(args[1]));
+      return n <= 0 ? '' : toBslString(args[0]).slice(0, n);
+    },
+  },
+  {
+    id: 'Прав',
+    aliases: ['right'],
+    arity: [2, 2],
+    impl: (args) => {
+      const s = toBslString(args[0]);
+      const n = Math.trunc(toNumber(args[1]));
+      return n <= 0 ? '' : s.slice(Math.max(0, s.length - n));
+    },
+  },
+  {
+    id: 'Сред',
+    aliases: ['mid'],
+    arity: [2, 3],
+    impl: (args) => {
+      const s = toBslString(args[0]);
+      const start = Math.max(1, Math.trunc(toNumber(args[1]))) - 1; // НачальныйНомер с 1
+      if (args.length > 2) {
+        const count = Math.trunc(toNumber(args[2]));
+        return count <= 0 ? '' : s.slice(start, start + count);
+      }
+      return s.slice(start);
+    },
+  },
+  {
+    id: 'СтрНайти',
+    aliases: ['strfind'],
+    arity: [2, 2],
+    // Позиция первого вхождения с 1 (0 — не найдено). Направление/начало пока не поддержаны.
+    impl: (args) => {
+      const needle = toBslString(args[1]);
+      if (needle === '') return 0;
+      const i = toBslString(args[0]).indexOf(needle);
+      return i < 0 ? 0 : i + 1;
+    },
+  },
+  {
+    id: 'СтрЗаменить',
+    aliases: ['strreplace'],
+    arity: [3, 3],
+    impl: (args) => {
+      const s = toBslString(args[0]);
+      const find = toBslString(args[1]);
+      return find === '' ? s : s.split(find).join(toBslString(args[2]));
+    },
+  },
+  {
+    id: 'СтрРазделить',
+    aliases: ['strsplit'],
+    arity: [2, 3],
+    // Каждый символ Разделителя — отдельный разделитель (как в 1С).
+    impl: (args) => {
+      const s = toBslString(args[0]);
+      const sep = toBslString(args[1]);
+      const includeEmpty = args.length > 2 ? isTruthy(args[2]) : true;
+      let parts = sep === '' ? [s] : s.split(new RegExp(`[${escapeForCharClass(sep)}]`));
+      if (!includeEmpty) parts = parts.filter((p) => p !== '');
+      return new BslArray(parts);
+    },
+  },
+  {
+    id: 'СтрСоединить',
+    aliases: ['strconcat'],
+    arity: [1, 2],
+    impl: (args) => {
+      const arr = args[0];
+      if (!(arr instanceof BslArray)) {
+        throw new RuntimeError(
+          `«СтрСоединить»: первый аргумент должен быть Массивом, получено «${typeName(arr)}»`,
+        );
+      }
+      const sep = args.length > 1 ? toBslString(args[1]) : '';
+      return arr.items.map((v) => toBslString(v)).join(sep);
+    },
+  },
+  {
+    id: 'СтрЧислоСтрок',
+    aliases: ['strlinecount'],
+    arity: [1, 1],
+    impl: (args) => toBslString(args[0]).split('\n').length,
+  },
+
+  // ── Числовые ──────────────────────────────────────────────────
+  {
+    id: 'Цел',
+    aliases: ['int'],
+    arity: [1, 1],
+    impl: (args) => Math.trunc(toNumber(args[0])),
+  },
+  {
+    id: 'Окр',
+    aliases: ['round'],
+    arity: [1, 3],
+    // Округление до Разрядности (по умолчанию 0), .5 — от нуля. Режим пока не поддержан.
+    impl: (args) => {
+      const num = toNumber(args[0]);
+      const digits = args.length > 1 ? Math.trunc(toNumber(args[1])) : 0;
+      const factor = 10 ** digits;
+      return (Math.sign(num) * Math.round(Math.abs(num) * factor)) / factor;
+    },
+  },
+  {
+    id: 'Макс',
+    aliases: ['max'],
+    arity: [1, 255],
+    impl: (args) => pickExtreme(args, 'Макс', 1),
+  },
+  {
+    id: 'Мин',
+    aliases: ['min'],
+    arity: [1, 255],
+    impl: (args) => pickExtreme(args, 'Мин', -1),
+  },
 ];
+
+/** Возвращает максимум (`dir=1`) или минимум (`dir=-1`) из аргументов. */
+function pickExtreme(args: BslValue[], fn: string, dir: number): BslValue {
+  let best = args[0];
+  for (let i = 1; i < args.length; i += 1) {
+    const c = compareValues(args[i], best);
+    if (c === undefined) throw new RuntimeError(`«${fn}»: значения несравнимы`);
+    if (Math.sign(c) === dir) best = args[i];
+  }
+  return best;
+}
 
 const LOOKUP = new Map<string, Builtin>();
 for (const b of BUILTINS) {
