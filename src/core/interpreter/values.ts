@@ -50,6 +50,17 @@ export function copyValue(value: BslValue, seen: Map<BslObject, BslObject> = new
   return already ?? value.copy(seen);
 }
 
+/**
+ * Равенство значений BSL (для оператора `=` и поиска ключа/значения в коллекциях):
+ * даты — по моменту времени, остальное — по значению (примитивы) или ссылке
+ * (коллекции). Именно поэтому НЕ голый `===`: два разных объекта `Дата` с одним
+ * моментом равны, как и в 1С.
+ */
+export function valuesEqual(l: BslValue, r: BslValue): boolean {
+  if (l instanceof BslDate && r instanceof BslDate) return l.time === r.time;
+  return l === r;
+}
+
 /** Имя типа значения на русском (как возвращал бы `ТипЗнч`). */
 export function typeName(value: BslValue): string {
   switch (typeof value) {

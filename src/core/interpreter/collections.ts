@@ -12,9 +12,11 @@ import {
   UNDEFINED,
   copyValue,
   displayValue,
+  isTruthy,
   toBslString,
   toNumber,
   typeName,
+  valuesEqual,
 } from './values';
 import type { BslValue } from './values';
 
@@ -106,6 +108,44 @@ export class BslKeyValue extends BslObject {
   }
 }
 
+/** Элемент списка значений: значение + представление + пометка (всё изменяемо). */
+export class BslValueListItem extends BslObject {
+  readonly typeName = 'ЭлементСпискаЗначений';
+  constructor(
+    public value: BslValue,
+    public presentation: string = '',
+    public check: boolean = false,
+  ) {
+    super();
+  }
+  display(depth: number): string {
+    return this.presentation !== '' ? this.presentation : cell(this.value, depth);
+  }
+  copy(seen: Map<BslObject, BslObject>): BslValueListItem {
+    const out = new BslValueListItem(UNDEFINED, this.presentation, this.check);
+    seen.set(this, out);
+    out.value = copyValue(this.value, seen);
+    return out;
+  }
+}
+
+export class BslValueList extends BslObject {
+  readonly typeName = 'СписокЗначений';
+  readonly items: BslValueListItem[] = [];
+  display(depth: number): string {
+    if (depth >= 2) return `СписокЗначений (${this.items.length})`;
+    const shown = this.items.slice(0, MAX_SHOWN).map((i) => i.display(depth + 1));
+    if (this.items.length > MAX_SHOWN) shown.push('…');
+    return `СписокЗначений [${shown.join(', ')}]`;
+  }
+  copy(seen: Map<BslObject, BslObject>): BslValueList {
+    const out = new BslValueList();
+    seen.set(this, out);
+    for (const item of this.items) out.items.push(copyValue(item, seen) as BslValueListItem);
+    return out;
+  }
+}
+
 // ── Доступ к членам / индексам / обход ───────────────────────────
 
 export function getMember(obj: BslValue, name: string, line: number): BslValue {
@@ -119,6 +159,13 @@ export function getMember(obj: BslValue, name: string, line: number): BslValue {
     if (key === 'ключ' || key === 'key') return obj.key;
     if (key === 'значение' || key === 'value') return obj.value;
     throw new RuntimeError(`КлючИЗначение: нет свойства «${name}»`, line);
+  }
+  if (obj instanceof BslValueListItem) {
+    const key = name.toLowerCase();
+    if (key === 'значение' || key === 'value') return obj.value;
+    if (key === 'представление' || key === 'presentation') return obj.presentation;
+    if (key === 'пометка' || key === 'check') return obj.check;
+    throw new RuntimeError(`ЭлементСпискаЗначений: нет свойства «${name}»`, line);
   }
   throw new RuntimeError(`Значение типа «${typeName(obj)}» не имеет свойства «${name}»`, line);
 }
@@ -135,6 +182,22 @@ export function setMember(obj: BslValue, name: string, value: BslValue, line: nu
     hit.value = value;
     return;
   }
+  if (obj instanceof BslValueListItem) {
+    const key = name.toLowerCase();
+    if (key === 'значение' || key === 'value') {
+      obj.value = value;
+      return;
+    }
+    if (key === 'представление' || key === 'presentation') {
+      obj.presentation = toBslString(value);
+      return;
+    }
+    if (key === 'пометка' || key === 'check') {
+      obj.check = isTruthy(value);
+      return;
+    }
+    throw new RuntimeError(`ЭлементСпискаЗначений: нет свойства «${name}»`, line);
+  }
   throw new RuntimeError(
     `Значению типа «${typeName(obj)}» нельзя присвоить свойство «${name}»`,
     line,
@@ -143,8 +206,9 @@ export function setMember(obj: BslValue, name: string, value: BslValue, line: nu
 
 export function getIndex(obj: BslValue, key: BslValue, line: number): BslValue {
   if (obj instanceof BslArray) return obj.items[arrayIndex(obj, key, line)];
+  if (obj instanceof BslValueList) return obj.items[listIndex(obj, key, line)];
   if (obj instanceof BslMap) {
-    const hit = obj.pairs.find((p) => p.key === key);
+    const hit = obj.pairs.find((p) => valuesEqual(p.key, key));
     return hit ? hit.value : UNDEFINED;
   }
   throw new RuntimeError(
@@ -159,7 +223,7 @@ export function setIndex(obj: BslValue, key: BslValue, value: BslValue, line: nu
     return;
   }
   if (obj instanceof BslMap) {
-    const hit = obj.pairs.find((p) => p.key === key);
+    const hit = obj.pairs.find((p) => valuesEqual(p.key, key));
     if (hit) hit.value = value;
     else obj.pairs.push({ key, value });
     return;
@@ -172,6 +236,7 @@ export function setIndex(obj: BslValue, key: BslValue, value: BslValue, line: nu
 
 export function iterate(obj: BslValue, line: number): BslValue[] {
   if (obj instanceof BslArray) return [...obj.items];
+  if (obj instanceof BslValueList) return [...obj.items];
   if (obj instanceof BslMap) return obj.pairs.map((p) => new BslKeyValue(p.key, p.value));
   if (obj instanceof BslStructure) {
     return [...obj.props.values()].map((p) => new BslKeyValue(p.display, p.value));
@@ -183,6 +248,17 @@ function arrayIndex(arr: BslArray, key: BslValue, line: number): number {
   const i = toNumber(key);
   if (!Number.isInteger(i) || i < 0 || i >= arr.items.length) {
     throw new RuntimeError(`Индекс ${i} за границами массива (размер ${arr.items.length})`, line);
+  }
+  return i;
+}
+
+function listIndex(list: BslValueList, key: BslValue, line: number): number {
+  const i = toNumber(key);
+  if (!Number.isInteger(i) || i < 0 || i >= list.items.length) {
+    throw new RuntimeError(
+      `Индекс ${i} за границами списка значений (размер ${list.items.length})`,
+      line,
+    );
   }
   return i;
 }
@@ -341,7 +417,7 @@ const MAP_METHODS: MethodDef[] = [
     arity: [1, 1],
     impl: (self, args) => {
       const m = self as BslMap;
-      const i = m.pairs.findIndex((p) => p.key === args[0]);
+      const i = m.pairs.findIndex((p) => valuesEqual(p.key, args[0]));
       if (i >= 0) m.pairs.splice(i, 1);
       return UNDEFINED;
     },
@@ -363,10 +439,107 @@ const MAP_METHODS: MethodDef[] = [
   },
 ];
 
+const VALUELIST_METHODS: MethodDef[] = [
+  {
+    name: 'Добавить',
+    aliases: ['add'],
+    arity: [1, 3],
+    impl: (self, args) => {
+      const list = self as BslValueList;
+      const presentation = args.length > 1 ? toBslString(args[1]) : '';
+      const check = args.length > 2 ? isTruthy(args[2]) : false;
+      const item = new BslValueListItem(args[0], presentation, check);
+      list.items.push(item);
+      return item;
+    },
+  },
+  {
+    name: 'Количество',
+    aliases: ['count'],
+    arity: [0, 0],
+    impl: (self) => (self as BslValueList).items.length,
+  },
+  {
+    name: 'Получить',
+    aliases: ['get'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      const list = self as BslValueList;
+      return list.items[listIndex(list, args[0], line)];
+    },
+  },
+  {
+    name: 'Вставить',
+    aliases: ['insert'],
+    arity: [2, 4],
+    impl: (self, args, line) => {
+      const list = self as BslValueList;
+      const i = toNumber(args[0]);
+      if (!Number.isInteger(i) || i < 0 || i > list.items.length) {
+        throw new RuntimeError(`Вставить: индекс ${i} вне диапазона 0..${list.items.length}`, line);
+      }
+      const presentation = args.length > 2 ? toBslString(args[2]) : '';
+      const check = args.length > 3 ? isTruthy(args[3]) : false;
+      const item = new BslValueListItem(args[1], presentation, check);
+      list.items.splice(i, 0, item);
+      return item;
+    },
+  },
+  {
+    name: 'Удалить',
+    aliases: ['delete'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      const list = self as BslValueList;
+      if (args[0] instanceof BslValueListItem) {
+        const i = list.items.indexOf(args[0]);
+        if (i >= 0) list.items.splice(i, 1);
+      } else {
+        list.items.splice(listIndex(list, args[0], line), 1);
+      }
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'Очистить',
+    aliases: ['clear'],
+    arity: [0, 0],
+    impl: (self) => {
+      (self as BslValueList).items.length = 0;
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'НайтиПоЗначению',
+    aliases: ['findbyvalue'],
+    arity: [1, 1],
+    impl: (self, args) => {
+      const hit = (self as BslValueList).items.find((it) => valuesEqual(it.value, args[0]));
+      return hit ?? UNDEFINED;
+    },
+  },
+  {
+    name: 'Индекс',
+    aliases: ['indexof'],
+    arity: [1, 1],
+    impl: (self, args) => {
+      const list = self as BslValueList;
+      return args[0] instanceof BslValueListItem ? list.items.indexOf(args[0]) : -1;
+    },
+  },
+  {
+    name: 'ВыгрузитьЗначения',
+    aliases: ['unloadvalues'],
+    arity: [0, 0],
+    impl: (self) => new BslArray((self as BslValueList).items.map((it) => it.value)),
+  },
+];
+
 const METHODS: Record<string, MethodDef[]> = {
   Массив: ARRAY_METHODS,
   Структура: STRUCT_METHODS,
   Соответствие: MAP_METHODS,
+  СписокЗначений: VALUELIST_METHODS,
 };
 
 const METHOD_LOOKUP = new Map<string, MethodDef>();
@@ -422,6 +595,11 @@ const CONSTRUCTORS: ConstructorDef[] = [
     type: 'Соответствие',
     aliases: ['соответствие', 'map'],
     build: () => new BslMap(),
+  },
+  {
+    type: 'СписокЗначений',
+    aliases: ['списокзначений', 'valuelist'],
+    build: () => new BslValueList(),
   },
 ];
 

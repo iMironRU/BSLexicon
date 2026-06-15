@@ -24,6 +24,7 @@ import {
   toBslString,
   toNumber,
   typeName,
+  valuesEqual,
 } from './values';
 import type { BslValue } from './values';
 
@@ -496,12 +497,6 @@ function compare(l: BslValue, r: BslValue, line: number): number {
     return l.time < r.time ? -1 : l.time > r.time ? 1 : 0;
   }
   throw new RuntimeError('Невозможно сравнить значения разных типов', line);
-}
-
-/** Равенство значений: даты — по моменту времени, остальное — по ссылке/значению JS. */
-function valuesEqual(l: BslValue, r: BslValue): boolean {
-  if (l instanceof BslDate && r instanceof BslDate) return l.time === r.time;
-  return l === r;
 }
 
 /** `Дата + Число` (секунды) → `Дата`; две даты складывать нельзя. */
