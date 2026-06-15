@@ -7,24 +7,7 @@ import { ReferencePanel } from './components/ReferencePanel';
 import { DebugSession, run } from '@core/index';
 import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } from '@core/index';
 import { loadCatalog } from './catalog';
-
-const SAMPLE = `// «Войти» зайдёт внутрь Удвоить. Клик слева — точка останова.
-Функция Удвоить(Знач Х)
-    Возврат Х * 2;
-КонецФункции
-
-Числа = Новый Массив;
-Для Сч = 1 По 3 Цикл
-    Числа.Добавить(Удвоить(Сч));
-КонецЦикла;
-
-Итог = 0;
-Для Каждого Н Из Числа Цикл
-    Итог = Итог + Н;
-КонецЦикла;
-
-Сообщить("Элементов: " + Числа.Количество() + ", сумма = " + Итог);
-`;
+import { EXAMPLES } from './examples';
 
 interface PanelView {
   output: string[] | null;
@@ -37,7 +20,8 @@ interface PanelView {
 const IDLE: PanelView = { output: null, error: null, variables: [], callStack: [], line: null };
 
 export function App() {
-  const [source, setSource] = useState<string>(SAMPLE);
+  const [source, setSource] = useState<string>(EXAMPLES[0].code);
+  const [activeExample, setActiveExample] = useState<string | null>(EXAMPLES[0].id);
   const [batch, setBatch] = useState<RunResult | null>(null);
   const [snap, setSnap] = useState<DebugSnapshot | null>(null);
   const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set());
@@ -94,7 +78,20 @@ export function App() {
   const handleSourceChange = useCallback(
     (next: string) => {
       setSource(next);
+      setActiveExample(null); // правка вручную — больше не «чистый» пресет
       // Правка кода съезжает с номеров строк — гасим активную сессию (брейкпоинты храним).
+      reset();
+    },
+    [reset],
+  );
+
+  /** Загрузить пример в редактор: заменяем код, сбрасываем отладку и точки останова. */
+  const handleSelectExample = useCallback(
+    (id: string, code: string) => {
+      setSource(code);
+      setActiveExample(id);
+      setBreakpoints(new Set());
+      setBatch(null);
       reset();
     },
     [reset],
@@ -190,6 +187,20 @@ export function App() {
           </button>
         </div>
       </header>
+
+      <nav className="app__examples" aria-label="Примеры">
+        <span className="app__examples-label">Примеры:</span>
+        {EXAMPLES.map((ex) => (
+          <button
+            key={ex.id}
+            className={'chip' + (activeExample === ex.id ? ' chip--active' : '')}
+            onClick={() => handleSelectExample(ex.id, ex.code)}
+            type="button"
+          >
+            {ex.title}
+          </button>
+        ))}
+      </nav>
 
       <main className="app__body">
         <section className="app__editor">
