@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
-import type { OnMount } from '@monaco-editor/react';
+import type { BeforeMount, OnMount } from '@monaco-editor/react';
 import type { Catalog } from '@core/index';
 import { registerCatalogProviders } from '../monaco/providers';
+import { BSL_LANGUAGE_ID, BSL_THEME, registerBslLanguage } from '../monaco/language';
 
 type CodeEditor = Parameters<OnMount>[0];
 type MonacoApi = Parameters<OnMount>[1];
@@ -23,9 +24,9 @@ interface EditorProps {
 }
 
 /**
- * Обёртка над Monaco. Подсветку пока берём от `vb` как близкую к BSL (впереди
- * TextMate-грамматика 1c-syntax). Автодополнение, hover и signature help берутся
- * из каталога языка (см. ../monaco/providers).
+ * Обёртка над Monaco. Подсветка — собственная Monarch-грамматика BSL
+ * (см. ../monaco/language), переиспользует таблицу ключевых слов и каталог.
+ * Автодополнение, hover и signature help берутся из каталога (см. ../monaco/providers).
  *
  * Глиф-маржа кликабельна: клик по ней ставит/снимает точку останова.
  * Текущая строка отладки подсвечивается через коллекцию декораций.
@@ -46,6 +47,11 @@ export function Editor({
   // Колбэк тоггла читаем через ref: слушатель мыши регистрируем один раз.
   const toggleRef = useRef(onToggleBreakpoint);
   toggleRef.current = onToggleBreakpoint;
+
+  // До создания модели — регистрируем язык BSL, грамматику подсветки и тему.
+  const handleBeforeMount: BeforeMount = (monaco) => {
+    registerBslLanguage(monaco, catalog);
+  };
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -89,10 +95,11 @@ export function Editor({
   return (
     <MonacoEditor
       height="100%"
-      defaultLanguage="vb"
-      theme="vs-dark"
+      defaultLanguage={BSL_LANGUAGE_ID}
+      theme={BSL_THEME}
       value={value}
       onChange={(next) => onChange(next ?? '')}
+      beforeMount={handleBeforeMount}
       onMount={handleMount}
       options={{
         fontSize: 14,

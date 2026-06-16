@@ -8,6 +8,7 @@
  */
 import type { OnMount } from '@monaco-editor/react';
 import type { Catalog, CatalogEntry } from '@core/index';
+import { BSL_LANGUAGE_ID } from './language';
 
 type MonacoApi = Parameters<OnMount>[1];
 type CompletionProvider = Parameters<MonacoApi['languages']['registerCompletionItemProvider']>[1];
@@ -109,7 +110,7 @@ function registerCompletion(monaco: MonacoApi, catalog: Catalog): void {
     },
   };
 
-  monaco.languages.registerCompletionItemProvider('vb', provider);
+  monaco.languages.registerCompletionItemProvider(BSL_LANGUAGE_ID, provider);
 }
 
 // --- Hover ---
@@ -156,7 +157,7 @@ function registerHover(monaco: MonacoApi, catalog: Catalog): void {
     },
   };
 
-  monaco.languages.registerHoverProvider('vb', provider);
+  monaco.languages.registerHoverProvider(BSL_LANGUAGE_ID, provider);
 }
 
 // --- Signature help ---
@@ -239,7 +240,7 @@ function registerSignatureHelp(monaco: MonacoApi, catalog: Catalog): void {
     },
   };
 
-  monaco.languages.registerSignatureHelpProvider('vb', provider);
+  monaco.languages.registerSignatureHelpProvider(BSL_LANGUAGE_ID, provider);
 }
 
 // --- Регистрация всех провайдеров (один раз на инстанс Monaco) ---

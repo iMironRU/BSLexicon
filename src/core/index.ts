@@ -12,6 +12,8 @@ export { parse } from './parser/parser';
 export { Interpreter } from './interpreter/interpreter';
 export { builtinIds, BUILTINS } from './interpreter/builtins';
 export { methodIds } from './interpreter/collections';
+export { KEYWORDS } from './lexer/keywords';
+export type { KeywordKind } from './lexer/keywords';
 export { BslError, LexError, ParseError, RuntimeError } from './errors';
 export { DebugSession } from './debugger/session';
 export { toRunError } from './run-error';
