@@ -146,6 +146,112 @@ export class BslValueList extends BslObject {
   }
 }
 
+// ── ТаблицаЗначений: колонки, строки, ячейки ──────────────────────
+
+/** Колонка таблицы значений: имя + заголовок (изменяемы); знает свою таблицу. */
+export class BslColumn extends BslObject {
+  readonly typeName = 'КолонкаТаблицыЗначений';
+  owner: BslValueTable | null = null;
+  constructor(
+    public name: string,
+    public title: string,
+  ) {
+    super();
+  }
+  display(): string {
+    return this.name;
+  }
+  copy(): BslColumn {
+    return new BslColumn(this.name, this.title);
+  }
+}
+
+/** Коллекция колонок таблицы значений. Изменения колонок синхронно меняют строки. */
+export class BslColumnCollection extends BslObject {
+  readonly typeName = 'КоллекцияКолонокТаблицыЗначений';
+  readonly items: BslColumn[] = [];
+  constructor(public owner: BslValueTable) {
+    super();
+  }
+  display(): string {
+    return `Колонки [${this.items.map((c) => c.name).join(', ')}]`;
+  }
+  copy(seen: Map<BslObject, BslObject>): BslColumnCollection {
+    // Редкий случай — копия коллекции колонок отдельно от таблицы.
+    const t = new BslValueTable();
+    seen.set(this, t.columns);
+    for (const c of this.items) t.addColumn(c.name, c.title);
+    return t.columns;
+  }
+}
+
+/** Строка таблицы значений: ячейки по имени колонки (в нижнем регистре). */
+export class BslValueTableRow extends BslObject {
+  readonly typeName = 'СтрокаТаблицыЗначений';
+  readonly cells = new Map<string, BslValue>();
+  constructor(public owner: BslValueTable) {
+    super();
+  }
+  display(depth: number): string {
+    const parts = this.owner.columns.items.map(
+      (c) => `${c.name}: ${cell(this.cells.get(c.name.toLowerCase()) ?? UNDEFINED, depth + 1)}`,
+    );
+    return `Строка{${parts.join('; ')}}`;
+  }
+  copy(seen: Map<BslObject, BslObject>): BslValueTableRow {
+    const t = new BslValueTable();
+    for (const c of this.owner.columns.items) t.addColumn(c.name, c.title);
+    const r = new BslValueTableRow(t);
+    seen.set(this, r);
+    for (const [k, v] of this.cells) r.cells.set(k, copyValue(v, seen));
+    t.rows.push(r);
+    return r;
+  }
+}
+
+export class BslValueTable extends BslObject {
+  readonly typeName = 'ТаблицаЗначений';
+  readonly columns: BslColumnCollection;
+  readonly rows: BslValueTableRow[] = [];
+  constructor() {
+    super();
+    this.columns = new BslColumnCollection(this);
+  }
+  display(depth: number): string {
+    const size = `${this.rows.length}×${this.columns.items.length}`;
+    if (depth >= 2) return `ТаблицаЗначений (${size})`;
+    return `ТаблицаЗначений ${size} [${this.columns.items.map((c) => c.name).join(', ')}]`;
+  }
+  copy(seen: Map<BslObject, BslObject>): BslValueTable {
+    const t = new BslValueTable();
+    seen.set(this, t);
+    for (const c of this.columns.items) t.addColumn(c.name, c.title);
+    for (const row of this.rows) {
+      const r = new BslValueTableRow(t);
+      for (const [k, v] of row.cells) r.cells.set(k, copyValue(v, seen));
+      t.rows.push(r);
+    }
+    return t;
+  }
+
+  /** Добавляет колонку и ячейку в каждую существующую строку. */
+  addColumn(name: string, title: string): BslColumn {
+    const col = new BslColumn(name, title);
+    col.owner = this;
+    this.columns.items.push(col);
+    for (const row of this.rows) row.cells.set(name.toLowerCase(), UNDEFINED);
+    return col;
+  }
+
+  /** Добавляет пустую строку (ячейки по текущим колонкам). */
+  addRow(): BslValueTableRow {
+    const row = new BslValueTableRow(this);
+    for (const c of this.columns.items) row.cells.set(c.name.toLowerCase(), UNDEFINED);
+    this.rows.push(row);
+    return row;
+  }
+}
+
 // ── Доступ к членам / индексам / обход ───────────────────────────
 
 export function getMember(obj: BslValue, name: string, line: number): BslValue {
@@ -166,6 +272,22 @@ export function getMember(obj: BslValue, name: string, line: number): BslValue {
     if (key === 'представление' || key === 'presentation') return obj.presentation;
     if (key === 'пометка' || key === 'check') return obj.check;
     throw new RuntimeError(`ЭлементСпискаЗначений: нет свойства «${name}»`, line);
+  }
+  if (obj instanceof BslValueTable) {
+    const key = name.toLowerCase();
+    if (key === 'колонки' || key === 'columns') return obj.columns;
+    throw new RuntimeError(`ТаблицаЗначений: нет свойства «${name}»`, line);
+  }
+  if (obj instanceof BslColumn) {
+    const key = name.toLowerCase();
+    if (key === 'имя' || key === 'name') return obj.name;
+    if (key === 'заголовок' || key === 'title') return obj.title;
+    throw new RuntimeError(`КолонкаТаблицыЗначений: нет свойства «${name}»`, line);
+  }
+  if (obj instanceof BslValueTableRow) {
+    const key = name.toLowerCase();
+    if (obj.cells.has(key)) return obj.cells.get(key) as BslValue;
+    throw new RuntimeError(`СтрокаТаблицыЗначений: нет колонки «${name}»`, line);
   }
   throw new RuntimeError(`Значение типа «${typeName(obj)}» не имеет свойства «${name}»`, line);
 }
@@ -198,10 +320,45 @@ export function setMember(obj: BslValue, name: string, value: BslValue, line: nu
     }
     throw new RuntimeError(`ЭлементСпискаЗначений: нет свойства «${name}»`, line);
   }
+  if (obj instanceof BslColumn) {
+    const key = name.toLowerCase();
+    if (key === 'имя' || key === 'name') {
+      renameColumn(obj, toBslString(value));
+      return;
+    }
+    if (key === 'заголовок' || key === 'title') {
+      obj.title = toBslString(value);
+      return;
+    }
+    throw new RuntimeError(`КолонкаТаблицыЗначений: нет свойства «${name}»`, line);
+  }
+  if (obj instanceof BslValueTableRow) {
+    const key = name.toLowerCase();
+    if (obj.cells.has(key)) {
+      obj.cells.set(key, value);
+      return;
+    }
+    throw new RuntimeError(`СтрокаТаблицыЗначений: нет колонки «${name}»`, line);
+  }
   throw new RuntimeError(
     `Значению типа «${typeName(obj)}» нельзя присвоить свойство «${name}»`,
     line,
   );
+}
+
+/** Переименование колонки: меняет имя и перевешивает ячейки во всех строках таблицы. */
+function renameColumn(col: BslColumn, newName: string): void {
+  const oldKey = col.name.toLowerCase();
+  const newKey = newName.toLowerCase();
+  if (oldKey !== newKey && col.owner) {
+    for (const row of col.owner.rows) {
+      if (row.cells.has(oldKey)) {
+        row.cells.set(newKey, row.cells.get(oldKey) as BslValue);
+        row.cells.delete(oldKey);
+      }
+    }
+  }
+  col.name = newName;
 }
 
 export function getIndex(obj: BslValue, key: BslValue, line: number): BslValue {
@@ -211,10 +368,53 @@ export function getIndex(obj: BslValue, key: BslValue, line: number): BslValue {
     const hit = obj.pairs.find((p) => valuesEqual(p.key, key));
     return hit ? hit.value : UNDEFINED;
   }
+  if (obj instanceof BslValueTable) {
+    const i = toNumber(key);
+    if (!Number.isInteger(i) || i < 0 || i >= obj.rows.length) {
+      throw new RuntimeError(`Индекс строки ${i} за границами (строк ${obj.rows.length})`, line);
+    }
+    return obj.rows[i];
+  }
+  if (obj instanceof BslColumnCollection) {
+    const col = findColumn(obj, key, line);
+    return col;
+  }
+  if (obj instanceof BslValueTableRow) {
+    return obj.cells.get(rowCellKey(obj, key, line)) as BslValue;
+  }
   throw new RuntimeError(
     `Значение типа «${typeName(obj)}» не поддерживает обращение по индексу [ ]`,
     line,
   );
+}
+
+/** Колонка по индексу (Число) или имени (Строка). */
+function findColumn(coll: BslColumnCollection, key: BslValue, line: number): BslColumn {
+  if (typeof key === 'string') {
+    const col = coll.items.find((c) => c.name.toLowerCase() === key.toLowerCase());
+    if (!col) throw new RuntimeError(`Колонка «${key}» не найдена`, line);
+    return col;
+  }
+  const i = toNumber(key);
+  if (!Number.isInteger(i) || i < 0 || i >= coll.items.length) {
+    throw new RuntimeError(`Индекс колонки ${i} за границами (колонок ${coll.items.length})`, line);
+  }
+  return coll.items[i];
+}
+
+/** Ключ ячейки строки по индексу колонки (Число) или имени колонки (Строка). */
+function rowCellKey(row: BslValueTableRow, key: BslValue, line: number): string {
+  if (typeof key === 'string') {
+    const k = key.toLowerCase();
+    if (!row.cells.has(k)) throw new RuntimeError(`СтрокаТаблицыЗначений: нет колонки «${key}»`, line);
+    return k;
+  }
+  const i = toNumber(key);
+  const col = row.owner.columns.items[i];
+  if (!Number.isInteger(i) || i < 0 || !col) {
+    throw new RuntimeError(`Колонка с индексом ${i} не найдена`, line);
+  }
+  return col.name.toLowerCase();
 }
 
 export function setIndex(obj: BslValue, key: BslValue, value: BslValue, line: number): void {
@@ -226,6 +426,10 @@ export function setIndex(obj: BslValue, key: BslValue, value: BslValue, line: nu
     const hit = obj.pairs.find((p) => valuesEqual(p.key, key));
     if (hit) hit.value = value;
     else obj.pairs.push({ key, value });
+    return;
+  }
+  if (obj instanceof BslValueTableRow) {
+    obj.cells.set(rowCellKey(obj, key, line), value);
     return;
   }
   throw new RuntimeError(
@@ -241,6 +445,8 @@ export function iterate(obj: BslValue, line: number): BslValue[] {
   if (obj instanceof BslStructure) {
     return [...obj.props.values()].map((p) => new BslKeyValue(p.display, p.value));
   }
+  if (obj instanceof BslValueTable) return [...obj.rows];
+  if (obj instanceof BslColumnCollection) return [...obj.items];
   throw new RuntimeError(`Значение типа «${typeName(obj)}» нельзя обойти «Для Каждого»`, line);
 }
 
@@ -535,11 +741,167 @@ const VALUELIST_METHODS: MethodDef[] = [
   },
 ];
 
+const VALUETABLE_METHODS: MethodDef[] = [
+  {
+    name: 'Добавить',
+    aliases: ['add'],
+    arity: [0, 0],
+    impl: (self) => (self as BslValueTable).addRow(),
+  },
+  {
+    name: 'Количество',
+    aliases: ['count'],
+    arity: [0, 0],
+    impl: (self) => (self as BslValueTable).rows.length,
+  },
+  {
+    name: 'Получить',
+    aliases: ['get'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      const t = self as BslValueTable;
+      const i = toNumber(args[0]);
+      if (!Number.isInteger(i) || i < 0 || i >= t.rows.length) {
+        throw new RuntimeError(`Индекс строки ${i} за границами (строк ${t.rows.length})`, line);
+      }
+      return t.rows[i];
+    },
+  },
+  {
+    name: 'Удалить',
+    aliases: ['delete'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      const t = self as BslValueTable;
+      const idx = args[0] instanceof BslValueTableRow ? t.rows.indexOf(args[0]) : toNumber(args[0]);
+      if (idx < 0 || idx >= t.rows.length) {
+        throw new RuntimeError('Строка для удаления не найдена', line);
+      }
+      t.rows.splice(idx, 1);
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'Очистить',
+    aliases: ['clear'],
+    arity: [0, 0],
+    impl: (self) => {
+      (self as BslValueTable).rows.length = 0;
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'Итог',
+    aliases: ['total'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      const t = self as BslValueTable;
+      const key = columnKey(t, args[0], 'Итог', line);
+      let sum = 0;
+      for (const row of t.rows) sum += toNumber(row.cells.get(key) ?? 0);
+      return sum;
+    },
+  },
+  {
+    name: 'НайтиСтроки',
+    aliases: ['findrows'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      const t = self as BslValueTable;
+      const filter = args[0];
+      if (!(filter instanceof BslStructure)) {
+        throw new RuntimeError('НайтиСтроки: ожидалась Структура отбора (Колонка = Значение)', line);
+      }
+      // Ключи Структуры уже в нижнем регистре — как и ключи ячеек строки.
+      const conds: { key: string; value: BslValue }[] = [...filter.props.entries()].map(
+        ([key, p]) => ({ key, value: p.value }),
+      );
+      const found = new BslArray();
+      for (const row of t.rows) {
+        const match = conds.every((c) => {
+          const cellVal: BslValue = row.cells.get(c.key) ?? UNDEFINED;
+          return valuesEqual(cellVal, c.value);
+        });
+        if (match) found.items.push(row);
+      }
+      return found;
+    },
+  },
+  {
+    name: 'ВыгрузитьКолонку',
+    aliases: ['unloadcolumn'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      const t = self as BslValueTable;
+      const key = columnKey(t, args[0], 'ВыгрузитьКолонку', line);
+      return new BslArray(t.rows.map((row) => row.cells.get(key) ?? UNDEFINED));
+    },
+  },
+];
+
+const COLUMNS_METHODS: MethodDef[] = [
+  {
+    name: 'Добавить',
+    aliases: ['add'],
+    arity: [1, 3],
+    // Добавить(Имя, [Тип], [Заголовок]). Тип не моделируем; Заголовок по умолчанию = Имя.
+    impl: (self, args) => {
+      const coll = self as BslColumnCollection;
+      const name = toBslString(args[0]);
+      const title = args.length > 2 ? toBslString(args[2]) : name;
+      return coll.owner.addColumn(name, title);
+    },
+  },
+  {
+    name: 'Количество',
+    aliases: ['count'],
+    arity: [0, 0],
+    impl: (self) => (self as BslColumnCollection).items.length,
+  },
+  {
+    name: 'Получить',
+    aliases: ['get'],
+    arity: [1, 1],
+    impl: (self, args, line) => findColumn(self as BslColumnCollection, toNumber(args[0]), line),
+  },
+  {
+    name: 'Удалить',
+    aliases: ['delete'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      const coll = self as BslColumnCollection;
+      let idx: number;
+      if (args[0] instanceof BslColumn) idx = coll.items.indexOf(args[0]);
+      else if (typeof args[0] === 'string') {
+        const lower = args[0].toLowerCase();
+        idx = coll.items.findIndex((c) => c.name.toLowerCase() === lower);
+      } else idx = toNumber(args[0]);
+      if (idx < 0 || idx >= coll.items.length) {
+        throw new RuntimeError('Колонка для удаления не найдена', line);
+      }
+      const removed = coll.items.splice(idx, 1)[0];
+      for (const row of coll.owner.rows) row.cells.delete(removed.name.toLowerCase());
+      return UNDEFINED;
+    },
+  },
+];
+
+/** Имя колонки (ключ ячеек) с проверкой существования. */
+function columnKey(table: BslValueTable, name: BslValue, fn: string, line: number): string {
+  const key = toBslString(name).toLowerCase();
+  if (!table.columns.items.some((c) => c.name.toLowerCase() === key)) {
+    throw new RuntimeError(`«${fn}»: колонка «${toBslString(name)}» не найдена`, line);
+  }
+  return key;
+}
+
 const METHODS: Record<string, MethodDef[]> = {
   Массив: ARRAY_METHODS,
   Структура: STRUCT_METHODS,
   Соответствие: MAP_METHODS,
   СписокЗначений: VALUELIST_METHODS,
+  ТаблицаЗначений: VALUETABLE_METHODS,
+  КоллекцияКолонокТаблицыЗначений: COLUMNS_METHODS,
 };
 
 const METHOD_LOOKUP = new Map<string, MethodDef>();
@@ -600,6 +962,11 @@ const CONSTRUCTORS: ConstructorDef[] = [
     type: 'СписокЗначений',
     aliases: ['списокзначений', 'valuelist'],
     build: () => new BslValueList(),
+  },
+  {
+    type: 'ТаблицаЗначений',
+    aliases: ['таблицазначений', 'valuetable'],
+    build: () => new BslValueTable(),
   },
 ];
 
