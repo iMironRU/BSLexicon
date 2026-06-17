@@ -300,11 +300,78 @@ body {
 }
 
 .app__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 6px 16px;
   font-size: 11px;
   color: var(--fg-dim);
   background: var(--bg-header);
   border-top: 1px solid var(--border);
+}
+
+.app__footer-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+
+.app__footer-meta a {
+  color: var(--fg-dim);
+  text-decoration: none;
+}
+.app__footer-meta a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.app__build {
+  font-variant-numeric: tabular-nums;
+}
+
+.app__author {
+  font-size: 12px;
+  color: var(--fg-dim);
+  text-decoration: none;
+}
+.app__author:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* Баннер «доступна новая версия» */
+.update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--bg-header);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  z-index: 20;
+}
+
+.update-banner button {
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-run);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.update-banner button:hover {
+  background: var(--accent-run-hover);
 }
 
 /* ── Адаптив: телефоны и узкие планшеты ─────────────────────────── */
@@ -358,8 +425,14 @@ body {
     min-height: 0;
   }
 
-  /* Подсказка в футере на телефоне съедает место — прячем. */
+  /* Подсказка в футере на телефоне съедает место — прячем, версию и GitHub оставляем. */
+  .app__footer-hint {
+    display: none;
+  }
   .app__footer {
+    justify-content: flex-end;
+  }
+  .app__author {
     display: none;
   }
 }

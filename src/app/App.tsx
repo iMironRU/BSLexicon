@@ -8,6 +8,10 @@ import { DebugSession, run } from '@core/index';
 import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } from '@core/index';
 import { loadCatalog } from './catalog';
 import { EXAMPLES } from './examples';
+import { useVersionCheck } from './useVersionCheck';
+
+const REPO_URL = 'https://github.com/iMironRU/BSLexicon';
+const AUTHOR_URL = 'https://github.com/iMironRU';
 
 interface PanelView {
   output: string[] | null;
@@ -29,6 +33,7 @@ export function App() {
   const [showReference, setShowReference] = useState(false);
   const sessionRef = useRef<DebugSession | null>(null);
   const catalog = useMemo(() => loadCatalog(), []);
+  const updateAvailable = useVersionCheck();
 
   /** Новая сессия из текущего кода с перенесёнными точками останова. */
   const ensureSession = useCallback((): DebugSession => {
@@ -141,6 +146,9 @@ export function App() {
         <div className="app__brand">
           <span className="app__logo">BSLexicon</span>
           <span className="app__tagline">тренажёр языка 1С (BSL)</span>
+          <a className="app__author" href={AUTHOR_URL} target="_blank" rel="noopener noreferrer">
+            от iMironRU
+          </a>
         </div>
         <div className="app__controls">
           {status && <span className="app__status">{status}</span>}
@@ -230,8 +238,27 @@ export function App() {
       </main>
 
       <footer className="app__footer">
-        Клик в левом поле — точка останова · Шаг / Войти / Выйти / Продолжить · Фаза&nbsp;1
+        <span className="app__footer-hint">
+          Клик в левом поле — точка останова · Шаг / Войти / Выйти / Продолжить
+        </span>
+        <span className="app__footer-meta">
+          <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
+            GitHub
+          </a>
+          <span className="app__build" title={`Дата сборки: ${__BUILD_TIME__}`}>
+            сборка {__BUILD_SHA__} · {__BUILD_TIME__}
+          </span>
+        </span>
       </footer>
+
+      {updateAvailable && (
+        <div className="update-banner" role="status">
+          <span>Доступна новая версия тренажёра.</span>
+          <button type="button" onClick={() => window.location.reload()}>
+            Обновить
+          </button>
+        </div>
+      )}
     </div>
   );
 }
