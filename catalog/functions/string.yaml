@@ -198,3 +198,133 @@
   examples:
     - code: Сообщить(СтрЧислоСтрок("одна строка"));
       expect: "1"
+
+- id: КодСимвола
+  kind: function
+  names: { ru: КодСимвола, en: CharCode }
+  category: Строки
+  signature: "КодСимвола(Строка): Число"
+  description: Возвращает числовой код первого символа строки (Unicode). Для пустой строки возвращает 0.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(КодСимвола("A"));
+      expect: "65"
+
+- id: Символ
+  kind: function
+  names: { ru: Символ, en: Char }
+  category: Строки
+  signature: "Символ(КодСимвола): Строка"
+  description: Возвращает строку из одного символа по его числовому коду Unicode.
+  params:
+    - { name: КодСимвола, type: Число, optional: false }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить(Символ(65));
+      expect: "A"
+
+- id: ПустаяСтрока
+  kind: function
+  names: { ru: ПустаяСтрока, en: IsBlankString }
+  category: Строки
+  signature: "ПустаяСтрока(Строка): Булево"
+  description: Возвращает Истина, если строка пустая или состоит только из пробельных символов.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+  returns: { type: Булево }
+  examples:
+    - code: Сообщить(ПустаяСтрока("  "));
+      expect: "Да"
+    - code: Сообщить(ПустаяСтрока("нет"));
+      expect: "Нет"
+
+- id: СтрНачинаетсяС
+  kind: function
+  names: { ru: СтрНачинаетсяС, en: StrStartsWith }
+  category: Строки
+  signature: "СтрНачинаетсяС(Строка, ПодстрокаПоиска): Булево"
+  description: Возвращает Истина, если строка начинается с указанной подстроки (с учётом регистра).
+  params:
+    - { name: Строка, type: Строка, optional: false }
+    - { name: ПодстрокаПоиска, type: Строка, optional: false }
+  returns: { type: Булево }
+  examples:
+    - code: Сообщить(СтрНачинаетсяС("привет", "при"));
+      expect: "Да"
+
+- id: СтрЗаканчиваетсяНа
+  kind: function
+  names: { ru: СтрЗаканчиваетсяНа, en: StrEndsWith }
+  category: Строки
+  signature: "СтрЗаканчиваетсяНа(Строка, ПодстрокаПоиска): Булево"
+  description: Возвращает Истина, если строка заканчивается на указанную подстроку (с учётом регистра).
+  params:
+    - { name: Строка, type: Строка, optional: false }
+    - { name: ПодстрокаПоиска, type: Строка, optional: false }
+  returns: { type: Булево }
+  examples:
+    - code: Сообщить(СтрЗаканчиваетсяНа("привет", "вет"));
+      expect: "Да"
+
+- id: СтрСравнить
+  kind: function
+  names: { ru: СтрСравнить, en: StrCompare }
+  category: Строки
+  signature: "СтрСравнить(Строка1, Строка2): Число"
+  description: >-
+    Сравнивает строки без учёта регистра. Возвращает -1, если Строка1 < Строка2;
+    0 — если равны; 1 — если Строка1 > Строка2.
+  params:
+    - { name: Строка1, type: Строка, optional: false }
+    - { name: Строка2, type: Строка, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(СтрСравнить("abc", "ABC"));
+      expect: "0"
+    - code: Сообщить(СтрСравнить("А", "Б"));
+      expect: "-1"
+
+- id: СтрЧислоВхождений
+  kind: function
+  names: { ru: СтрЧислоВхождений, en: StrOccurrenceCount }
+  category: Строки
+  signature: "СтрЧислоВхождений(Строка, ПодстрокаПоиска): Число"
+  description: Возвращает количество непересекающихся вхождений подстроки в строку. Если подстрока пустая — возвращает 0.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+    - { name: ПодстрокаПоиска, type: Строка, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(СтрЧислоВхождений("аааба", "а"));
+      expect: "4"
+
+- id: СтрПолучитьСтроку
+  kind: function
+  names: { ru: СтрПолучитьСтроку, en: StrGetLine }
+  category: Строки
+  signature: "СтрПолучитьСтроку(Строка, НомерСтроки): Строка"
+  description: Возвращает строку с указанным номером (с 1) из многострочного текста. Если номер вне диапазона — пустая строка.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+    - { name: НомерСтроки, type: Число, optional: false }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить(СтрПолучитьСтроку("раз" + Символ(10) + "два", 2));
+      expect: "два"
+
+- id: ТРег
+  kind: function
+  names: { ru: ТРег, en: TitleCase }
+  category: Строки
+  signature: "ТРег(Строка): Строка"
+  description: >-
+    Преобразует строку в «заглавный регистр»: первая буква каждого слова —
+    прописная, остальные — строчные. Слово начинается после любого не-буквенного символа.
+  params:
+    - { name: Строка, type: Строка, optional: false }
+  returns: { type: Строка }
+  examples:
+    - code: Сообщить(ТРег("иван петров"));
+      expect: "Иван Петров"

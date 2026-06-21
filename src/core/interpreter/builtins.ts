@@ -287,6 +287,87 @@ export const BUILTINS: readonly Builtin[] = [
     arity: [1, 1],
     impl: (args) => toBslString(args[0]).split('\n').length,
   },
+  {
+    id: 'КодСимвола',
+    aliases: ['charcode'],
+    arity: [1, 1],
+    impl: (args) => {
+      const s = toBslString(args[0]);
+      return s.length === 0 ? 0 : s.codePointAt(0) ?? 0;
+    },
+  },
+  {
+    id: 'Символ',
+    aliases: ['char'],
+    arity: [1, 1],
+    impl: (args) => String.fromCodePoint(Math.trunc(toNumber(args[0]))),
+  },
+  {
+    id: 'ПустаяСтрока',
+    aliases: ['isblankstring'],
+    arity: [1, 1],
+    impl: (args) => toBslString(args[0]).trim() === '',
+  },
+  {
+    id: 'СтрНачинаетсяС',
+    aliases: ['strstartswith'],
+    arity: [2, 2],
+    impl: (args) => toBslString(args[0]).startsWith(toBslString(args[1])),
+  },
+  {
+    id: 'СтрЗаканчиваетсяНа',
+    aliases: ['strendswith'],
+    arity: [2, 2],
+    impl: (args) => toBslString(args[0]).endsWith(toBslString(args[1])),
+  },
+  {
+    id: 'СтрСравнить',
+    aliases: ['strcompare'],
+    arity: [2, 2],
+    impl: (args) => {
+      const cmp = toBslString(args[0]).toLowerCase().localeCompare(toBslString(args[1]).toLowerCase());
+      return cmp < 0 ? -1 : cmp > 0 ? 1 : 0;
+    },
+  },
+  {
+    id: 'СтрЧислоВхождений',
+    aliases: ['stroccurrencecount'],
+    arity: [2, 2],
+    impl: (args) => {
+      const s = toBslString(args[0]);
+      const needle = toBslString(args[1]);
+      if (needle === '') return 0;
+      let count = 0;
+      let pos = 0;
+      while ((pos = s.indexOf(needle, pos)) !== -1) { count += 1; pos += needle.length; }
+      return count;
+    },
+  },
+  {
+    id: 'СтрПолучитьСтроку',
+    aliases: ['strgetline'],
+    arity: [2, 2],
+    impl: (args) => {
+      const lines = toBslString(args[0]).split('\n');
+      const n = Math.trunc(toNumber(args[1]));
+      return n >= 1 && n <= lines.length ? lines[n - 1] : '';
+    },
+  },
+  {
+    id: 'ТРег',
+    aliases: ['titlecase'],
+    arity: [1, 1],
+    impl: (args) => {
+      const s = toBslString(args[0]);
+      let prevWasLetter = false;
+      return [...s].map((ch) => {
+        const isLetter = /\p{L}/u.test(ch);
+        const out = isLetter && !prevWasLetter ? ch.toUpperCase() : isLetter ? ch.toLowerCase() : ch;
+        prevWasLetter = isLetter;
+        return out;
+      }).join('');
+    },
+  },
 
   // ── Числовые ──────────────────────────────────────────────────
   {
