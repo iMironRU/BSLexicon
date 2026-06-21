@@ -621,6 +621,92 @@ body {
   margin-top: 6px;
 }
 
+/* Статистика «исполняется / всего» в шапке и индикатор-точка. */
+.ref__stats {
+  margin-left: auto;
+  margin-right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.ref__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.ref__dot--on {
+  background: var(--accent);
+  box-shadow: 0 0 4px rgba(78, 201, 176, 0.6);
+}
+.ref__dot--off {
+  background: transparent;
+  border: 1px solid var(--fg-dim);
+}
+
+/* Чипы категорий */
+.ref__cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 12px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.ref__cat {
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+.ref__cat:hover {
+  background: var(--bg-header);
+  border-color: var(--fg-dim);
+}
+.ref__cat--active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(78, 201, 176, 0.1);
+}
+.ref__cat-n {
+  margin-left: 4px;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.ref__cat--active .ref__cat-n {
+  color: var(--accent);
+}
+
+/* Бейдж-индикатор в строке списка: впереди имени. */
+.ref__item .ref__dot {
+  margin-right: 2px;
+}
+
+/* Строка статуса в карточке: исполняется / только справка + категория. */
+.ref__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.ref__status--on {
+  color: var(--accent);
+}
+.ref__status--off {
+  color: var(--fg-dim);
+}
+.ref__card-cat {
+  color: var(--fg-dim);
+}
+
 @media (max-width: 820px) {
   .ref {
     width: 100%;

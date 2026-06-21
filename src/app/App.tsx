@@ -234,7 +234,9 @@ export function App() {
           <VariablesPanel variables={shownVariables} />
         </aside>
 
-        {showReference && <ReferencePanel onClose={() => setShowReference(false)} />}
+        {showReference && (
+          <ReferencePanel catalog={catalog} onClose={() => setShowReference(false)} />
+        )}
       </main>
 
       <footer className="app__footer">
