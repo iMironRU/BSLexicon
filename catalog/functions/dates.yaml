@@ -144,3 +144,206 @@
   examples:
     - code: Сообщить(Месяц(ДобавитьМесяц(Дата(2024, 1, 31), 1)));
       expect: "2"
+
+- id: НачалоМесяца
+  kind: function
+  names: { ru: НачалоМесяца, en: BeginOfMonth }
+  category: Даты
+  signature: "НачалоМесяца(Дата): Дата"
+  description: Возвращает первую секунду первого дня месяца указанной даты (00:00:00).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(День(НачалоМесяца(Дата(2024, 3, 15))));
+      expect: "1"
+
+- id: КонецМесяца
+  kind: function
+  names: { ru: КонецМесяца, en: EndOfMonth }
+  category: Даты
+  signature: "КонецМесяца(Дата): Дата"
+  description: Возвращает последнюю секунду последнего дня месяца указанной даты (23:59:59).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(День(КонецМесяца(Дата(2024, 2, 10))));
+      expect: "29"
+
+- id: НачалоГода
+  kind: function
+  names: { ru: НачалоГода, en: BeginOfYear }
+  category: Даты
+  signature: "НачалоГода(Дата): Дата"
+  description: Возвращает первую секунду первого дня года указанной даты (00:00:00).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(Месяц(НачалоГода(Дата(2024, 6, 15))));
+      expect: "1"
+
+- id: КонецГода
+  kind: function
+  names: { ru: КонецГода, en: EndOfYear }
+  category: Даты
+  signature: "КонецГода(Дата): Дата"
+  description: Возвращает последнюю секунду последнего дня года указанной даты (23:59:59).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(Месяц(КонецГода(Дата(2024, 6, 15))));
+      expect: "12"
+
+- id: НачалоНедели
+  kind: function
+  names: { ru: НачалоНедели, en: BeginOfWeek }
+  category: Даты
+  signature: "НачалоНедели(Дата): Дата"
+  description: Возвращает первую секунду понедельника недели указанной даты (00:00:00).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(День(НачалоНедели(Дата(2024, 1, 10))));
+      expect: "8"
+
+- id: КонецНедели
+  kind: function
+  names: { ru: КонецНедели, en: EndOfWeek }
+  category: Даты
+  signature: "КонецНедели(Дата): Дата"
+  description: Возвращает последнюю секунду воскресенья недели указанной даты (23:59:59).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(День(КонецНедели(Дата(2024, 1, 10))));
+      expect: "14"
+
+- id: НачалоКвартала
+  kind: function
+  names: { ru: НачалоКвартала, en: BeginOfQuarter }
+  category: Даты
+  signature: "НачалоКвартала(Дата): Дата"
+  description: Возвращает первую секунду первого дня квартала указанной даты.
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(Месяц(НачалоКвартала(Дата(2024, 5, 15))));
+      expect: "4"
+
+- id: КонецКвартала
+  kind: function
+  names: { ru: КонецКвартала, en: EndOfQuarter }
+  category: Даты
+  signature: "КонецКвартала(Дата): Дата"
+  description: Возвращает последнюю секунду последнего дня квартала указанной даты.
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(День(КонецКвартала(Дата(2024, 5, 15))));
+      expect: "30"
+
+- id: НачалоЧаса
+  kind: function
+  names: { ru: НачалоЧаса, en: BeginOfHour }
+  category: Даты
+  signature: "НачалоЧаса(Дата): Дата"
+  description: Возвращает начало часа указанной даты-времени (минуты и секунды обнуляются).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(Минута(НачалоЧаса(Дата(2024, 1, 1, 15, 30, 45))));
+      expect: "0"
+
+- id: КонецЧаса
+  kind: function
+  names: { ru: КонецЧаса, en: EndOfHour }
+  category: Даты
+  signature: "КонецЧаса(Дата): Дата"
+  description: Возвращает последнюю секунду часа указанной даты-времени (:59:59).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(Минута(КонецЧаса(Дата(2024, 1, 1, 15, 0, 0))));
+      expect: "59"
+
+- id: НачалоМинуты
+  kind: function
+  names: { ru: НачалоМинуты, en: BeginOfMinute }
+  category: Даты
+  signature: "НачалоМинуты(Дата): Дата"
+  description: Возвращает начало минуты указанной даты-времени (секунды обнуляются).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(Секунда(НачалоМинуты(Дата(2024, 1, 1, 15, 30, 45))));
+      expect: "0"
+
+- id: КонецМинуты
+  kind: function
+  names: { ru: КонецМинуты, en: EndOfMinute }
+  category: Даты
+  signature: "КонецМинуты(Дата): Дата"
+  description: Возвращает последнюю секунду минуты указанной даты-времени (:59).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Дата }
+  examples:
+    - code: Сообщить(Секунда(КонецМинуты(Дата(2024, 1, 1, 15, 30, 0))));
+      expect: "59"
+
+- id: ДеньГода
+  kind: function
+  names: { ru: ДеньГода, en: DayOfYear }
+  category: Даты
+  signature: "ДеньГода(Дата): Число"
+  description: Возвращает порядковый номер дня в году (1..365 или 366 для високосного).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(ДеньГода(Дата(2024, 1, 10)));
+      expect: "10"
+    - code: Сообщить(ДеньГода(Дата(2024, 12, 31)));
+      expect: "366"
+
+- id: ДеньНедели
+  kind: function
+  names: { ru: ДеньНедели, en: DayOfWeek }
+  category: Даты
+  signature: "ДеньНедели(Дата): Число"
+  description: Возвращает номер дня недели (1=Понедельник … 7=Воскресенье).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(ДеньНедели(Дата(2024, 1, 1)));
+      expect: "1"
+    - code: Сообщить(ДеньНедели(Дата(2024, 1, 7)));
+      expect: "7"
+
+- id: НеделяГода
+  kind: function
+  names: { ru: НеделяГода, en: WeekOfYear }
+  category: Даты
+  signature: "НеделяГода(Дата): Число"
+  description: >-
+    Возвращает номер недели в году по ISO 8601 (понедельник — первый день недели;
+    первая неделя — та, что содержит 4 января).
+  params:
+    - { name: Дата, type: Дата, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(НеделяГода(Дата(2024, 1, 1)));
+      expect: "1"
+    - code: Сообщить(НеделяГода(Дата(2024, 1, 8)));
+      expect: "2"
