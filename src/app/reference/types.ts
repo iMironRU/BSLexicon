@@ -9,6 +9,8 @@ export interface SyntaxEntry {
   owner: string;
   ownerEn: string;
   kind: 'function' | 'method' | 'property';
+  /** Учебная категория: Строки, Даты, Числа, Коллекции, Прочее… */
+  category: string;
   nameRu: string;
   nameEn: string;
   signature: string | null;

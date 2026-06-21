@@ -4,30 +4,36 @@
  *
  * ВАЖНО (лицензия): тексты СП — собственность «1С». Берём только факты —
  * имена ru/en, сигнатуры, параметры (тип/обязательность), возвращаемый тип,
- * доступность. Описания и примеры 1С НЕ извлекаем (пишем свои).
+ * доступность, категорию. Описания и примеры 1С НЕ извлекаем (пишем свои).
  *
- * Источник (~110 МБ) в репозиторий не коммитим. Путь — через переменную
- * окружения BSL_SP_EXPORT или первым аргументом:
- *   BSL_SP_EXPORT=/path/to/export.xml npm run extract:sp
+ * КУРАЦИЯ: тренажёр учит ЯЗЫКУ, не платформе. Поэтому оставляем только учебные
+ * категории глобальных функций (строки/числа/даты/тип/преобразование/
+ * форматирование + точечный allow-list из «Прочих») и все коллекции; всё
+ * платформенное (файлы, ИБ, сеанс, XML/JSON, крипто, транзакции, формы…) — вон.
  *
- * Результат — reference/syntax-help.json (факты, можно коммитить).
+ * Источник (~110 МБ) в репозиторий не коммитим. По умолчанию берётся
+ * reference/source/syntax-help-export.xml; путь можно переопределить через
+ * BSL_SP_EXPORT или первым аргументом. Результат — public/reference/syntax-help.json.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const source = process.env.BSL_SP_EXPORT ?? process.argv[2];
-if (!source) {
-  console.error('Укажите путь к выгрузке: BSL_SP_EXPORT=/path/export.xml npm run extract:sp');
+const root = fileURLToPath(new URL('..', import.meta.url));
+const source =
+  process.env.BSL_SP_EXPORT ??
+  process.argv[2] ??
+  join(root, 'reference', 'source', 'syntax-help-export.xml');
+const outPath = join(root, 'public', 'reference', 'syntax-help.json');
+
+if (!existsSync(source)) {
+  console.error(`Не найдена выгрузка: ${source}\nУкажите путь: BSL_SP_EXPORT=/path/export.xml npm run extract:sp`);
   process.exit(1);
 }
 
-// Корень репозитория: на уровень выше папки scripts/.
-const root = fileURLToPath(new URL('..', import.meta.url));
-// В public/ — чтобы Vite отдавал статикой, а панель-справочник грузила лениво (fetch).
-const outPath = join(root, 'public', 'reference', 'syntax-help.json');
+const GLOBAL = 'Глобальный контекст';
 
-/** Типы-владельцы, чьи члены нас интересуют (помимо глобального контекста). */
+/** Типы-владельцы (коллекции), чьи члены оставляем целиком. */
 const COLLECTION_OWNERS = new Set([
   'Массив',
   'Структура',
@@ -40,7 +46,24 @@ const COLLECTION_OWNERS = new Set([
   'КоллекцияКолонокТаблицыЗначений',
   'КлючИЗначение',
 ]);
-const GLOBAL = 'Глобальный контекст';
+
+/** Учебные категории глобальных функций (папка-родитель в help → короткий ярлык). */
+const CATEGORY_LABELS: Record<string, string> = {
+  'Функции работы со значениями типа Строка': 'Строки',
+  'Функции работы со значениями типа Дата': 'Даты',
+  'Функции работы со значениями типа Число': 'Числа',
+  'Функции работы со значениями типа Тип': 'Тип',
+  'Функции преобразования значений': 'Преобразование',
+  'Функции форматирования': 'Форматирование',
+};
+
+/** «Прочие процедуры и функции» — сборная; берём только эти. */
+const MISC_CATEGORY = 'Прочие процедуры и функции';
+const MISC_ALLOW = new Set(
+  ['Макс', 'Мин', 'ОписаниеОшибки', 'ИнформацияОбОшибке', 'ЗначениеЗаполнено', 'Вычислить'].map(
+    (s) => s.toLowerCase(),
+  ),
+);
 
 interface Param {
   name: string;
@@ -51,6 +74,7 @@ interface Entry {
   owner: string;
   ownerEn: string;
   kind: 'function' | 'method' | 'property';
+  category: string;
   nameRu: string;
   nameEn: string;
   signature: string | null;
@@ -79,12 +103,13 @@ function htmlToText(html: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
     .replace(/&amp;/g, '&')
-    .replace(/[ \t ]+/g, ' ')
+    .replace(/[ \t ]+/g, ' ')
     .trim();
 }
 
+/** Значение тега; терпит атрибуты (например, у Ref/Parent есть xsi:type). */
 function field(record: string, tag: string): string | null {
-  const m = record.match(new RegExp(`<v8:${tag}>([\\s\\S]*?)</v8:${tag}>`));
+  const m = record.match(new RegExp(`<v8:${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</v8:${tag}>`));
   return m ? m[1] : null;
 }
 
@@ -121,7 +146,6 @@ function parseParams(html: string | undefined): Param[] {
     const rubricEnd = block.indexOf('</div>');
     const rubric = htmlToText(rubricEnd >= 0 ? block.slice(0, rubricEnd) : block);
     const rest = rubricEnd >= 0 ? block.slice(rubricEnd + 6) : '';
-    // «<Имя> (обязательный)» или «Имя (необязательный)»
     const nm = rubric.match(/^<?([A-Za-zА-Яа-яЁё0-9_]+)>?/);
     if (!nm) continue;
     const optional = /необязательный/i.test(rubric);
@@ -138,8 +162,25 @@ function parseAvailability(html: string | undefined): string[] {
     .filter(Boolean);
 }
 
+/** Категория-ярлык учебной глобальной функции, либо null (отбрасываем). */
+function globalCategory(rawCategory: string | undefined, nameRu: string): string | null {
+  if (!rawCategory) return null;
+  const label = CATEGORY_LABELS[rawCategory];
+  if (label) return label;
+  if (rawCategory === MISC_CATEGORY && MISC_ALLOW.has(nameRu.toLowerCase())) return 'Прочее';
+  return null;
+}
+
 const xml = readFileSync(source, 'utf8').replace(/^﻿/, '');
 const records = xml.split('<v8:CatalogObject.ЭлементыДокументации>').slice(1);
+
+// Пред-проход: Ref → Description (для резолва категории по папке-родителю).
+const refDescription = new Map<string, string>();
+for (const record of records) {
+  const ref = field(record, 'Ref');
+  const desc = field(record, 'Description');
+  if (ref && desc) refDescription.set(ref, desc);
+}
 
 const entries: Entry[] = [];
 let skipped = 0;
@@ -164,7 +205,16 @@ for (const record of records) {
   }
   const [, owner, nameRu, ownerEn, nameEn] = parsed.map((s) => s.trim());
 
-  if (owner !== GLOBAL && !COLLECTION_OWNERS.has(owner)) continue;
+  let category: string | null;
+  if (owner === GLOBAL) {
+    const parentRef = field(record, 'Parent');
+    category = globalCategory(parentRef ? refDescription.get(parentRef) : undefined, nameRu);
+  } else if (COLLECTION_OWNERS.has(owner)) {
+    category = 'Коллекции';
+  } else {
+    category = null;
+  }
+  if (!category) continue; // не учебное — отбрасываем
 
   const path = field(record, 'ПутьКHTML') ?? '';
   const kind: Entry['kind'] =
@@ -179,6 +229,7 @@ for (const record of records) {
     owner,
     ownerEn,
     kind,
+    category,
     nameRu,
     nameEn,
     signature,
@@ -189,18 +240,20 @@ for (const record of records) {
 }
 
 entries.sort((a, b) =>
-  a.owner === b.owner ? a.nameRu.localeCompare(b.nameRu) : a.owner.localeCompare(b.owner),
+  a.category === b.category
+    ? a.nameRu.localeCompare(b.nameRu)
+    : a.category.localeCompare(b.category),
 );
 
-const byOwner = new Map<string, number>();
-for (const e of entries) byOwner.set(e.owner, (byOwner.get(e.owner) ?? 0) + 1);
+const byCategory = new Map<string, number>();
+for (const e of entries) byCategory.set(e.category, (byCategory.get(e.category) ?? 0) + 1);
 
 mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(
   outPath,
   JSON.stringify(
     {
-      note: 'Только структурные факты из синтакс-помощника 1С. Описания/примеры не извлекаются (тексты — собственность «1С»).',
+      note: 'Курированное учебное подмножество синтакс-помощника 1С. Только структурные факты (описания/примеры — собственность «1С» — не извлекаются).',
       total: entries.length,
       entries,
     },
@@ -209,9 +262,8 @@ writeFileSync(
   ),
 );
 
-console.log(`✓ Извлечено ${entries.length} записей (пропущено без заголовка: ${skipped}).`);
-console.log(`  Глобальных функций: ${byOwner.get(GLOBAL) ?? 0}`);
-for (const owner of COLLECTION_OWNERS) {
-  if (byOwner.get(owner)) console.log(`  ${owner}: ${byOwner.get(owner)}`);
+console.log(`✓ Извлечено ${entries.length} учебных записей (пропущено без заголовка: ${skipped}).`);
+for (const [cat, n] of [...byCategory.entries()].sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${String(n).padStart(4)}  ${cat}`);
 }
 console.log('  → public/reference/syntax-help.json');
