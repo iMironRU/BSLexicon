@@ -1,5 +1,5 @@
 import { RuntimeError } from '../errors';
-import { BslArray } from './collections';
+import { BslArray, BslStructure } from './collections';
 import {
   BslDate,
   addMonths,
@@ -89,6 +89,23 @@ export const BUILTINS: readonly Builtin[] = [
     impl: (args) => toNumber(args[0]),
   },
   {
+    id: 'Булево',
+    aliases: ['boolean'],
+    arity: [1, 1],
+    impl: (args) => {
+      const v = args[0];
+      if (typeof v === 'boolean') return v;
+      if (typeof v === 'number') return v !== 0;
+      if (typeof v === 'string') {
+        const lc = v.trim().toLowerCase();
+        if (lc === 'истина' || lc === 'true' || lc === 'да') return true;
+        if (lc === 'ложь' || lc === 'false' || lc === 'нет') return false;
+        throw new RuntimeError(`«Булево»: не удалось преобразовать строку «${v}» к булевому`);
+      }
+      throw new RuntimeError(`«Булево»: не удалось преобразовать «${typeName(v)}» к булевому`);
+    },
+  },
+  {
     id: 'СокрЛП',
     aliases: ['trimall'],
     arity: [1, 1],
@@ -125,6 +142,34 @@ export const BUILTINS: readonly Builtin[] = [
     arity: [0, 0],
     // Текст ошибки, пойманной текущим «Исключение»; вне обработчика — пустая строка.
     impl: (_args, ctx) => ctx.errorDescription(),
+  },
+  {
+    id: 'ЗначениеЗаполнено',
+    aliases: ['valueisfilled'],
+    arity: [1, 1],
+    impl: (args) => {
+      const v = args[0];
+      if (v === UNDEFINED) return false;
+      if (typeof v === 'boolean') return v;
+      if (typeof v === 'number') return v !== 0;
+      if (typeof v === 'string') return v !== '';
+      return true;
+    },
+  },
+  {
+    id: 'ИнформацияОбОшибке',
+    aliases: ['errorinfo'],
+    arity: [0, 0],
+    impl: (_args, ctx) => {
+      const text = ctx.errorDescription();
+      const s = new BslStructure();
+      const set = (name: string, val: BslValue): void => {
+        s.props.set(name.toLowerCase(), { display: name, value: val });
+      };
+      set('ОписаниеОшибки', text);
+      set('ПолноеОписание', text);
+      return s;
+    },
   },
 
   // ── Даты ──────────────────────────────────────────────────────
