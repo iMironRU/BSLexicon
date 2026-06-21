@@ -319,6 +319,74 @@ export const BUILTINS: readonly Builtin[] = [
     arity: [1, 255],
     impl: (args) => pickExtreme(args, 'Мин', -1),
   },
+
+  // ── Тригонометрия и экспоненты ────────────────────────────────
+  {
+    id: 'Sin',
+    aliases: ['sin'],
+    arity: [1, 1],
+    impl: (args) => Math.sin(toNumber(args[0])),
+  },
+  {
+    id: 'Cos',
+    aliases: ['cos'],
+    arity: [1, 1],
+    impl: (args) => Math.cos(toNumber(args[0])),
+  },
+  {
+    id: 'Tan',
+    aliases: ['tan'],
+    arity: [1, 1],
+    impl: (args) => Math.tan(toNumber(args[0])),
+  },
+  {
+    id: 'ASin',
+    aliases: ['asin'],
+    arity: [1, 1],
+    impl: (args) => Math.asin(toNumber(args[0])),
+  },
+  {
+    id: 'ACos',
+    aliases: ['acos'],
+    arity: [1, 1],
+    impl: (args) => Math.acos(toNumber(args[0])),
+  },
+  {
+    id: 'ATan',
+    aliases: ['atan'],
+    arity: [1, 1],
+    impl: (args) => Math.atan(toNumber(args[0])),
+  },
+  {
+    id: 'Exp',
+    aliases: ['exp'],
+    arity: [1, 1],
+    impl: (args) => Math.exp(toNumber(args[0])),
+  },
+  {
+    id: 'Log',
+    aliases: ['log'],
+    arity: [1, 1],
+    impl: (args) => Math.log(toNumber(args[0])),
+  },
+  {
+    id: 'Log10',
+    aliases: ['log10'],
+    arity: [1, 1],
+    impl: (args) => Math.log10(toNumber(args[0])),
+  },
+  {
+    id: 'Pow',
+    aliases: ['pow'],
+    arity: [2, 2],
+    impl: (args) => Math.pow(toNumber(args[0]), toNumber(args[1])),
+  },
+  {
+    id: 'Sqrt',
+    aliases: ['sqrt'],
+    arity: [1, 1],
+    impl: (args) => Math.sqrt(toNumber(args[0])),
+  },
 ];
 
 /** Возвращает максимум (`dir=1`) или минимум (`dir=-1`) из аргументов. */

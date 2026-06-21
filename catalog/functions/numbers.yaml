@@ -58,3 +58,147 @@
   examples:
     - code: Сообщить(Мин(3, 7, 5));
       expect: "3"
+
+- id: Sin
+  kind: function
+  names: { ru: Sin, en: Sin }
+  category: Числа
+  signature: "Sin(Угол): Число"
+  description: Возвращает синус угла в радианах.
+  params:
+    - { name: Угол, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Sin(0));
+      expect: "0"
+
+- id: Cos
+  kind: function
+  names: { ru: Cos, en: Cos }
+  category: Числа
+  signature: "Cos(Угол): Число"
+  description: Возвращает косинус угла в радианах.
+  params:
+    - { name: Угол, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Cos(0));
+      expect: "1"
+
+- id: Tan
+  kind: function
+  names: { ru: Tan, en: Tan }
+  category: Числа
+  signature: "Tan(Угол): Число"
+  description: Возвращает тангенс угла в радианах.
+  params:
+    - { name: Угол, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Tan(0));
+      expect: "0"
+
+- id: ASin
+  kind: function
+  names: { ru: ASin, en: ASin }
+  category: Числа
+  signature: "ASin(Число): Число"
+  description: Возвращает арксинус числа в радианах. Аргумент должен быть в диапазоне [-1, 1].
+  params:
+    - { name: Число, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(ASin(0));
+      expect: "0"
+
+- id: ACos
+  kind: function
+  names: { ru: ACos, en: ACos }
+  category: Числа
+  signature: "ACos(Число): Число"
+  description: Возвращает арккосинус числа в радианах. Аргумент должен быть в диапазоне [-1, 1].
+  params:
+    - { name: Число, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Окр(ACos(1), 5));
+      expect: "0"
+
+- id: ATan
+  kind: function
+  names: { ru: ATan, en: ATan }
+  category: Числа
+  signature: "ATan(Число): Число"
+  description: Возвращает арктангенс числа в радианах.
+  params:
+    - { name: Число, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(ATan(0));
+      expect: "0"
+
+- id: Exp
+  kind: function
+  names: { ru: Exp, en: Exp }
+  category: Числа
+  signature: "Exp(Степень): Число"
+  description: Возвращает e (число Эйлера ≈ 2,718) в указанной степени.
+  params:
+    - { name: Степень, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Exp(0));
+      expect: "1"
+
+- id: Log
+  kind: function
+  names: { ru: Log, en: Log }
+  category: Числа
+  signature: "Log(Число): Число"
+  description: Возвращает натуральный логарифм числа (по основанию e).
+  params:
+    - { name: Число, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Log(1));
+      expect: "0"
+
+- id: Log10
+  kind: function
+  names: { ru: Log10, en: Log10 }
+  category: Числа
+  signature: "Log10(Число): Число"
+  description: Возвращает десятичный логарифм числа (по основанию 10).
+  params:
+    - { name: Число, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Log10(1000));
+      expect: "3"
+
+- id: Pow
+  kind: function
+  names: { ru: Pow, en: Pow }
+  category: Числа
+  signature: "Pow(Основание, Показатель): Число"
+  description: Возвращает Основание, возведённое в степень Показатель.
+  params:
+    - { name: Основание, type: Число, optional: false }
+    - { name: Показатель, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Pow(2, 10));
+      expect: "1024"
+
+- id: Sqrt
+  kind: function
+  names: { ru: Sqrt, en: Sqrt }
+  category: Числа
+  signature: "Sqrt(Число): Число"
+  description: Возвращает квадратный корень числа.
+  params:
+    - { name: Число, type: Число, optional: false }
+  returns: { type: Число }
+  examples:
+    - code: Сообщить(Sqrt(16));
+      expect: "4"
