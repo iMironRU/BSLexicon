@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Editor } from './components/Editor';
 import { OutputPanel } from './components/OutputPanel';
 import { VariablesPanel } from './components/VariablesPanel';
@@ -9,6 +9,7 @@ import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } fro
 import { loadCatalog } from './catalog';
 import { EXAMPLES } from './examples';
 import { useVersionCheck } from './useVersionCheck';
+import { useUrlParams } from './useUrlParams';
 
 const REPO_URL = 'https://github.com/iMironRU/BSLexicon';
 const AUTHOR_URL = 'https://github.com/iMironRU';
@@ -24,8 +25,13 @@ interface PanelView {
 const IDLE: PanelView = { output: null, error: null, variables: [], callStack: [], line: null };
 
 export function App() {
-  const [source, setSource] = useState<string>(EXAMPLES[0].code);
-  const [activeExample, setActiveExample] = useState<string | null>(EXAMPLES[0].id);
+  const urlParams = useUrlParams();
+  const hasUrlCode = urlParams.code !== null || urlParams.loading;
+  const [source, setSource] = useState<string>(urlParams.code ?? EXAMPLES[0].code);
+  const [activeExample, setActiveExample] = useState<string | null>(
+    hasUrlCode ? null : EXAMPLES[0].id,
+  );
+  const [decodeError, setDecodeError] = useState<string | null>(urlParams.decodeError);
   const [batch, setBatch] = useState<RunResult | null>(null);
   const [snap, setSnap] = useState<DebugSnapshot | null>(null);
   const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set());
@@ -34,6 +40,15 @@ export function App() {
   const sessionRef = useRef<DebugSession | null>(null);
   const catalog = useMemo(() => loadCatalog(), []);
   const updateAvailable = useVersionCheck();
+
+  // Применяем код из URL когда ?gzcode завершил асинхронное декодирование
+  useEffect(() => {
+    if (!urlParams.loading && urlParams.code !== null) {
+      setSource(urlParams.code);
+      setActiveExample(null);
+    }
+    if (urlParams.decodeError) setDecodeError(urlParams.decodeError);
+  }, [urlParams.loading, urlParams.code, urlParams.decodeError]);
 
   /** Новая сессия из текущего кода с перенесёнными точками останова. */
   const ensureSession = useCallback((): DebugSession => {
@@ -212,6 +227,20 @@ export function App() {
 
       <main className="app__body">
         <section className="app__editor">
+          {decodeError && (
+            <div className="decode-error" role="alert">
+              <span className="decode-error__text">{decodeError}</span>
+              <button
+                className="decode-error__close"
+                type="button"
+                aria-label="Закрыть"
+                onClick={() => setDecodeError(null)}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          <div className="app__editor-monaco">
           <Editor
             value={source}
             onChange={handleSourceChange}
@@ -220,6 +249,7 @@ export function App() {
             onToggleBreakpoint={handleToggleBreakpoint}
             currentLine={view.line}
           />
+          </div>
         </section>
 
         <aside className="app__panels">
