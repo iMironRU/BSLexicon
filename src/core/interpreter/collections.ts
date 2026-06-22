@@ -916,6 +916,202 @@ const VALUETABLE_METHODS: MethodDef[] = [
       return new BslArray(t.rows.map((row) => row.cells.get(key) ?? UNDEFINED));
     },
   },
+  {
+    name: 'Вставить',
+    aliases: ['insert'],
+    arity: [1, 1],
+    impl: (self, args) => {
+      const t = self as BslValueTable;
+      const idx = Math.max(0, Math.min(toNumber(args[0]), t.rows.length));
+      const row = new BslValueTableRow(t);
+      for (const c of t.columns.items) row.cells.set(c.name.toLowerCase(), UNDEFINED);
+      t.rows.splice(idx, 0, row);
+      return row;
+    },
+  },
+  {
+    name: 'Индекс',
+    aliases: ['indexof'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      const t = self as BslValueTable;
+      if (!(args[0] instanceof BslValueTableRow))
+        throw new RuntimeError('Индекс: ожидалась строка ТаблицыЗначений', line);
+      return t.rows.indexOf(args[0]);
+    },
+  },
+  {
+    name: 'Найти',
+    aliases: ['find'],
+    arity: [1, 2],
+    impl: (self, args) => {
+      const t = self as BslValueTable;
+      const needle = args[0];
+      const colsArg = args.length > 1 ? toBslString(args[1]).trim() : '';
+      const keys = colsArg
+        ? colsArg.split(',').map((s) => s.trim().toLowerCase())
+        : t.columns.items.map((c) => c.name.toLowerCase());
+      for (const row of t.rows) {
+        for (const k of keys) {
+          if (valuesEqual(row.cells.get(k) ?? UNDEFINED, needle)) return row;
+        }
+      }
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'Сдвинуть',
+    aliases: ['move'],
+    arity: [2, 2],
+    impl: (self, args, line) => {
+      const t = self as BslValueTable;
+      if (!(args[0] instanceof BslValueTableRow))
+        throw new RuntimeError('Сдвинуть: ожидалась строка ТаблицыЗначений', line);
+      const from = t.rows.indexOf(args[0]);
+      if (from === -1) throw new RuntimeError('Сдвинуть: строка не принадлежит таблице', line);
+      const to = Math.max(0, Math.min(from + toNumber(args[1]), t.rows.length - 1));
+      t.rows.splice(from, 1);
+      t.rows.splice(to, 0, args[0] as BslValueTableRow);
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'Скопировать',
+    aliases: ['copy'],
+    arity: [0, 2],
+    impl: (self, args) => {
+      const t = self as BslValueTable;
+      const rowFilter =
+        args.length > 0 && args[0] instanceof BslArray
+          ? (args[0].items.filter((r) => r instanceof BslValueTableRow) as BslValueTableRow[])
+          : null;
+      const colArg = args.length > 1 && typeof args[1] === 'string' ? args[1].trim() : '';
+      const colKeys = colArg
+        ? colArg.split(',').map((s) => s.trim().toLowerCase())
+        : null;
+      const out = new BslValueTable();
+      const cols = colKeys
+        ? t.columns.items.filter((c) => colKeys.includes(c.name.toLowerCase()))
+        : t.columns.items;
+      for (const c of cols) out.addColumn(c.name, c.title);
+      for (const row of rowFilter ?? t.rows) {
+        const nr = out.addRow();
+        for (const c of out.columns.items) nr.cells.set(c.name.toLowerCase(), row.cells.get(c.name.toLowerCase()) ?? UNDEFINED);
+      }
+      return out;
+    },
+  },
+  {
+    name: 'СкопироватьКолонки',
+    aliases: ['copycolumns'],
+    arity: [0, 1],
+    impl: (self, args) => {
+      const t = self as BslValueTable;
+      const colArg = args.length > 0 && typeof args[0] === 'string' ? args[0].trim() : '';
+      const colKeys = colArg ? colArg.split(',').map((s) => s.trim().toLowerCase()) : null;
+      const out = new BslValueTable();
+      const cols = colKeys
+        ? t.columns.items.filter((c) => colKeys.includes(c.name.toLowerCase()))
+        : t.columns.items;
+      for (const c of cols) out.addColumn(c.name, c.title);
+      return out;
+    },
+  },
+  {
+    name: 'Сортировать',
+    aliases: ['sort'],
+    arity: [1, 1],
+    impl: (self, args) => {
+      const t = self as BslValueTable;
+      const criteria = toBslString(args[0])
+        .split(',')
+        .map((s) => {
+          const parts = s.trim().split(/\s+/);
+          const key = parts[0].toLowerCase();
+          const desc = parts[1]?.toLowerCase() === 'убыв' || parts[1]?.toLowerCase() === 'desc';
+          return { key, desc };
+        });
+      t.rows.sort((a, b) => {
+        for (const { key, desc } of criteria) {
+          const va = a.cells.get(key) ?? UNDEFINED;
+          const vb = b.cells.get(key) ?? UNDEFINED;
+          const cmp = compareValues(va, vb);
+          if (cmp !== 0) return desc ? -cmp : cmp;
+        }
+        return 0;
+      });
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'ЗагрузитьКолонку',
+    aliases: ['loadcolumn'],
+    arity: [2, 2],
+    impl: (self, args, line) => {
+      const t = self as BslValueTable;
+      if (!(args[0] instanceof BslArray))
+        throw new RuntimeError('ЗагрузитьКолонку: первый аргумент должен быть Массивом', line);
+      const key = columnKey(t, args[1], 'ЗагрузитьКолонку', line);
+      const arr = args[0] as BslArray;
+      const count = Math.min(arr.items.length, t.rows.length);
+      for (let i = 0; i < count; i++) t.rows[i].cells.set(key, arr.items[i]);
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'ЗаполнитьЗначения',
+    aliases: ['fillvalues'],
+    arity: [1, 2],
+    impl: (self, args) => {
+      const t = self as BslValueTable;
+      const value = args[0];
+      const colArg = args.length > 1 && typeof args[1] === 'string' ? args[1].trim() : '';
+      const keys = colArg
+        ? colArg.split(',').map((s) => s.trim().toLowerCase())
+        : t.columns.items.map((c) => c.name.toLowerCase());
+      for (const row of t.rows) {
+        for (const k of keys) row.cells.set(k, value);
+      }
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'Свернуть',
+    aliases: ['groupby'],
+    arity: [1, 2],
+    impl: (self, args) => {
+      const t = self as BslValueTable;
+      const groupKeys = toBslString(args[0])
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      const sumKeys =
+        args.length > 1
+          ? toBslString(args[1]).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+          : [];
+      const order: string[] = [];
+      const groups = new Map<string, { row: BslValueTableRow; sums: Map<string, number> }>();
+      for (const row of t.rows) {
+        const gk = groupKeys.map((k) => JSON.stringify(row.cells.get(k) ?? null)).join('\x00');
+        if (!groups.has(gk)) {
+          order.push(gk);
+          const nr = new BslValueTableRow(t);
+          for (const c of t.columns.items) nr.cells.set(c.name.toLowerCase(), UNDEFINED);
+          for (const k of groupKeys) nr.cells.set(k, row.cells.get(k) ?? UNDEFINED);
+          groups.set(gk, { row: nr, sums: new Map(sumKeys.map((k) => [k, 0])) });
+        }
+        const g = groups.get(gk)!;
+        for (const k of sumKeys) g.sums.set(k, (g.sums.get(k) ?? 0) + toNumber(row.cells.get(k) ?? 0));
+      }
+      t.rows.length = 0;
+      for (const gk of order) {
+        const { row, sums } = groups.get(gk)!;
+        for (const [k, v] of sums) row.cells.set(k, v);
+        t.rows.push(row);
+      }
+      return UNDEFINED;
+    },
+  },
 ];
 
 const COLUMNS_METHODS: MethodDef[] = [
@@ -960,6 +1156,71 @@ const COLUMNS_METHODS: MethodDef[] = [
       }
       const removed = coll.items.splice(idx, 1)[0];
       for (const row of coll.owner.rows) row.cells.delete(removed.name.toLowerCase());
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'Вставить',
+    aliases: ['insert'],
+    arity: [2, 4],
+    // Вставить(Индекс, Имя, Тип?, Заголовок?) — Тип не моделируем.
+    impl: (self, args) => {
+      const coll = self as BslColumnCollection;
+      const idx = Math.max(0, Math.min(toNumber(args[0]), coll.items.length));
+      const name = toBslString(args[1]);
+      const title = args.length > 3 ? toBslString(args[3]) : name;
+      const col = new BslColumn(name, title);
+      col.owner = coll.owner;
+      coll.items.splice(idx, 0, col);
+      for (const row of coll.owner.rows) row.cells.set(name.toLowerCase(), UNDEFINED);
+      return col;
+    },
+  },
+  {
+    name: 'Индекс',
+    aliases: ['indexof'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      const coll = self as BslColumnCollection;
+      if (!(args[0] instanceof BslColumn))
+        throw new RuntimeError('Индекс: ожидалась колонка КоллекцияКолонок', line);
+      return coll.items.indexOf(args[0]);
+    },
+  },
+  {
+    name: 'Найти',
+    aliases: ['find'],
+    arity: [1, 1],
+    impl: (self, args) => {
+      const coll = self as BslColumnCollection;
+      const lower = toBslString(args[0]).toLowerCase();
+      return coll.items.find((c) => c.name.toLowerCase() === lower) ?? UNDEFINED;
+    },
+  },
+  {
+    name: 'Очистить',
+    aliases: ['clear'],
+    arity: [0, 0],
+    impl: (self) => {
+      const coll = self as BslColumnCollection;
+      coll.items.length = 0;
+      for (const row of coll.owner.rows) row.cells.clear();
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'Сдвинуть',
+    aliases: ['move'],
+    arity: [2, 2],
+    impl: (self, args, line) => {
+      const coll = self as BslColumnCollection;
+      if (!(args[0] instanceof BslColumn))
+        throw new RuntimeError('Сдвинуть: ожидалась колонка КоллекцияКолонок', line);
+      const from = coll.items.indexOf(args[0]);
+      if (from === -1) throw new RuntimeError('Сдвинуть: колонка не принадлежит коллекции', line);
+      const to = Math.max(0, Math.min(from + toNumber(args[1]), coll.items.length - 1));
+      coll.items.splice(from, 1);
+      coll.items.splice(to, 0, args[0] as BslColumn);
       return UNDEFINED;
     },
   },
