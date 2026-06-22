@@ -10,6 +10,7 @@ import { loadCatalog } from './catalog';
 import { EXAMPLES } from './examples';
 import { useVersionCheck } from './useVersionCheck';
 import { useUrlParams } from './useUrlParams';
+import { ProvenanceBanner } from './components/ProvenanceBanner';
 
 const REPO_URL = 'https://github.com/iMironRU/BSLexicon';
 const AUTHOR_URL = 'https://github.com/iMironRU';
@@ -32,6 +33,7 @@ export function App() {
     hasUrlCode ? null : EXAMPLES[0].id,
   );
   const [decodeError, setDecodeError] = useState<string | null>(urlParams.decodeError);
+  const [showProvenance, setShowProvenance] = useState(urlParams.sourceUrl !== null);
   const [batch, setBatch] = useState<RunResult | null>(null);
   const [snap, setSnap] = useState<DebugSnapshot | null>(null);
   const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set());
@@ -224,6 +226,14 @@ export function App() {
           </button>
         ))}
       </nav>
+
+      {showProvenance && urlParams.sourceUrl && (
+        <ProvenanceBanner
+          sourceUrl={urlParams.sourceUrl}
+          title={urlParams.title}
+          onClose={() => setShowProvenance(false)}
+        />
+      )}
 
       <main className="app__body">
         <section className="app__editor">

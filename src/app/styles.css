@@ -204,6 +204,74 @@ body {
   opacity: 1;
 }
 
+/* --- Баннер источника (provenance) --- */
+
+.provenance-banner {
+  display: flex;
+  align-items: center;
+  padding: 5px 12px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-panel));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  font-size: 12px;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.provenance-banner__link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.provenance-banner__link:hover {
+  text-decoration: underline;
+}
+
+.provenance-banner__icon {
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.provenance-banner__prefix {
+  flex-shrink: 0;
+  color: var(--fg-dim);
+}
+
+.provenance-banner__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.provenance-banner__arrow {
+  flex-shrink: 0;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.provenance-banner__close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--fg-dim);
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: 0.6;
+  margin-left: 4px;
+}
+
+.provenance-banner__close:hover {
+  opacity: 1;
+  color: var(--fg);
+}
+
 .app__panels {
   flex: 1 1 40%;
   min-width: 320px;
