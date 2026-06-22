@@ -158,7 +158,7 @@ export function App() {
   const shownVariables = view.callStack[selectedFrame]?.variables ?? view.variables;
 
   return (
-    <div className="app">
+    <div className={'app' + (urlParams.embed ? ' app--embed' : '')}>
       <header className="app__header">
         <div className="app__brand">
           <span className="app__logo">BSLexicon</span>
@@ -198,7 +198,7 @@ export function App() {
             </button>
           </div>
           <button
-            className={'app__step' + (showReference ? ' app__step--on' : '')}
+            className={'app__step app__ref-btn' + (showReference ? ' app__step--on' : '')}
             onClick={() => setShowReference((v) => !v)}
             type="button"
             title="Справочник по функциям и типам"
@@ -274,7 +274,7 @@ export function App() {
           <VariablesPanel variables={shownVariables} />
         </aside>
 
-        {showReference && (
+        {showReference && !urlParams.embed && (
           <ReferencePanel catalog={catalog} onClose={() => setShowReference(false)} />
         )}
       </main>

@@ -872,3 +872,17 @@ body {
     display: none;
   }
 }
+
+/* --- Embed-режим (?embed=1) --- */
+
+.app--embed .app__brand,
+.app--embed .app__examples,
+.app--embed .app__footer,
+.app--embed .app__ref-btn {
+  display: none;
+}
+
+.app--embed .app__header {
+  min-height: 0;
+  padding: 4px 8px;
+}
