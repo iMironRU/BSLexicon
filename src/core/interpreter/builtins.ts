@@ -658,6 +658,28 @@ export const BUILTINS: readonly Builtin[] = [
     arity: [1, 1],
     impl: (args) => Math.sqrt(toNumber(args[0])),
   },
+  {
+    id: 'ЧислоИзДвоичнойСтроки',
+    aliases: ['numberfrombiinarystring', 'numberfrombistring'],
+    arity: [1, 1],
+    impl: (args) => {
+      const s = toBslString(args[0]).trim();
+      if (s !== '' && !/^[01]+$/.test(s))
+        throw new RuntimeError(`ЧислоИзДвоичнойСтроки: недопустимые символы в «${s}»`);
+      return s === '' ? 0 : parseInt(s, 2);
+    },
+  },
+  {
+    id: 'ЧислоИзШестнадцатеричнойСтроки',
+    aliases: ['numberfromhexstring'],
+    arity: [1, 1],
+    impl: (args) => {
+      const s = toBslString(args[0]).trim();
+      if (s !== '' && !/^[0-9a-fA-F]+$/.test(s))
+        throw new RuntimeError(`ЧислоИзШестнадцатеричнойСтроки: недопустимые символы в «${s}»`);
+      return s === '' ? 0 : parseInt(s, 16);
+    },
+  },
 ];
 
 /** Разбирает строку формата «К=В; К2=В2» → Map<ключ_нижн, значение>. */

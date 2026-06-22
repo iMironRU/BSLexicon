@@ -287,6 +287,7 @@ export function getMember(obj: BslValue, name: string, line: number): BslValue {
   }
   if (obj instanceof BslValueTableRow) {
     const key = name.toLowerCase();
+    if (key === 'владелец' || key === 'owner') return obj.owner;
     if (obj.cells.has(key)) return obj.cells.get(key) as BslValue;
     throw new RuntimeError(`СтрокаТаблицыЗначений: нет колонки «${name}»`, line);
   }
@@ -403,8 +404,13 @@ function findColumn(coll: BslColumnCollection, key: BslValue, line: number): Bsl
   return coll.items[i];
 }
 
-/** Ключ ячейки строки по индексу колонки (Число) или имени колонки (Строка). */
+/** Ключ ячейки строки по объекту колонки, индексу (Число) или имени (Строка). */
 function rowCellKey(row: BslValueTableRow, key: BslValue, line: number): string {
+  if (key instanceof BslColumn) {
+    const k = key.name.toLowerCase();
+    if (!row.cells.has(k)) throw new RuntimeError(`СтрокаТаблицыЗначений: нет колонки «${key.name}»`, line);
+    return k;
+  }
   if (typeof key === 'string') {
     const k = key.toLowerCase();
     if (!row.cells.has(k)) throw new RuntimeError(`СтрокаТаблицыЗначений: нет колонки «${key}»`, line);
@@ -555,6 +561,12 @@ const ARRAY_METHODS: MethodDef[] = [
       (self as BslArray).items.length = 0;
       return UNDEFINED;
     },
+  },
+  {
+    name: 'ВГраница',
+    aliases: ['ubound'],
+    arity: [0, 0],
+    impl: (self) => (self as BslArray).items.length - 1,
   },
 ];
 
@@ -1235,6 +1247,28 @@ function columnKey(table: BslValueTable, name: BslValue, fn: string, line: numbe
   return key;
 }
 
+const TABLEROW_METHODS: MethodDef[] = [
+  {
+    name: 'Получить',
+    aliases: ['get'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      const row = self as BslValueTableRow;
+      return row.cells.get(rowCellKey(row, args[0], line)) ?? UNDEFINED;
+    },
+  },
+  {
+    name: 'Установить',
+    aliases: ['set'],
+    arity: [2, 2],
+    impl: (self, args, line) => {
+      const row = self as BslValueTableRow;
+      row.cells.set(rowCellKey(row, args[0], line), args[1]);
+      return UNDEFINED;
+    },
+  },
+];
+
 const METHODS: Record<string, MethodDef[]> = {
   Массив: ARRAY_METHODS,
   Структура: STRUCT_METHODS,
@@ -1242,6 +1276,7 @@ const METHODS: Record<string, MethodDef[]> = {
   СписокЗначений: VALUELIST_METHODS,
   ТаблицаЗначений: VALUETABLE_METHODS,
   КоллекцияКолонокТаблицыЗначений: COLUMNS_METHODS,
+  СтрокаТаблицыЗначений: TABLEROW_METHODS,
 };
 
 const METHOD_LOOKUP = new Map<string, MethodDef>();
@@ -1278,6 +1313,7 @@ export const propertyIds: readonly string[] = [
   'Структура.<Имя ключа>',
   'КоллекцияКолонокТаблицыЗначений.<Имя колонки>',
   'СтрокаТаблицыЗначений.<Имя колонки>',
+  'СтрокаТаблицыЗначений.Владелец',
 ];
 
 // ── Конструкторы (оператор «Новый») ──────────────────────────────
