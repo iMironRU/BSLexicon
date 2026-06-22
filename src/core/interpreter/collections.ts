@@ -1035,7 +1035,7 @@ const VALUETABLE_METHODS: MethodDef[] = [
         for (const { key, desc } of criteria) {
           const va = a.cells.get(key) ?? UNDEFINED;
           const vb = b.cells.get(key) ?? UNDEFINED;
-          const cmp = compareValues(va, vb);
+          const cmp = compareValues(va, vb) ?? 0;
           if (cmp !== 0) return desc ? -cmp : cmp;
         }
         return 0;
