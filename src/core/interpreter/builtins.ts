@@ -3,6 +3,7 @@ import { BslArray, BslStructure } from './collections';
 import {
   BslDate,
   addMonths,
+  formatDate,
   dateDay,
   dateHour,
   dateMinute,
@@ -519,6 +520,45 @@ export const BUILTINS: readonly Builtin[] = [
     },
   },
 
+  // ── Форматирование ────────────────────────────────────────────
+  {
+    id: 'Формат',
+    aliases: ['format'],
+    arity: [2, 2],
+    impl: (args) => bslFormat(args[0], toBslString(args[1])),
+  },
+  {
+    id: 'СтрШаблон',
+    aliases: ['strtemplate'],
+    arity: [1, 255],
+    impl: (args) => {
+      let tmpl = toBslString(args[0]);
+      for (let i = 1; i < args.length; i += 1) {
+        tmpl = tmpl.split(`%${i}`).join(toBslString(args[i]));
+      }
+      return tmpl;
+    },
+  },
+  {
+    id: 'СтрокаСЧислом',
+    aliases: ['stringwithcount'],
+    arity: [2, 2],
+    impl: (args) => {
+      const n = Math.abs(Math.trunc(toNumber(args[0])));
+      const forms = toBslString(args[1]).split(';');
+      const form1 = forms[0] ?? '';
+      const form2 = forms[1] ?? form1;
+      const form5 = forms[2] ?? form2;
+      const mod10 = n % 10;
+      const mod100 = n % 100;
+      let form: string;
+      if (mod10 === 1 && mod100 !== 11) form = form1;
+      else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) form = form2;
+      else form = form5;
+      return form.split('%1').join(String(Math.abs(Math.trunc(toNumber(args[0])))));
+    },
+  },
+
   // ── Числовые ──────────────────────────────────────────────────
   {
     id: 'Цел',
@@ -619,6 +659,83 @@ export const BUILTINS: readonly Builtin[] = [
     impl: (args) => Math.sqrt(toNumber(args[0])),
   },
 ];
+
+/** Разбирает строку формата «К=В; К2=В2» → Map<ключ_нижн, значение>. */
+function parseFmtParams(fmt: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const part of fmt.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq < 0) {
+      const k = part.trim().toLowerCase();
+      if (k) map.set(k, '');
+    } else {
+      map.set(part.slice(0, eq).trim().toLowerCase(), part.slice(eq + 1));
+    }
+  }
+  return map;
+}
+
+/** Форматирует дату по шаблону вида «dd.MM.yyyy HH:mm:ss». */
+function formatDatePattern(d: BslDate, pattern: string): string {
+  const dt = new Date(d.time);
+  return pattern.replace(/yyyy|yy|MM|M|dd|d|HH|H|mm|m|ss|s/g, (tok) => {
+    switch (tok) {
+      case 'yyyy': return String(dt.getUTCFullYear());
+      case 'yy': return String(dt.getUTCFullYear()).slice(-2);
+      case 'MM': return String(dt.getUTCMonth() + 1).padStart(2, '0');
+      case 'M': return String(dt.getUTCMonth() + 1);
+      case 'dd': return String(dt.getUTCDate()).padStart(2, '0');
+      case 'd': return String(dt.getUTCDate());
+      case 'HH': return String(dt.getUTCHours()).padStart(2, '0');
+      case 'H': return String(dt.getUTCHours());
+      case 'mm': return String(dt.getUTCMinutes()).padStart(2, '0');
+      case 'm': return String(dt.getUTCMinutes());
+      case 'ss': return String(dt.getUTCSeconds()).padStart(2, '0');
+      case 's': return String(dt.getUTCSeconds());
+      default: return tok;
+    }
+  });
+}
+
+/** Реализация встроенной функции Формат(). */
+function bslFormat(value: BslValue, fmt: string): string {
+  const p = parseFmtParams(fmt);
+
+  if (value instanceof BslDate) {
+    const df = p.get('дф') ?? p.get('df');
+    return df !== undefined ? formatDatePattern(value, df) : formatDate(value);
+  }
+
+  if (typeof value === 'boolean') {
+    const t = p.get('би') ?? p.get('bt') ?? 'Да';
+    const f = p.get('бл') ?? p.get('bf') ?? 'Нет';
+    return value ? t : f;
+  }
+
+  if (typeof value === 'number') {
+    const digitsStr = p.get('чц') ?? p.get('nd');
+    const decSep = p.get('чрд') ?? p.get('nds') ?? '.';
+    const grpSep = p.get('чрг') ?? p.get('ngs') ?? '';
+    const zeroStr = p.get('чн') ?? p.get('nz');
+
+    if (value === 0 && zeroStr !== undefined) return zeroStr;
+
+    const digits = digitsStr !== undefined && digitsStr !== '' ? parseInt(digitsStr, 10) : undefined;
+    const absStr = digits !== undefined && !isNaN(digits)
+      ? Math.abs(value).toFixed(digits)
+      : String(Math.abs(value));
+    const dotIdx = absStr.indexOf('.');
+    const intPart = dotIdx < 0 ? absStr : absStr.slice(0, dotIdx);
+    const decPart = dotIdx < 0 ? undefined : absStr.slice(dotIdx + 1);
+    const intFmt = grpSep !== ''
+      ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, grpSep)
+      : intPart;
+    const result = decPart !== undefined ? intFmt + decSep + decPart : intFmt;
+    return value < 0 ? '-' + result : result;
+  }
+
+  return toBslString(value);
+}
 
 /** Возвращает максимум (`dir=1`) или минимум (`dir=-1`) из аргументов. */
 function pickExtreme(args: BslValue[], fn: string, dir: number): BslValue {
