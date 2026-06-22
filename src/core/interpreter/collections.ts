@@ -10,6 +10,7 @@ import { RuntimeError } from '../errors';
 import {
   BslObject,
   UNDEFINED,
+  compareValues,
   copyValue,
   displayValue,
   isTruthy,
@@ -738,6 +739,84 @@ const VALUELIST_METHODS: MethodDef[] = [
     aliases: ['unloadvalues'],
     arity: [0, 0],
     impl: (self) => new BslArray((self as BslValueList).items.map((it) => it.value)),
+  },
+  {
+    name: 'ЗагрузитьЗначения',
+    aliases: ['loadvalues'],
+    arity: [1, 1],
+    impl: (self, args, line) => {
+      if (!(args[0] instanceof BslArray)) {
+        throw new RuntimeError(`ЗагрузитьЗначения: ожидался Массив, получено «${typeName(args[0])}»`, line);
+      }
+      const list = self as BslValueList;
+      list.items.length = 0;
+      for (const v of (args[0] as BslArray).items) list.items.push(new BslValueListItem(v));
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'ЗаполнитьПометки',
+    aliases: ['fillchecks'],
+    arity: [1, 1],
+    impl: (self, args) => {
+      const flag = isTruthy(args[0]);
+      for (const it of (self as BslValueList).items) it.check = flag;
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'Сдвинуть',
+    aliases: ['move'],
+    arity: [2, 2],
+    impl: (self, args, line) => {
+      const list = self as BslValueList;
+      const idx = args[0] instanceof BslValueListItem
+        ? list.items.indexOf(args[0])
+        : listIndex(list, args[0], line);
+      if (idx < 0) throw new RuntimeError(`Сдвинуть: элемент не найден`, line);
+      const newIdx = Math.max(0, Math.min(list.items.length - 1, idx + Math.trunc(toNumber(args[1]))));
+      const [item] = list.items.splice(idx, 1);
+      list.items.splice(newIdx, 0, item);
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'Скопировать',
+    aliases: ['copy'],
+    arity: [0, 0],
+    impl: (self) => {
+      const out = new BslValueList();
+      for (const it of (self as BslValueList).items) {
+        out.items.push(new BslValueListItem(it.value, it.presentation, it.check));
+      }
+      return out;
+    },
+  },
+  {
+    name: 'СортироватьПоЗначению',
+    aliases: ['sortbyvalue'],
+    arity: [0, 1],
+    impl: (self, args) => {
+      const list = self as BslValueList;
+      const desc = args.length > 0 && (toNumber(args[0]) === 1 || /^уб/i.test(toBslString(args[0])));
+      list.items.sort((a, b) => (compareValues(a.value, b.value) ?? 0) * (desc ? -1 : 1));
+      return UNDEFINED;
+    },
+  },
+  {
+    name: 'СортироватьПоПредставлению',
+    aliases: ['sortbypresentation'],
+    arity: [0, 1],
+    impl: (self, args) => {
+      const list = self as BslValueList;
+      const desc = args.length > 0 && (toNumber(args[0]) === 1 || /^уб/i.test(toBslString(args[0])));
+      list.items.sort((a, b) => {
+        const pa = a.presentation !== '' ? a.presentation : toBslString(a.value);
+        const pb = b.presentation !== '' ? b.presentation : toBslString(b.value);
+        return pa.localeCompare(pb) * (desc ? -1 : 1);
+      });
+      return UNDEFINED;
+    },
   },
 ];
 
