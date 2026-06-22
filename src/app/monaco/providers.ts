@@ -22,6 +22,7 @@ const KIND_LABEL: Record<CatalogEntry['kind'], string> = {
   function: 'функция',
   method: 'метод',
   type: 'тип',
+  property: 'свойство',
 };
 
 /** Контекст «после точки» (обращение к члену) по тексту строки до слова. */

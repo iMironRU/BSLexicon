@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "BSLexicon — файл каталога языка",
-  "description": "Массив записей каталога: типы, функции, методы. Единый источник правды для рантайма, Monaco-провайдеров и панели-справочника.",
+  "description": "Массив записей каталога: типы, функции, методы, свойства. Единый источник правды для рантайма, Monaco-провайдеров и панели-справочника.",
   "type": "array",
   "items": { "$ref": "#/definitions/entry" },
   "definitions": {
@@ -11,7 +11,7 @@
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string", "minLength": 1 },
-        "kind": { "enum": ["function", "type", "method"] },
+        "kind": { "enum": ["function", "type", "method", "property"] },
         "names": {
           "type": "object",
           "required": ["ru", "en"],

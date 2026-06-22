@@ -4,7 +4,7 @@
  * общее для рантайм-проверки (scripts/check-catalog.ts) и синтакс-помощника.
  */
 
-export type CatalogKind = 'function' | 'type' | 'method';
+export type CatalogKind = 'function' | 'type' | 'method' | 'property';
 
 export interface CatalogNames {
   /** Русское имя (как пишут в коде: `СокрЛП`, `Добавить`). */

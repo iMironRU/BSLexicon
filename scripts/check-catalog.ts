@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Ajv from 'ajv';
 import { load } from 'js-yaml';
-import { builtinIds, methodIds, run } from '../src/core/index';
+import { builtinIds, methodIds, propertyIds, run } from '../src/core/index';
 import type { CatalogEntry } from '../src/core/catalog/types';
 
 const catalogDir = fileURLToPath(new URL('../catalog', import.meta.url));
@@ -78,6 +78,10 @@ const catalogMethods = new Set(entries.filter((e) => e.kind === 'method').map((e
 const runtimeMethods = new Set(methodIds);
 checkInvariant('метод', runtimeMethods, catalogMethods);
 
+const catalogProperties = new Set(entries.filter((e) => e.kind === 'property').map((e) => e.id));
+const runtimeProperties = new Set(propertyIds);
+checkInvariant('свойство', runtimeProperties, catalogProperties);
+
 // --- Doctest примеров ---
 let doctests = 0;
 for (const entry of entries) {
@@ -106,6 +110,6 @@ if (errors.length > 0) {
 
 console.log(
   `✓ Каталог в порядке: ${entries.length} записей, ` +
-    `${runtimeFns.size} функций и ${runtimeMethods.size} методов совпадают с рантаймом, ` +
+    `${runtimeFns.size} функций, ${runtimeMethods.size} методов и ${runtimeProperties.size} свойств совпадают с рантаймом, ` +
     `${doctests} doctest пройдено.`,
 );
