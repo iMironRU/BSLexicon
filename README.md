@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](tsconfig.app.json)
 
-[Демо](https://imironru.github.io/BSLexicon/) · [Концепция](docs/concept.md) · [Дорожная карта](#дорожная-карта) · [Вклад](CONTRIBUTING.md)
+[Демо](https://imironru.github.io/BSLexicon/) · [Концепция](docs/concept.md) · [Интеграция с книгами](docs/book-integration.md) · [Дорожная карта](#дорожная-карта) · [Вклад](CONTRIBUTING.md)
 
 </div>
 
@@ -142,6 +142,14 @@ docs/concept.md       Концепция проекта
 
 TypeScript (strict) · React · Vite · Monaco Editor · Vitest · GitHub Actions → GitHub Pages.
 Ядро (`src/core`) не зависит от фреймворка и переиспользуемо как встраиваемый компонент.
+
+## Интеграция с книгами
+
+BSLexicon принимает листинги по URL — книга формирует ссылку, читатель кликает и сразу
+видит готовый код в редакторе. Поддерживается `?code`, `?gzcode` (gzip для QR-кодов),
+`?source`/`?title` (провенанс-баннер), `?embed=1` (режим iframe).
+
+Подробности, примеры и готовые функции кодирования — в [docs/book-integration.md](docs/book-integration.md).
 
 ## Вклад
 
