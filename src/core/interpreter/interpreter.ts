@@ -291,11 +291,8 @@ export class Interpreter {
         return isTruthy(yield* this.evaluate(e.cond, scope))
           ? yield* this.evaluate(e.whenTrue, scope)
           : yield* this.evaluate(e.whenFalse, scope);
-      case 'Call': {
-        const args: BslValue[] = [];
-        for (const a of e.args) args.push(yield* this.evaluate(a, scope));
-        return yield* this.callFunction(e.callee, args, e.line);
-      }
+      case 'Call':
+        return yield* this.callFunction(e.callee, e.args, scope, e.line);
       case 'New': {
         const ctor = resolveConstructor(e.typeName);
         if (!ctor) throw new RuntimeError(`«Новый»: неизвестный тип «${e.typeName}»`, e.line);
@@ -413,11 +410,14 @@ export class Interpreter {
 
   private *callFunction(
     name: string,
-    args: BslValue[],
+    argExprs: Expr[],
+    callerScope: Scope,
     line: number,
   ): Generator<StepEvent, BslValue, void> {
     const builtin = resolveBuiltin(name);
     if (builtin) {
+      const args: BslValue[] = [];
+      for (const a of argExprs) args.push(yield* this.evaluate(a, callerScope));
       const [min, max] = builtin.arity;
       if (args.length < min || args.length > max) {
         throw new RuntimeError(
@@ -429,22 +429,48 @@ export class Interpreter {
     }
 
     const proc = this.procedures.get(name.toLowerCase());
-    if (proc) return yield* this.callUser(proc, args);
+    if (proc) return yield* this.callUser(proc, argExprs, callerScope);
 
     throw new RuntimeError(`Неизвестная процедура или функция «${name}»`, line);
   }
 
-  private *callUser(decl: ProcDecl, args: BslValue[]): Generator<StepEvent, BslValue, void> {
+  /**
+   * Вызов пользовательской процедуры/функции. Аргументы передаются как выражения,
+   * чтобы реализовать семантику параметров 1С:
+   *   • `Знач Х`            — копия значения (см. `copyValue`); учебный акцент §4;
+   *   • `Х` + аргумент-Ident — алиас (by-reference): переприсваивание внутри
+   *                             меняет переменную вызывающего;
+   *   • `Х` + другое выражение — значение (pass-by-sharing): мутации объекта видны,
+   *                             переприсваивание локально.
+   */
+  private *callUser(
+    decl: ProcDecl,
+    argExprs: Expr[],
+    callerScope: Scope,
+  ): Generator<StepEvent, BslValue, void> {
     const frame = new Scope();
     for (let i = 0; i < decl.params.length; i += 1) {
       const p = decl.params[i];
-      let value: BslValue;
-      if (i < args.length) value = args[i];
-      else if (p.default) value = yield* this.evaluate(p.default, this.globals);
-      else value = UNDEFINED;
-      // «Знач»: коллекция копируется (иначе передаётся по ссылке) — учебный акцент §4.
-      if (p.byVal) value = copyValue(value);
-      frame.declare(p.name, value);
+      const argExpr = i < argExprs.length ? argExprs[i] : undefined;
+
+      if (!argExpr) {
+        // аргумент не передан → значение по умолчанию или Неопределено
+        const v = p.default ? yield* this.evaluate(p.default, this.globals) : UNDEFINED;
+        frame.declare(p.name, v);
+        continue;
+      }
+
+      if (!p.byVal && argExpr.kind === 'Ident') {
+        // by-reference: алиас на переменную вызывающего. Если её ещё нет —
+        // 1С создаёт переменную при первой передаче по ссылке.
+        if (!callerScope.has(argExpr.name)) callerScope.declare(argExpr.name);
+        frame.declareAlias(p.name, callerScope, argExpr.name);
+        continue;
+      }
+
+      let v = yield* this.evaluate(argExpr, callerScope);
+      if (p.byVal) v = copyValue(v); // глубокая копия для коллекций
+      frame.declare(p.name, v);
     }
 
     // Кадр на стеке во время исполнения тела — отсюда шаг внутрь и стек вызовов.
