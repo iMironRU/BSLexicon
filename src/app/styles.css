@@ -587,6 +587,18 @@ body {
   color: var(--fg);
 }
 
+.ref__open-site {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+.ref__open-site:hover {
+  border-color: var(--accent);
+}
+
 .ref__search {
   margin: 10px 12px;
   padding: 7px 10px;

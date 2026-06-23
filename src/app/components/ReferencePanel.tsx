@@ -101,6 +101,13 @@ export function ReferencePanel({ catalog, onClose }: ReferencePanelProps) {
             <span className="ref__dot ref__dot--on" /> {totalStats.runtime} / {totalStats.total}
           </span>
         )}
+        <a
+          className="ref__open-site"
+          href={`${import.meta.env.BASE_URL}help/`}
+          title="Открыть как самостоятельный сайт"
+        >
+          Открыть как сайт →
+        </a>
         <button className="ref__close" onClick={onClose} type="button" title="Закрыть">
           ✕
         </button>

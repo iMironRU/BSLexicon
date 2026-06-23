@@ -85,3 +85,14 @@ export function decodeCodeParam(raw: string): CodeDecodeResult {
     return { ok: false, error: 'Не удалось декодировать код из ссылки' };
   }
 }
+
+/**
+ * Кодирует исходник в URL-safe base64 (для параметра `?code=…`).
+ * Симметричен `decodeBase64` ↔ `decodeCodeParam`.
+ */
+export function encodeCodeParam(code: string): string {
+  const bytes = new TextEncoder().encode(code);
+  let binStr = '';
+  for (const b of bytes) binStr += String.fromCharCode(b);
+  return btoa(binStr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}

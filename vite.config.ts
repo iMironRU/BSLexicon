@@ -47,5 +47,13 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      // Multi-page: тренажёр (/) + справочник (/help/). Help-entry не импортирует
+      // Monaco — у него свой ≪50 КБ JS-чанк, не дублирующий 4 МБ редактора.
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        help: fileURLToPath(new URL('./help/index.html', import.meta.url)),
+      },
+    },
   },
 }));
