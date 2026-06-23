@@ -20,6 +20,7 @@
     "test:watch": "vitest",
     "check:catalog": "tsx scripts/check-catalog.ts",
     "extract:sp": "tsx scripts/extract-syntax-help.ts",
+    "extract:hbk": "tsx scripts/extract-hbk.ts",
     "lint": "eslint . --ext .ts,.tsx",
     "verify": "npm run typecheck && npm run check:catalog && npm run test"
   },
@@ -37,6 +38,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "ajv": "^8.17.1",
+    "jszip": "^3.10.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",

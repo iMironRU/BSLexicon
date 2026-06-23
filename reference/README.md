@@ -19,12 +19,30 @@
 
 Исходная выгрузка (~110 МБ) в репозиторий **не коммитится**.
 
-### Регенерация
+### Регенерация — два источника
+
+**Из родного `.hbk` (предпочтительный):**
+
+```bash
+BSL_HBK_ZIP="/путь/к/8.3.18_shcntx_ru/source/FileStorage.data" npm run extract:hbk
+# по умолчанию — reference/source/8.3.18_shcntx_ru/source/FileStorage.data
+```
+
+Скрипт: [`scripts/extract-hbk.ts`](../scripts/extract-hbk.ts). `.hbk` — родной
+формат справки 1С; его внутреннее `FileStorage.data` — обычный ZIP с HTML-статьями
+в дереве `objects/<TYPE>/methods/...`. Иерархия владельца/категории берётся
+из пути и `catalog<N>.html`.
+
+**Из XML-выгрузки справочника `ЭлементыДокументации` (альтернатива):**
 
 ```bash
 BSL_SP_EXPORT="/путь/к/Файл выгрузки.xml" npm run extract:sp
 ```
 
 Скрипт: [`scripts/extract-syntax-help.ts`](../scripts/extract-syntax-help.ts).
-Парсит справочник `ЭлементыДокументации` формата `_1CV8DtUD`, оставляет
-глобальный контекст и типы коллекций, складывает факты в `syntax-help.json`.
+Парсит справочник формата `_1CV8DtUD`.
+
+Оба скрипта пишут в один и тот же `public/reference/syntax-help.json`,
+переиспользуют общие парсеры HTML из
+[`scripts/lib/syntax-html.ts`](../scripts/lib/syntax-html.ts) и применяют ту же
+курацию (учебные категории + коллекции).
