@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import './app/monaco/setup'; // self-host Monaco: должен быть до первого рендера Editor
 import { App } from './app/App';
 import './app/styles.css';
 
