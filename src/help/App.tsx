@@ -135,7 +135,6 @@ export function App() {
       </header>
 
       <main className="help__body">
-        <Sidebar catalog={catalog} route={route} syntaxIndex={syntaxIndex} target={target} />
         <section className="help__content">
           {route.kind === 'home' && <Home catalog={catalog} />}
           {route.kind === 'entry' && entry && (
@@ -161,12 +160,13 @@ export function App() {
             <div className="help__missing">
               <h1>Адрес не распознан</h1>
               <p>
-                Не понял адрес <code>{route.raw}</code>. Используйте дерево слева
+                Не понял адрес <code>{route.raw}</code>. Используйте дерево справа
                 или вернитесь на <a href="#/">главную</a>.
               </p>
             </div>
           )}
         </section>
+        <Sidebar catalog={catalog} route={route} syntaxIndex={syntaxIndex} target={target} />
       </main>
 
       {searchOpen && (

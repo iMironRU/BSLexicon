@@ -128,12 +128,17 @@ a:hover { text-decoration: underline; }
   flex-shrink: 0;
   padding: 16px 12px 32px;
   background: var(--bg-panel);
-  border-right: 1px solid var(--border);
+  /* Раньше дерево было слева — теперь справа: граница на левой стороне. */
+  border-left: 1px solid var(--border);
+  /* Растягивается на всю высоту main (default align-items: stretch).
+     Внутренний overflow — собственный скролл, не влияет на content. */
   overflow-y: auto;
-  max-height: calc(100vh - 56px);
+  /* Sticky внутри flex-родителя нужен, чтобы дерево было видно при
+     скролле длинной карточки; растягивание + sticky совместимы при
+     высоте 100% min-height: 0. */
   position: sticky;
   top: 56px;
-  align-self: flex-start;
+  max-height: calc(100vh - 56px);
 }
 
 .sb__home {
@@ -418,12 +423,14 @@ a:hover { text-decoration: underline; }
 /* ── Адаптив ──────────────────────────────────────────────────── */
 
 @media (max-width: 820px) {
-  .help__body { flex-direction: column; }
+  /* На мобиле — column-reverse, чтобы дерево было СВЕРХУ (для навигации),
+     несмотря на DOM-порядок «content → sidebar». */
+  .help__body { flex-direction: column-reverse; }
   .sb {
     width: 100%;
     max-height: 240px;
     position: static;
-    border-right: none;
+    border-left: none;
     border-bottom: 1px solid var(--border);
   }
   .help__content { padding: 18px 16px 32px; }
