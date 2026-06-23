@@ -1,15 +1,20 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { loadCatalog } from '../app/catalog';
 import { Sidebar } from './Sidebar';
 import { Card } from './Card';
 import { Home } from './Home';
+import { SearchOverlay } from './SearchOverlay';
+import { pushRecent } from './recent';
 import { useHashRoute } from './router';
 
 const TRAINER_URL = import.meta.env.BASE_URL; // '/' в dev, '/BSLexicon/' в build
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+const HOTKEY_LABEL = IS_MAC ? '⌘K' : 'Ctrl+K';
 
 export function App() {
   const catalog = useMemo(() => loadCatalog(), []);
   const route = useHashRoute();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const entry =
     route.kind === 'entry' ? catalog.byId.get(route.id) ?? null : null;
@@ -23,6 +28,31 @@ export function App() {
     }
   }, [entry]);
 
+  /** Любая открытая карточка попадает в историю — для пустого Cmd+K и образцов. */
+  useEffect(() => {
+    if (entry) pushRecent(entry.id);
+  }, [entry]);
+
+  /** Глобальный ⌘K / Ctrl+K — переключение поискового overlay'я. */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      } else if (e.key === '/' && !searchOpen) {
+        const tag = (e.target as HTMLElement | null)?.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+          e.preventDefault();
+          setSearchOpen(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [searchOpen]);
+
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
+
   return (
     <div className="help">
       <header className="help__header">
@@ -30,9 +60,21 @@ export function App() {
           <span className="help__logo">BSLexicon</span>
           <span className="help__tagline">Синтакс-помощник</span>
         </a>
-        <a className="help__back" href={TRAINER_URL}>
-          ← Тренажёр
-        </a>
+        <div className="help__head-actions">
+          <button
+            type="button"
+            className="help__search-btn"
+            onClick={() => setSearchOpen(true)}
+            title={`Поиск (${HOTKEY_LABEL})`}
+          >
+            <span aria-hidden="true">🔎</span>
+            <span className="help__search-label">Поиск</span>
+            <kbd className="help__kbd">{HOTKEY_LABEL}</kbd>
+          </button>
+          <a className="help__back" href={TRAINER_URL}>
+            ← Тренажёр
+          </a>
+        </div>
       </header>
 
       <main className="help__body">
@@ -62,6 +104,8 @@ export function App() {
           )}
         </section>
       </main>
+
+      {searchOpen && <SearchOverlay catalog={catalog} onClose={closeSearch} />}
     </div>
   );
 }
