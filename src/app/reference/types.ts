@@ -16,5 +16,10 @@ export interface SyntaxEntry {
   signature: string | null;
   params: SyntaxParam[];
   returnType: string | null;
+  /** Текстовые контексты, как в HTML (для UI/тулипа). */
   availability: string[];
+  /** Нормализованные ключи контекстов для фильтра/сравнения. */
+  availabilityKeys: string[];
+  /** Версия платформы «начиная с» (`"8.3.18"`). `null` — не указана. */
+  since: string | null;
 }

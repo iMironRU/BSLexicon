@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Catalog, CatalogEntry } from '@core/index';
+import type { SyntaxEntry } from '../app/reference/types';
 import { formatHash } from './router';
 import type { Route } from './router';
+import { isAvailable } from './target';
+import type { Target, Verdict } from './target';
 
 interface SidebarProps {
   catalog: Catalog;
   route: Route;
+  syntaxIndex: Map<string, SyntaxEntry>;
+  target: Target;
 }
 
 /** Канонический порядок категорий функций (из правой панели в SPA). */
@@ -81,7 +86,18 @@ function groupOf(route: Route, groups: { functions: Group[]; types: Group[] }): 
   return groups.types.find((g) => g.entries.some((e) => e.id === typeName))?.key ?? null;
 }
 
-export function Sidebar({ catalog, route }: SidebarProps) {
+/** Сводный вердикт по записи каталога с учётом target и привязки к выгрузке. */
+function verdictOf(
+  entry: CatalogEntry,
+  syntaxIndex: Map<string, SyntaxEntry>,
+  target: Target,
+): Verdict {
+  const syntax = syntaxIndex.get(entry.id);
+  if (!syntax) return 'unknown';
+  return isAvailable(syntax, target);
+}
+
+export function Sidebar({ catalog, route, syntaxIndex, target }: SidebarProps) {
   const groups = useMemo(() => buildGroups(catalog), [catalog]);
   const initialOpen = useMemo(() => {
     const set = new Set<string>();
@@ -118,8 +134,8 @@ export function Sidebar({ catalog, route }: SidebarProps) {
         Главная
       </a>
 
-      <Section title="Функции" groups={groups.functions} entryKind="function" route={route} open={open} onToggle={toggle} />
-      <Section title="Типы" groups={groups.types} entryKind="type" route={route} open={open} onToggle={toggle} />
+      <Section title="Функции" groups={groups.functions} entryKind="function" route={route} open={open} onToggle={toggle} syntaxIndex={syntaxIndex} target={target} />
+      <Section title="Типы" groups={groups.types} entryKind="type" route={route} open={open} onToggle={toggle} syntaxIndex={syntaxIndex} target={target} />
     </nav>
   );
 }
@@ -131,9 +147,11 @@ interface SectionProps {
   route: Route;
   open: Set<string>;
   onToggle: (key: string) => void;
+  syntaxIndex: Map<string, SyntaxEntry>;
+  target: Target;
 }
 
-function Section({ title, groups, entryKind, route, open, onToggle }: SectionProps) {
+function Section({ title, groups, entryKind, route, open, onToggle, syntaxIndex, target }: SectionProps) {
   if (groups.length === 0) return null;
   return (
     <div className="sb__section">
@@ -157,13 +175,25 @@ function Section({ title, groups, entryKind, route, open, onToggle }: SectionPro
                 <ul className="sb__entries">
                   {g.entries.map((e) => {
                     const active = route.kind === 'entry' && route.entryKind === entryKind && route.id === e.id;
+                    const v = verdictOf(e, syntaxIndex, target);
                     return (
                       <li key={e.id}>
                         <a
-                          className={'sb__entry' + (active ? ' sb__entry--active' : '')}
+                          className={
+                            'sb__entry' +
+                            (active ? ' sb__entry--active' : '') +
+                            (v === 'no' ? ' sb__entry--blocked' : '')
+                          }
                           href={formatHash({ kind: 'entry', entryKind, id: e.id })}
                           title={e.names.en}
                         >
+                          {v !== 'unknown' && (
+                            <span
+                              className={`dot dot--${v}`}
+                              aria-hidden="true"
+                              title={v === 'yes' ? 'Доступно у вас' : 'Не подходит под выбранную платформу'}
+                            />
+                          )}
                           {e.names.ru}
                         </a>
                       </li>

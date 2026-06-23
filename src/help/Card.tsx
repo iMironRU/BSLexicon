@@ -1,7 +1,10 @@
 import type { Catalog, CatalogEntry, CatalogExample, CatalogParam } from '@core/index';
 import { methodTypeOf } from '@core/index';
+import type { SyntaxEntry } from '../app/reference/types';
 import { encodeCodeParam } from '../app/url-params';
 import { formatHash } from './router';
+import { ALL_CONTEXTS, CONTEXT_LABELS, verdict } from './target';
+import type { Target } from './target';
 
 const KIND_LABEL: Record<CatalogEntry['kind'], string> = {
   function: 'функция',
@@ -13,9 +16,13 @@ const KIND_LABEL: Record<CatalogEntry['kind'], string> = {
 interface CardProps {
   catalog: Catalog;
   entry: CatalogEntry;
+  syntax: SyntaxEntry | null;
+  target: Target;
 }
 
-export function Card({ catalog, entry }: CardProps) {
+export function Card({ catalog, entry, syntax, target }: CardProps) {
+  const availabilityVerdict = syntax ? verdict(syntax, target) : null;
+
   return (
     <article className="card">
       <Breadcrumbs catalog={catalog} entry={entry} />
@@ -26,6 +33,9 @@ export function Card({ catalog, entry }: CardProps) {
         </h1>
         <span className="card__kind">{KIND_LABEL[entry.kind]}</span>
         <span className="card__category">· {entry.category}</span>
+        {availabilityVerdict && availabilityVerdict.verdict !== 'unknown' && (
+          <AvailabilityBadge verdict={availabilityVerdict} />
+        )}
       </header>
 
       {entry.signature && <pre className="card__sig">{entry.signature}</pre>}
@@ -44,8 +54,66 @@ export function Card({ catalog, entry }: CardProps) {
 
       {entry.kind === 'type' && <TypeMembers catalog={catalog} entry={entry} />}
 
+      {syntax && <AvailabilitySection syntax={syntax} target={target} />}
+
       {entry.examples && entry.examples.length > 0 && <Examples examples={entry.examples} />}
     </article>
+  );
+}
+
+function AvailabilityBadge({ verdict: v }: { verdict: ReturnType<typeof verdict> }) {
+  if (v.verdict === 'yes') {
+    return <span className="card__avail-badge card__avail-badge--yes">✓ доступно у вас</span>;
+  }
+  if (v.reason.needsVersion) {
+    return (
+      <span className="card__avail-badge card__avail-badge--no">
+        ✗ требует {v.reason.needsVersion}
+      </span>
+    );
+  }
+  if (v.reason.missingContexts && v.reason.missingContexts.length > 0) {
+    const labels = v.reason.missingContexts.map((c) => CONTEXT_LABELS[c]).join(', ');
+    return (
+      <span className="card__avail-badge card__avail-badge--no" title={`Не работает: ${labels}`}>
+        ✗ не подходит контекст
+      </span>
+    );
+  }
+  return null;
+}
+
+function AvailabilitySection({ syntax, target }: { syntax: SyntaxEntry; target: Target }) {
+  const available = new Set(syntax.availabilityKeys);
+  return (
+    <section className="card__avail">
+      <h2 className="card__avail-title">Доступность</h2>
+      {syntax.since && (
+        <div className="card__avail-since">
+          Доступен с версии <b>{syntax.since}</b>
+        </div>
+      )}
+      <ul className="card__avail-matrix">
+        {ALL_CONTEXTS.map((ctx) => {
+          const has = available.has(ctx);
+          const targeted = target.contexts.has(ctx);
+          return (
+            <li
+              key={ctx}
+              className={
+                'card__ctx' +
+                (has ? ' card__ctx--has' : ' card__ctx--no') +
+                (targeted ? ' card__ctx--targeted' : '')
+              }
+              title={targeted ? 'Включено в вашей цели' : undefined}
+            >
+              <span aria-hidden="true" className="card__ctx-icon">{has ? '✓' : '✗'}</span>
+              <span className="card__ctx-label">{CONTEXT_LABELS[ctx]}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

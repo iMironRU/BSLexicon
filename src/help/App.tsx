@@ -1,20 +1,76 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { loadCatalog } from '../app/catalog';
+import { loadReference } from '../app/reference/load';
+import type { SyntaxEntry } from '../app/reference/types';
 import { Sidebar } from './Sidebar';
 import { Card } from './Card';
 import { Home } from './Home';
 import { SearchOverlay } from './SearchOverlay';
+import { TargetSelector } from './TargetSelector';
 import { pushRecent } from './recent';
 import { useHashRoute } from './router';
+import { defaultTarget, loadTarget, saveTarget, versionsFromEntries } from './target';
+import type { Target } from './target';
 
 const TRAINER_URL = import.meta.env.BASE_URL; // '/' в dev, '/BSLexicon/' в build
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const HOTKEY_LABEL = IS_MAC ? '⌘K' : 'Ctrl+K';
 
+/**
+ * Строит индекс CatalogEntry.id → SyntaxEntry. Ключ совпадает с тем,
+ * как мы храним id в YAML-каталоге («СокрЛП» / «Массив.Добавить»).
+ */
+function indexSyntax(entries: readonly SyntaxEntry[]): Map<string, SyntaxEntry> {
+  const map = new Map<string, SyntaxEntry>();
+  for (const e of entries) {
+    const id = e.kind === 'function' ? e.nameRu : `${e.owner}.${e.nameRu}`;
+    map.set(id, e);
+  }
+  return map;
+}
+
 export function App() {
   const catalog = useMemo(() => loadCatalog(), []);
   const route = useHashRoute();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [syntaxEntries, setSyntaxEntries] = useState<SyntaxEntry[] | null>(null);
+  const [target, setTargetState] = useState<Target>(() => defaultTarget());
+
+  // Ленивая загрузка датасета 1С-выгрузки — для версий и контекстов.
+  useEffect(() => {
+    let alive = true;
+    loadReference()
+      .then((data) => {
+        if (alive) setSyntaxEntries(data);
+      })
+      .catch(() => {
+        /* отсутствие выгрузки не критично — селектор и индикаторы просто будут пусты */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Подтягиваем сохранённый target после монтирования (а не в инициализаторе),
+  // чтобы SSR/preview не падали на ReferenceError localStorage.
+  useEffect(() => {
+    setTargetState(loadTarget());
+  }, []);
+
+  const syntaxIndex = useMemo(
+    () => (syntaxEntries ? indexSyntax(syntaxEntries) : new Map<string, SyntaxEntry>()),
+    [syntaxEntries],
+  );
+
+  const versions = useMemo(
+    () => versionsFromEntries(syntaxEntries ?? []),
+    [syntaxEntries],
+  );
+
+  const setTarget = useCallback((t: Target) => {
+    setTargetState(t);
+    saveTarget(t);
+  }, []);
 
   const entry =
     route.kind === 'entry' ? catalog.byId.get(route.id) ?? null : null;
@@ -61,6 +117,7 @@ export function App() {
           <span className="help__tagline">Синтакс-помощник</span>
         </a>
         <div className="help__head-actions">
+          <TargetSelector versions={versions} target={target} onChange={setTarget} />
           <button
             type="button"
             className="help__search-btn"
@@ -78,10 +135,17 @@ export function App() {
       </header>
 
       <main className="help__body">
-        <Sidebar catalog={catalog} route={route} />
+        <Sidebar catalog={catalog} route={route} syntaxIndex={syntaxIndex} target={target} />
         <section className="help__content">
           {route.kind === 'home' && <Home catalog={catalog} />}
-          {route.kind === 'entry' && entry && <Card catalog={catalog} entry={entry} />}
+          {route.kind === 'entry' && entry && (
+            <Card
+              catalog={catalog}
+              entry={entry}
+              syntax={syntaxIndex.get(entry.id) ?? null}
+              target={target}
+            />
+          )}
           {route.kind === 'entry' && !entry && (
             <div className="help__missing">
               <h1>Не нашёл запись</h1>
@@ -105,7 +169,14 @@ export function App() {
         </section>
       </main>
 
-      {searchOpen && <SearchOverlay catalog={catalog} onClose={closeSearch} />}
+      {searchOpen && (
+        <SearchOverlay
+          catalog={catalog}
+          syntaxIndex={syntaxIndex}
+          target={target}
+          onClose={closeSearch}
+        />
+      )}
     </div>
   );
 }

@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Catalog, CatalogEntry } from '@core/index';
+import type { SyntaxEntry } from '../app/reference/types';
 import { formatHash } from './router';
 import { loadRecent, pushRecent } from './recent';
 import { search } from './search';
 import type { SearchHit } from './search';
+import { isAvailable } from './target';
+import type { Target } from './target';
 
 interface SearchOverlayProps {
   catalog: Catalog;
+  syntaxIndex: Map<string, SyntaxEntry>;
+  target: Target;
   onClose: () => void;
 }
 
@@ -25,7 +30,7 @@ const KIND_FILTERS: { id: CatalogEntry['kind'] | 'all'; label: string }[] = [
   { id: 'property', label: 'Свойства' },
 ];
 
-export function SearchOverlay({ catalog, onClose }: SearchOverlayProps) {
+export function SearchOverlay({ catalog, syntaxIndex, target, onClose }: SearchOverlayProps) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<CatalogEntry['kind'] | 'all'>('all');
   const [selected, setSelected] = useState(0);
@@ -144,22 +149,31 @@ export function SearchOverlay({ catalog, onClose }: SearchOverlayProps) {
         )}
 
         <ul className="overlay__list" ref={listRef}>
-          {hits.map((h, i) => (
-            <li
-              key={h.entry.id}
-              data-i={i}
-              className={'overlay__item' + (i === selected ? ' overlay__item--active' : '')}
-              onMouseEnter={() => setSelected(i)}
-              onClick={() => go(h.entry)}
-            >
-              <span className="overlay__kind">{KIND_LABEL[h.entry.kind]}</span>
-              <span className="overlay__name">
-                <HighlightedName id={h.entry.id} hit={h} query={query} />
-              </span>
-              <span className="overlay__en">{h.entry.names.en}</span>
-              <span className="overlay__cat">{h.entry.category}</span>
-            </li>
-          ))}
+          {hits.map((h, i) => {
+            const syntax = syntaxIndex.get(h.entry.id);
+            const v = syntax ? isAvailable(syntax, target) : 'unknown';
+            return (
+              <li
+                key={h.entry.id}
+                data-i={i}
+                className={
+                  'overlay__item' +
+                  (i === selected ? ' overlay__item--active' : '') +
+                  (v === 'no' ? ' overlay__item--blocked' : '')
+                }
+                onMouseEnter={() => setSelected(i)}
+                onClick={() => go(h.entry)}
+              >
+                <span className="overlay__kind">{KIND_LABEL[h.entry.kind]}</span>
+                <span className="overlay__name">
+                  {v !== 'unknown' && <span className={`dot dot--${v}`} aria-hidden="true" />}
+                  <HighlightedName id={h.entry.id} hit={h} query={query} />
+                </span>
+                <span className="overlay__en">{h.entry.names.en}</span>
+                <span className="overlay__cat">{h.entry.category}</span>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

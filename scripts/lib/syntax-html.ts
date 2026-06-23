@@ -61,7 +61,12 @@ export interface Entry {
   signature: string | null;
   params: Param[];
   returnType: string | null;
+  /** Контексты исполнения как в HTML (для отображения). */
   availability: string[];
+  /** Контексты в нормализованных ключах для сравнения и фильтра. */
+  availabilityKeys: string[];
+  /** Версия платформы, с которой запись доступна (`"8.3.18"`); `null` — если не указана. */
+  since: string | null;
 }
 
 /** Снимает HTML-теги и декодирует HTML-сущности до читаемого текста. */
@@ -129,6 +134,44 @@ export function parseAvailability(html: string | undefined): string[] {
 }
 
 /**
+ * Маппинг текстового имени контекста исполнения 1С на стабильный ключ.
+ * Сравнение регистронезависимое, скобки/пробелы нормализуются. Возвращает
+ * `null`, если строка не сматчилась ни одному известному варианту —
+ * вызывающий код решит, логировать ли это (отлов новых формулировок).
+ */
+const CONTEXT_MAP: Record<string, string> = {
+  'тонкий клиент': 'thin',
+  'веб-клиент': 'web',
+  'веб клиент': 'web',
+  'мобильный клиент': 'mobile-thin',
+  'сервер': 'server',
+  'толстый клиент': 'thick',
+  'внешнее соединение': 'external',
+  'мобильное приложение (клиент)': 'mobile-client',
+  'мобильное приложение (сервер)': 'mobile-server',
+  'мобильный автономный сервер': 'mobile-standalone',
+};
+
+export function normalizeContext(raw: string): string | null {
+  const key = raw.toLowerCase().replace(/\s+/g, ' ').trim();
+  return CONTEXT_MAP[key] ?? null;
+}
+
+/**
+ * Извлекает версию «начиная с …» из секции «Использование в версии:»
+ * (`<p class="V8SH_versionInfo">Доступен, начиная с версии 8.3.18.</p>`).
+ * Возвращает строку версии (`"8.0"`, `"8.3.18"`) или `null`.
+ */
+export function parseSince(html: string): string | null {
+  // Сначала ищем разметку V8SH_versionInfo — самый надёжный источник.
+  const struct = html.match(/<p class="V8SH_versionInfo">[^<]*?версии\s+([\d.]+)/);
+  if (struct) return struct[1].replace(/\.$/, '');
+  // Резерв — параграф `not_used` в шапке статьи (всегда присутствует).
+  const fallback = html.match(/<p class="not_used">[^<]*?версии\s+([\d.]+)/);
+  return fallback ? fallback[1].replace(/\.$/, '') : null;
+}
+
+/**
  * Парсит заголовок статьи (V8SH_pagetitle) формата «Владелец.Имя (OwnerEN.NameEN)».
  * Возвращает 4 поля или `null`, если шаблон не сматчился (например, статья — раздел).
  */
@@ -154,19 +197,27 @@ export function globalCategory(rawCategory: string | undefined, nameRu: string):
   return null;
 }
 
-/** Извлекает 4 стандартные секции статьи (`signature/params/returnType/availability`). */
+/** Извлекает все стандартные секции статьи. */
 export function extractSections(
   html: string,
   kind: Entry['kind'],
-): Pick<Entry, 'signature' | 'params' | 'returnType' | 'availability'> {
+): Pick<Entry, 'signature' | 'params' | 'returnType' | 'availability' | 'availabilityKeys' | 'since'> {
   const secs = sections(html);
   const signature = secs.has('Синтаксис')
     ? htmlToText(secs.get('Синтаксис') as string).replace(/\s+/g, ' ').trim() || null
     : null;
+  const availability = parseAvailability(secs.get('Доступность'));
+  const availabilityKeys: string[] = [];
+  for (const raw of availability) {
+    const key = normalizeContext(raw);
+    if (key && !availabilityKeys.includes(key)) availabilityKeys.push(key);
+  }
   return {
     signature,
     params: kind === 'property' ? [] : parseParams(secs.get('Параметры')),
     returnType: parseType(secs.get('Возвращаемое значение')),
-    availability: parseAvailability(secs.get('Доступность')),
+    availability,
+    availabilityKeys,
+    since: parseSince(html),
   };
 }
