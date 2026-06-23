@@ -44,4 +44,6 @@ export interface CatalogEntry {
   params?: CatalogParam[];
   returns?: CatalogReturns;
   examples?: CatalogExample[];
+  /** Публичная ссылка на онлайн-синтакс-помощник 1С (источник описаний/примеров). */
+  referenceUrl?: string;
 }

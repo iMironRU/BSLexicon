@@ -22,4 +22,6 @@ export interface SyntaxEntry {
   availabilityKeys: string[];
   /** Версия платформы «начиная с» (`"8.3.18"`). `null` — не указана. */
   since: string | null;
+  /** Публичная ссылка на онлайн-синтакс-помощник 1С с описанием/примерами. */
+  referenceUrl: string | null;
 }

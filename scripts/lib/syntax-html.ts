@@ -67,6 +67,8 @@ export interface Entry {
   availabilityKeys: string[];
   /** Версия платформы, с которой запись доступна (`"8.3.18"`); `null` — если не указана. */
   since: string | null;
+  /** Публичная ссылка на онлайн-синтакс-помощник 1С (источник описаний и примеров). */
+  referenceUrl: string | null;
 }
 
 /** Снимает HTML-теги и декодирует HTML-сущности до читаемого текста. */
@@ -172,6 +174,18 @@ export function parseSince(html: string): string | null {
 }
 
 /**
+ * Публичная deep-ссылка на онлайн-синтакс-помощник 1С (нижний колонтитул
+ * каждой статьи). Это ресурс самой 1С, на лицензию текста СП не подпадает —
+ * мы можем ссылаться. Возвращает URL или `null`.
+ */
+export function parseReferenceUrl(html: string): string | null {
+  // Атрибут href без кавычек, URL содержит `"` внутри: захватываем до пробела/>.
+  const m = html.match(/href=(https?:\/\/[^\s>]*1centerprise\.com\/devlinks[^\s>]*)/i);
+  if (!m) return null;
+  return m[1].replace(/^["']|["']$/g, '').trim() || null;
+}
+
+/**
  * Парсит заголовок статьи (V8SH_pagetitle) формата «Владелец.Имя (OwnerEN.NameEN)».
  * Возвращает 4 поля или `null`, если шаблон не сматчился (например, статья — раздел).
  */
@@ -201,7 +215,7 @@ export function globalCategory(rawCategory: string | undefined, nameRu: string):
 export function extractSections(
   html: string,
   kind: Entry['kind'],
-): Pick<Entry, 'signature' | 'params' | 'returnType' | 'availability' | 'availabilityKeys' | 'since'> {
+): Pick<Entry, 'signature' | 'params' | 'returnType' | 'availability' | 'availabilityKeys' | 'since' | 'referenceUrl'> {
   const secs = sections(html);
   const signature = secs.has('Синтаксис')
     ? htmlToText(secs.get('Синтаксис') as string).replace(/\s+/g, ' ').trim() || null
@@ -219,5 +233,6 @@ export function extractSections(
     availability,
     availabilityKeys,
     since: parseSince(html),
+    referenceUrl: parseReferenceUrl(html),
   };
 }

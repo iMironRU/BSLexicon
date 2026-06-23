@@ -1,0 +1,61 @@
+# Stub-записи категории «Форматирование» — только для справочника (/help/).
+# Сгенерировано автоматически: scripts/import-stubs.ts.
+# При курации переносите запись в основной каталог (catalog/<вид>/...) с
+# собственным описанием и runnable-примерами, и она исчезнет отсюда.
+
+- id: НСтр
+  kind: function
+  names:
+    ru: НСтр
+    en: NStr
+  category: Форматирование
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: НСтр(<ИсходнаяСтрока>, <КодЯзыка>)
+  params:
+    - name: ИсходнаяСтрока
+      type: Строка
+    - name: КодЯзыка
+      type: Строка
+      optional: true
+  returns:
+    type: Строка
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00053M00871;lan=ru
+- id: ПредставлениеПериода
+  kind: function
+  names:
+    ru: ПредставлениеПериода
+    en: PeriodPresentation
+  category: Форматирование
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ПредставлениеПериода(<ДатаНачалаПериода>, <ДатаОкончанияПериода>, <ФорматнаяСтрока>)
+  params:
+    - name: ДатаНачалаПериода
+      type: Дата
+    - name: ДатаОкончанияПериода
+      type: Дата
+    - name: ФорматнаяСтрока
+      type: Строка
+      optional: true
+  returns:
+    type: Строка
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00053M01044;lan=ru
+- id: ЧислоПрописью
+  kind: function
+  names:
+    ru: ЧислоПрописью
+    en: NumberInWords
+  category: Форматирование
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ЧислоПрописью(<Число>, <ФорматнаяСтрока>, <ПараметрыПредметаИсчисления>)
+  params:
+    - name: Число
+      type: Число
+    - name: ФорматнаяСтрока
+      type: Строка
+      optional: true
+    - name: ПараметрыПредметаИсчисления
+      type: Строка
+      optional: true
+  returns:
+    type: Строка
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00053M00714;lan=ru

@@ -1,10 +1,18 @@
 import type { Catalog, CatalogEntry, CatalogExample, CatalogParam } from '@core/index';
-import { methodTypeOf } from '@core/index';
+import { builtinIds, methodIds, methodTypeOf, propertyIds } from '@core/index';
 import type { SyntaxEntry } from '../app/reference/types';
 import { encodeCodeParam } from '../app/url-params';
 import { formatHash } from './router';
 import { ALL_CONTEXTS, CONTEXT_LABELS, verdict } from './target';
 import type { Target } from './target';
+
+/** Кэш id-сетов рантайма — для определения «исполняется / только справка». */
+const RUNTIME_IDS = new Set<string>([...builtinIds, ...methodIds, ...propertyIds]);
+
+function isRuntimeEntry(entry: CatalogEntry): boolean {
+  if (entry.kind === 'type') return true; // тип — всегда «есть в рантайме», если он в каталоге
+  return RUNTIME_IDS.has(entry.id);
+}
 
 const KIND_LABEL: Record<CatalogEntry['kind'], string> = {
   function: 'функция',
@@ -33,6 +41,14 @@ export function Card({ catalog, entry, syntax, target }: CardProps) {
         </h1>
         <span className="card__kind">{KIND_LABEL[entry.kind]}</span>
         <span className="card__category">· {entry.category}</span>
+        {!isRuntimeEntry(entry) && (
+          <span
+            className="card__stub-badge"
+            title="Запись только в справочнике — рантайм тренажёра её не исполняет"
+          >
+            только справка
+          </span>
+        )}
         {availabilityVerdict && availabilityVerdict.verdict !== 'unknown' && (
           <AvailabilityBadge verdict={availabilityVerdict} />
         )}
@@ -57,6 +73,25 @@ export function Card({ catalog, entry, syntax, target }: CardProps) {
       {syntax && <AvailabilitySection syntax={syntax} target={target} />}
 
       {entry.examples && entry.examples.length > 0 && <Examples examples={entry.examples} />}
+
+      {syntax?.referenceUrl && (
+        <section className="card__source">
+          <a
+            href={syntax.referenceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="card__source-link"
+            title="Открыть статью в онлайн-синтакс-помощнике 1С"
+          >
+            📖 Описание и примеры на сайте 1С →
+          </a>
+          <p className="card__source-note">
+            Тексты и примеры синтакс-помощника — собственность «1С».
+            Мы храним только структурные факты (имена, сигнатуры, типы),
+            а полные описания — по ссылке.
+          </p>
+        </section>
+      )}
     </article>
   );
 }

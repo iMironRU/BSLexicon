@@ -1,0 +1,171 @@
+# Stub-записи категории «Строки» — только для справочника (/help/).
+# Сгенерировано автоматически: scripts/import-stubs.ts.
+# При курации переносите запись в основной каталог (catalog/<вид>/...) с
+# собственным описанием и runnable-примерами, и она исчезнет отсюда.
+
+- id: ПолучитьСклоненияСтроки
+  kind: function
+  names:
+    ru: ПолучитьСклоненияСтроки
+    en: GetStringDeclensions
+  category: Строки
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ПолучитьСклоненияСтроки(<СклоняемаяСтрока>, <ОписаниеСтроки>, <ФорматнаяСтрока>)
+  params:
+    - name: СклоняемаяСтрока
+      type: Строка
+    - name: ОписаниеСтроки
+      type: Строка
+      optional: true
+    - name: ФорматнаяСтрока
+      type: Строка
+      optional: true
+  returns:
+    type: Массив
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00053M05452;lan=ru
+- id: ПолучитьСклоненияСтрокиПоЧислу
+  kind: function
+  names:
+    ru: ПолучитьСклоненияСтрокиПоЧислу
+    en: GetStringDeclensionsByNumber
+  category: Строки
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: >-
+    ПолучитьСклоненияСтрокиПоЧислу(<СклоняемаяСтрока>, <Число>, <СклоняемыеЕдиницыИзмерения>,
+    <ОписаниеСтроки>, <ФорматнаяСтрока>, <ФорматнаяСтрокаЧисла>)
+  params:
+    - name: СклоняемаяСтрока
+      type: Строка
+    - name: Число
+      type: Число
+    - name: СклоняемыеЕдиницыИзмерения
+      type: Строка
+      optional: true
+    - name: ОписаниеСтроки
+      type: Строка
+      optional: true
+    - name: ФорматнаяСтрока
+      type: Строка
+      optional: true
+    - name: ФорматнаяСтрокаЧисла
+      type: Строка
+      optional: true
+  returns:
+    type: Массив
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00053M05592;lan=ru
+- id: СтрЗаменитьПоРегулярномуВыражению
+  kind: function
+  names:
+    ru: СтрЗаменитьПоРегулярномуВыражению
+    en: StrReplaceByRegularExpression
+  category: Строки
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: >-
+    СтрЗаменитьПоРегулярномуВыражению(<Строка>, <РегулярноеВыражение>, <ПодстрокаЗамены>,
+    <ИгнорироватьРегистр>, <МногострочныйПоиск>)
+  params:
+    - name: Строка
+      type: Строка
+    - name: РегулярноеВыражение
+      type: Строка
+    - name: ПодстрокаЗамены
+      type: Строка
+    - name: ИгнорироватьРегистр
+      type: Булево
+      optional: true
+    - name: МногострочныйПоиск
+      type: Булево
+      optional: true
+  returns:
+    type: Строка
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00053M06383;lan=ru
+- id: СтрНайтиВсеПоРегулярномуВыражению
+  kind: function
+  names:
+    ru: СтрНайтиВсеПоРегулярномуВыражению
+    en: StrFindAllByRegularExpression
+  category: Строки
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: СтрНайтиВсеПоРегулярномуВыражению(<Строка>, <МногострочныйПоиск>)
+  params:
+    - name: Строка
+      type: Строка
+    - name: МногострочныйПоиск
+      type: Булево
+      optional: true
+  returns:
+    type: Массив
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00053M06483;lan=ru
+- id: СтрНайтиИВыделитьОформлением
+  kind: function
+  names:
+    ru: СтрНайтиИВыделитьОформлением
+    en: StrFindAndHighlightByAppearance
+  category: Строки
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: СтрНайтиИВыделитьОформлением(<Строка>, <Подстрока>)
+  params:
+    - name: Строка
+      type: Строка
+    - name: Подстрока
+      type: Строка
+  returns:
+    type: ФорматированнаяСтрока
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00053M05729;lan=ru
+- id: СтрНайтиПоРегулярномуВыражению
+  kind: function
+  names:
+    ru: СтрНайтиПоРегулярномуВыражению
+    en: StrFindByRegularExpression
+  category: Строки
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: >-
+    СтрНайтиПоРегулярномуВыражению(<Строка>, <РегулярноеВыражение>, <НаправлениеПоиска>,
+    <НачальнаяПозиция>, <НомерВхождения>, <ИгнорироватьРегистр>, <МногострочныйПоиск>)
+  params:
+    - name: Строка
+      type: Строка
+    - name: РегулярноеВыражение
+      type: Строка
+    - name: НаправлениеПоиска
+      type: НаправлениеПоиска
+      optional: true
+    - name: НачальнаяПозиция
+      type: Число
+      optional: true
+    - name: НомерВхождения
+      type: Число
+      optional: true
+    - name: ИгнорироватьРегистр
+      type: Булево
+      optional: true
+    - name: МногострочныйПоиск
+      type: Булево
+      optional: true
+  returns:
+    type: РезультатПоискаПоРегулярномуВыражению
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00053M06385;lan=ru
+- id: СтрПодобнаПоРегулярномуВыражению
+  kind: function
+  names:
+    ru: СтрПодобнаПоРегулярномуВыражению
+    en: StrLikeByRegularExpression
+  category: Строки
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: >-
+    СтрПодобнаПоРегулярномуВыражению(<Строка>, <РегулярноеВыражение>, <ИгнорироватьРегистр>,
+    <МногострочныйПоиск>)
+  params:
+    - name: Строка
+      type: Строка
+    - name: РегулярноеВыражение
+      type: Строка
+    - name: ИгнорироватьРегистр
+      type: Булево
+      optional: true
+    - name: МногострочныйПоиск
+      type: Булево
+      optional: true
+  returns:
+    type: Булево
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00053M06384;lan=ru

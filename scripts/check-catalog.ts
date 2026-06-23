@@ -40,6 +40,7 @@ const validate = ajv.compile(schema);
 
 const files = findYaml(catalogDir);
 const entries: CatalogEntry[] = [];
+const stubEntries: CatalogEntry[] = [];
 
 for (const file of files) {
   const rel = file.slice(catalogDir.length + 1);
@@ -56,7 +57,11 @@ for (const file of files) {
     }
     continue;
   }
-  entries.push(...(data as CatalogEntry[]));
+  // Stubs (`catalog/stubs/...`) валидируются по схеме, но не участвуют
+  // в инварианте рантайм↔каталог и в doctest (там нет examples).
+  const isStub = rel.startsWith('stubs/') || rel.startsWith('stubs\\');
+  const bucket = isStub ? stubEntries : entries;
+  bucket.push(...(data as CatalogEntry[]));
 }
 
 // --- Инвариант рантайм ↔ каталог ---
@@ -108,8 +113,9 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
+const stubInfo = stubEntries.length > 0 ? `, ${stubEntries.length} stub-записей (только справка)` : '';
 console.log(
   `✓ Каталог в порядке: ${entries.length} записей, ` +
     `${runtimeFns.size} функций, ${runtimeMethods.size} методов и ${runtimeProperties.size} свойств совпадают с рантаймом, ` +
-    `${doctests} doctest пройдено.`,
+    `${doctests} doctest пройдено${stubInfo}.`,
 );

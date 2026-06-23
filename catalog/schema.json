@@ -26,7 +26,11 @@
         "description": { "type": "string" },
         "params": { "type": "array", "items": { "$ref": "#/definitions/param" } },
         "returns": { "$ref": "#/definitions/returns" },
-        "examples": { "type": "array", "items": { "$ref": "#/definitions/example" } }
+        "examples": { "type": "array", "items": { "$ref": "#/definitions/example" } },
+        "referenceUrl": {
+          "type": "string",
+          "description": "Публичная ссылка на онлайн-синтакс-помощник 1С (источник описаний/примеров)."
+        }
       }
     },
     "param": {

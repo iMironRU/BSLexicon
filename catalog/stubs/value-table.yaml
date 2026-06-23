@@ -1,0 +1,32 @@
+# Stub-записи категории «ТаблицаЗначений» — только для справочника (/help/).
+# Сгенерировано автоматически: scripts/import-stubs.ts.
+# При курации переносите запись в основной каталог (catalog/<вид>/...) с
+# собственным описанием и runnable-примерами, и она исчезнет отсюда.
+
+- id: ТаблицаЗначений.ВыбратьСтроку
+  kind: method
+  names:
+    ru: ВыбратьСтроку
+    en: ChooseRow
+  category: ТаблицаЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ВыбратьСтроку(<Заголовок>, <НачальнаяСтрока>)
+  params:
+    - name: Заголовок
+      type: Строка
+      optional: true
+    - name: НачальнаяСтрока
+      type: СтрокаТаблицыЗначений
+      optional: true
+  returns:
+    type: СтрокаТаблицыЗначений
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00071M00651;lan=ru
+- id: ТаблицаЗначений.Индексы
+  kind: property
+  names:
+    ru: Индексы
+    en: Indexes
+  category: ТаблицаЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: Индексы()
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00071A04720;lan=ru

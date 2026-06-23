@@ -23,6 +23,7 @@ function entry(over: Partial<SyntaxEntry>): SyntaxEntry {
     availability: [],
     availabilityKeys: [],
     since: null,
+    referenceUrl: null,
     ...over,
   };
 }

@@ -733,3 +733,50 @@ a:hover { text-decoration: underline; }
   .ts__popover { width: calc(100vw - 28px); right: -10px; }
   .card__avail-matrix { grid-template-columns: 1fr; }
 }
+
+/* ── Источник — ссылка на 1С ─────────────────────────────────── */
+
+.card__source {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.card__source-link {
+  display: inline-block;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  text-decoration: none;
+}
+.card__source-link:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  text-decoration: none;
+}
+
+.card__source-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--fg-dim);
+  line-height: 1.5;
+  max-width: 600px;
+}
+
+/* ── Бейдж «только справка» — для stub-записей ───────────────── */
+
+.card__stub-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--fg-dim);
+  background: var(--bg-header);
+  border: 1px solid var(--border);
+}

@@ -1,0 +1,23 @@
+# Stub-записи категории «КолонкаТаблицыЗначений» — только для справочника (/help/).
+# Сгенерировано автоматически: scripts/import-stubs.ts.
+# При курации переносите запись в основной каталог (catalog/<вид>/...) с
+# собственным описанием и runnable-примерами, и она исчезнет отсюда.
+
+- id: КолонкаТаблицыЗначений.ТипЗначения
+  kind: property
+  names:
+    ru: ТипЗначения
+    en: ValueType
+  category: КолонкаТаблицыЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ТипЗначения()
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00223A01027;lan=ru
+- id: КолонкаТаблицыЗначений.Ширина
+  kind: property
+  names:
+    ru: Ширина
+    en: Width
+  category: КолонкаТаблицыЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: Ширина()
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00223A01029;lan=ru

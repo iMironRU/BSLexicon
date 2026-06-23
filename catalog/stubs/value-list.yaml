@@ -1,0 +1,136 @@
+# Stub-записи категории «СписокЗначений» — только для справочника (/help/).
+# Сгенерировано автоматически: scripts/import-stubs.ts.
+# При курации переносите запись в основной каталог (catalog/<вид>/...) с
+# собственным описанием и runnable-примерами, и она исчезнет отсюда.
+
+- id: СписокЗначений.ВыбратьЭлемент
+  kind: method
+  names:
+    ru: ВыбратьЭлемент
+    en: ChooseItem
+  category: СписокЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ВыбратьЭлемент(<Заголовок>, <Элемент>)
+  params:
+    - name: Заголовок
+      type: Строка
+      optional: true
+    - name: Элемент
+      type: ЭлементСпискаЗначений
+      optional: true
+  returns:
+    type: ЭлементСпискаЗначений
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00080M00199;lan=ru
+- id: СписокЗначений.ВыбратьЭлементАсинх
+  kind: method
+  names:
+    ru: ВыбратьЭлементАсинх
+    en: ChooseItemAsync
+  category: СписокЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ВыбратьЭлементАсинх(<Заголовок>, <Элемент>)
+  params:
+    - name: Заголовок
+      type: Строка
+      optional: true
+    - name: Элемент
+      type: ЭлементСпискаЗначений
+      optional: true
+  returns:
+    type: Обещание
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00080M06069;lan=ru
+- id: СписокЗначений.ДоступныеЗначения
+  kind: property
+  names:
+    ru: ДоступныеЗначения
+    en: AvailableValues
+  category: СписокЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ДоступныеЗначения()
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00080A07388;lan=ru
+- id: СписокЗначений.НайтиПоИдентификатору
+  kind: method
+  names:
+    ru: НайтиПоИдентификатору
+    en: FindByID
+  category: СписокЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: НайтиПоИдентификатору(<Идентификатор>)
+  params:
+    - name: Идентификатор
+      type: Число
+  returns:
+    type: ЭлементСпискаЗначений
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00080M03928;lan=ru
+- id: СписокЗначений.ОтметитьЭлементы
+  kind: method
+  names:
+    ru: ОтметитьЭлементы
+    en: CheckItems
+  category: СписокЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ОтметитьЭлементы(<Заголовок>)
+  params:
+    - name: Заголовок
+      type: Строка
+      optional: true
+  returns:
+    type: Булево
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00080M00200;lan=ru
+- id: СписокЗначений.ОтметитьЭлементыАсинх
+  kind: method
+  names:
+    ru: ОтметитьЭлементыАсинх
+    en: CheckItemsAsync
+  category: СписокЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ОтметитьЭлементыАсинх(<Заголовок>)
+  params:
+    - name: Заголовок
+      type: Строка
+      optional: true
+  returns:
+    type: Обещание
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00080M06070;lan=ru
+- id: СписокЗначений.ПоказатьВыборЭлемента
+  kind: method
+  names:
+    ru: ПоказатьВыборЭлемента
+    en: ShowChooseItem
+  category: СписокЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ПоказатьВыборЭлемента(<ОписаниеОповещенияОЗакрытии>, <Заголовок>, <Элемент>)
+  params:
+    - name: ОписаниеОповещенияОЗакрытии
+      type: ОписаниеОповещения
+    - name: Заголовок
+      type: Строка
+      optional: true
+    - name: Элемент
+      type: ЭлементСпискаЗначений
+      optional: true
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00080M04371;lan=ru
+- id: СписокЗначений.ПоказатьОтметкуЭлементов
+  kind: method
+  names:
+    ru: ПоказатьОтметкуЭлементов
+    en: ShowCheckItems
+  category: СписокЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ПоказатьОтметкуЭлементов(<ОписаниеОповещенияОЗакрытии>, <Заголовок>)
+  params:
+    - name: ОписаниеОповещенияОЗакрытии
+      type: ОписаниеОповещения
+    - name: Заголовок
+      type: Строка
+      optional: true
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00080M04370;lan=ru
+- id: СписокЗначений.ТипЗначения
+  kind: property
+  names:
+    ru: ТипЗначения
+    en: ValueType
+  category: СписокЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ТипЗначения()
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00080A02299;lan=ru

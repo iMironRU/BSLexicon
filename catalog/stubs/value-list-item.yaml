@@ -1,0 +1,25 @@
+# Stub-записи категории «ЭлементСпискаЗначений» — только для справочника (/help/).
+# Сгенерировано автоматически: scripts/import-stubs.ts.
+# При курации переносите запись в основной каталог (catalog/<вид>/...) с
+# собственным описанием и runnable-примерами, и она исчезнет отсюда.
+
+- id: ЭлементСпискаЗначений.Картинка
+  kind: property
+  names:
+    ru: Картинка
+    en: Picture
+  category: ЭлементСпискаЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: Картинка()
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00081A01261;lan=ru
+- id: ЭлементСпискаЗначений.ПолучитьИдентификатор
+  kind: method
+  names:
+    ru: ПолучитьИдентификатор
+    en: GetID
+  category: ЭлементСпискаЗначений
+  description: (только справка — полное описание и примеры на сайте 1С по ссылке ниже)
+  signature: ПолучитьИдентификатор()
+  returns:
+    type: Число
+  referenceUrl: http://www.1centerprise.com/devlinks?C="id=00058O00081M03927;lan=ru
