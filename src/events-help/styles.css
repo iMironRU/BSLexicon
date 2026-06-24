@@ -154,3 +154,179 @@
   .events__item { grid-template-columns: 1fr; gap: 2px; }
   .events__item-sig { max-width: 100%; }
 }
+
+/* ── Карточки сценариев жизненного цикла на главной ─────────── */
+
+.events__lifecycles { margin-top: 40px; }
+.events__lifecycles-title {
+  font-size: 18px;
+  margin: 0 0 6px;
+  color: var(--accent);
+}
+.events__lifecycles-lead {
+  color: var(--fg-dim);
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+.events__lifecycles-list { list-style: none; padding: 0; margin: 0; }
+.events__lifecycle-link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--fg);
+  margin-bottom: 8px;
+}
+.events__lifecycle-link:hover {
+  border-color: var(--accent);
+  text-decoration: none;
+}
+.events__lifecycle-title { font-weight: 500; }
+.events__lifecycle-meta { font-size: 12px; color: var(--fg-dim); }
+
+/* ── Страница сценария ───────────────────────────────────────── */
+
+.lifecycle { max-width: 1100px; }
+
+.lifecycle__title {
+  font-size: 26px;
+  color: var(--accent);
+  margin: 8px 0 6px;
+}
+.lifecycle__desc {
+  color: var(--fg);
+  line-height: 1.55;
+  max-width: 800px;
+  margin: 0 0 22px;
+}
+
+.lifecycle__diagram-wrap {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  overflow-x: auto;
+  margin-bottom: 28px;
+}
+
+/* SVG-диаграмма */
+.lifecycle-svg {
+  display: block;
+  font-family: var(--sans);
+  min-width: 800px;
+}
+.lifecycle__lane-bg {
+  fill: transparent;
+  stroke: var(--border);
+  stroke-dasharray: 4 4;
+}
+.lifecycle__lane--client .lifecycle__lane-bg {
+  fill: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+.lifecycle__lane--server .lifecycle__lane-bg {
+  fill: color-mix(in srgb, #569cd6 4%, transparent);
+}
+.lifecycle__lane--object .lifecycle__lane-bg {
+  fill: color-mix(in srgb, #f4a261 4%, transparent);
+}
+
+.lifecycle__lane-label {
+  font-size: 11px;
+  fill: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 600;
+}
+
+.lifecycle__arrow {
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 0.7;
+}
+.lifecycle__cancel-arrow {
+  stroke: var(--error);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.lifecycle__step a { text-decoration: none; }
+
+.lifecycle__step-box {
+  fill: var(--bg);
+  stroke: var(--accent);
+  stroke-width: 1;
+  cursor: pointer;
+}
+.lifecycle__step:hover .lifecycle__step-box {
+  fill: var(--bg-header);
+  stroke-width: 2;
+}
+
+.lifecycle__step-index {
+  font-size: 10px;
+  fill: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.lifecycle__step-name {
+  font-size: 12px;
+  fill: var(--accent);
+  font-family: var(--mono);
+}
+
+.lifecycle__cancel-label {
+  font-size: 10px;
+  fill: var(--error);
+  font-weight: 600;
+}
+
+/* Список шагов под диаграммой */
+
+.lifecycle__steps-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 0 0 12px;
+}
+
+.lifecycle__steps-list { list-style: none; padding: 0; margin: 0; counter-reset: step; }
+
+.lifecycle__step-row {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.lifecycle__step-num {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 16px;
+}
+
+.lifecycle__step-link { font-family: var(--mono); font-weight: 500; }
+
+.lifecycle__step-lane {
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+
+.lifecycle__step-note {
+  margin: 4px 0 0;
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+.lifecycle__step-cancel {
+  margin: 4px 0 0;
+  color: var(--error);
+  font-size: 13px;
+}

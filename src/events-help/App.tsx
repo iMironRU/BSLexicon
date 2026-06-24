@@ -4,6 +4,8 @@ import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { entryId, loadFullReference } from '../full-help/loader';
 import { SearchOverlay } from '../full-help/SearchOverlay';
 import { TypeRef } from '../full-help/TypeRef';
+import { LifecycleDiagram } from './LifecycleDiagram';
+import { SCENARIOS, scenarioById } from './lifecycle';
 import {
   PHASE_LABELS,
   PHASE_ORDER,
@@ -29,11 +31,19 @@ const HOTKEY_LABEL = IS_MAC ? '⌘K' : 'Ctrl+K';
 type Route =
   | { kind: 'home' }
   | { kind: 'owner'; owner: string }
-  | { kind: 'entry'; id: string };
+  | { kind: 'entry'; id: string }
+  | { kind: 'lifecycle'; scenarioId: string };
 
 function parseHash(hash: string): Route {
   const t = hash.replace(/^#\/?/, '');
   if (t === '') return { kind: 'home' };
+  if (t.startsWith('lifecycle/')) {
+    try {
+      return { kind: 'lifecycle', scenarioId: decodeURIComponent(t.slice('lifecycle/'.length)) };
+    } catch {
+      return { kind: 'home' };
+    }
+  }
   if (t.startsWith('owner/')) {
     try {
       return { kind: 'owner', owner: decodeURIComponent(t.slice('owner/'.length)) };
@@ -50,6 +60,7 @@ function parseHash(hash: string): Route {
 
 function formatHash(route: Route): string {
   if (route.kind === 'home') return '#/';
+  if (route.kind === 'lifecycle') return `#/lifecycle/${encodeURIComponent(route.scenarioId)}`;
   if (route.kind === 'owner') return `#/owner/${encodeURIComponent(route.owner)}`;
   return `#/${encodeURIComponent(route.id)}`;
 }
@@ -196,6 +207,9 @@ export function App() {
               events={eventsByOwner.get(route.owner) ?? []}
             />
           )}
+          {entries && route.kind === 'lifecycle' && (
+            <LifecycleView scenarioId={route.scenarioId} />
+          )}
           {entries && route.kind === 'entry' && currentEntry && (
             <EventCard
               entry={currentEntry}
@@ -329,6 +343,82 @@ function Home({ groups, totalEvents }: { groups: EventGroup[]; totalEvents: numb
           </li>
         ))}
       </ul>
+
+      <section className="events__lifecycles">
+        <h2 className="events__lifecycles-title">Жизненный цикл — типичные сценарии</h2>
+        <p className="events__lifecycles-lead">
+          Курированные диаграммы: что и в каком порядке срабатывает при типичных
+          действиях пользователя. Клик по шагу — карточка события.
+        </p>
+        <ul className="events__lifecycles-list">
+          {SCENARIOS.map((s) => (
+            <li key={s.id}>
+              <a
+                className="events__lifecycle-link"
+                href={`#/lifecycle/${encodeURIComponent(s.id)}`}
+              >
+                <span className="events__lifecycle-title">{s.title}</span>
+                <span className="events__lifecycle-meta">{s.steps.length} шагов</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </article>
+  );
+}
+
+function LifecycleView({ scenarioId }: { scenarioId: string }) {
+  const scenario = scenarioById(scenarioId);
+  if (!scenario) {
+    return (
+      <div className="help__missing">
+        <h1>Сценарий не найден</h1>
+        <p>Нет сценария с id <code>{scenarioId}</code>.</p>
+        <p><a href="#/">На главную событий</a></p>
+      </div>
+    );
+  }
+  return (
+    <article className="lifecycle">
+      <nav className="crumbs">
+        <a href="#/">События</a>
+        <span className="crumbs__sep"> / </span>
+        <span className="crumbs__active">{scenario.title}</span>
+      </nav>
+      <h1 className="lifecycle__title">{scenario.title}</h1>
+      <p className="lifecycle__desc">{scenario.description}</p>
+      <div className="lifecycle__diagram-wrap">
+        <LifecycleDiagram
+          scenario={scenario}
+          hrefForEvent={(eventId) => `#/${encodeURIComponent(eventId)}`}
+        />
+      </div>
+      <section className="lifecycle__steps">
+        <h2 className="lifecycle__steps-title">Шаги с пояснениями</h2>
+        <ol className="lifecycle__steps-list">
+          {scenario.steps.map((step, i) => (
+            <li key={step.id} className="lifecycle__step-row">
+              <div className="lifecycle__step-num">{i + 1}</div>
+              <div className="lifecycle__step-body">
+                <a
+                  className="lifecycle__step-link"
+                  href={`#/${encodeURIComponent(step.event)}`}
+                >
+                  {step.displayName ?? step.event}
+                </a>
+                <span className="lifecycle__step-lane">
+                  · {scenario.swimlanes.find((l) => l.id === step.swimlane)?.label}
+                </span>
+                {step.note && <p className="lifecycle__step-note">{step.note}</p>}
+                {step.cancel && (
+                  <p className="lifecycle__step-cancel">✗ {step.cancel}</p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
     </article>
   );
 }
