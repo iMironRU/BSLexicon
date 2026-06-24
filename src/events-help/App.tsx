@@ -3,6 +3,7 @@ import type { SyntaxEntry } from '../app/reference/types';
 import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { entryId, loadFullReference } from '../full-help/loader';
 import { SearchOverlay } from '../full-help/SearchOverlay';
+import { TypeRef } from '../full-help/TypeRef';
 import {
   PHASE_LABELS,
   PHASE_ORDER,
@@ -81,6 +82,18 @@ export function App() {
 
   // Только методы-события из полной выгрузки.
   const events = useMemo(() => (entries ? entries.filter(isEvent) : []), [entries]);
+
+  // Имена всех типов, у которых есть страница в полном СП — для ссылок
+  // на тип из параметров/возврата события.
+  const knownOwners = useMemo(
+    () => new Set((entries ?? []).map((e) => e.owner)),
+    [entries],
+  );
+  const typeHref = useCallback(
+    (owner: string) =>
+      `${import.meta.env.BASE_URL}help/full/#/owner/${encodeURIComponent(owner)}`,
+    [],
+  );
 
   // Глобальный ⌘K / Ctrl+K — переключение поиска по событиям.
   useEffect(() => {
@@ -184,7 +197,12 @@ export function App() {
             />
           )}
           {entries && route.kind === 'entry' && currentEntry && (
-            <EventCard entry={currentEntry} owner={currentEntry.owner} />
+            <EventCard
+              entry={currentEntry}
+              owner={currentEntry.owner}
+              knownOwners={knownOwners}
+              typeHref={typeHref}
+            />
           )}
           {entries && route.kind === 'entry' && !currentEntry && (
             <div className="help__missing">
@@ -382,7 +400,17 @@ function shortSig(sig: string): string {
   return m ? `(${m[1]})` : '';
 }
 
-function EventCard({ entry, owner }: { entry: SyntaxEntry; owner: string }) {
+function EventCard({
+  entry,
+  owner,
+  knownOwners,
+  typeHref,
+}: {
+  entry: SyntaxEntry;
+  owner: string;
+  knownOwners: ReadonlySet<string>;
+  typeHref: (owner: string) => string;
+}) {
   void groupOf; // импорт-shake защита от пустого использования в production
   const available = new Set(entry.availabilityKeys);
   return (
@@ -414,7 +442,9 @@ function EventCard({ entry, owner }: { entry: SyntaxEntry; owner: string }) {
             {entry.params.map((p) => (
               <tr key={p.name}>
                 <td className="params__name">{p.name}</td>
-                <td className="params__type">{p.type ?? '—'}</td>
+                <td className="params__type">
+                  <TypeRef type={p.type} knownOwners={knownOwners} hrefFor={typeHref} />
+                </td>
                 <td className="params__opt">{p.optional ? 'необязательный' : 'обязательный'}</td>
               </tr>
             ))}

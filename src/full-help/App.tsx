@@ -3,6 +3,7 @@ import type { SyntaxEntry } from '../app/reference/types';
 import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { SearchOverlay } from './SearchOverlay';
 import { Sidebar } from './Sidebar';
+import { TypeRef } from './TypeRef';
 import { entryId, loadFullReference } from './loader';
 import { search } from './search';
 import type { FullHit } from './search';
@@ -116,6 +117,13 @@ export function App() {
     return m;
   }, [entries]);
 
+  // Множество имён типов, у которых есть своя страница `#/owner/<имя>`.
+  // Используется для превращения текста типа в кликабельную ссылку.
+  const knownOwners = useMemo(
+    () => new Set([...byOwner.keys(), ...Object.keys(data?.ownerPaths ?? {})]),
+    [byOwner, data],
+  );
+
   // Дерево разделов — строится один раз после загрузки.
   const tree = useMemo(() => {
     if (!data) return [];
@@ -180,7 +188,9 @@ export function App() {
           {data && route.kind === 'owner' && (
             <OwnerView owner={route.owner} entries={byOwner.get(route.owner) ?? []} />
           )}
-          {data && route.kind === 'entry' && entry && <FullCard entry={entry} />}
+          {data && route.kind === 'entry' && entry && (
+            <FullCard entry={entry} knownOwners={knownOwners} />
+          )}
           {data && route.kind === 'entry' && !entry && (
             <div className="help__missing">
               <h1>Не нашёл запись</h1>
@@ -337,7 +347,7 @@ function Highlight({ text, index, q }: { text: string; index: number; q: string 
   );
 }
 
-function FullCard({ entry }: { entry: SyntaxEntry }) {
+function FullCard({ entry, knownOwners }: { entry: SyntaxEntry; knownOwners: ReadonlySet<string> }) {
   const id = entryId(entry);
   const available = new Set(entry.availabilityKeys);
   return (
@@ -347,7 +357,11 @@ function FullCard({ entry }: { entry: SyntaxEntry }) {
         <span className="crumbs__sep"> / </span>
         {entry.kind !== 'function' && (
           <>
-            <span>{entry.owner}</span>
+            {knownOwners.has(entry.owner) ? (
+              <a href={`#/owner/${encodeURIComponent(entry.owner)}`}>{entry.owner}</a>
+            ) : (
+              <span>{entry.owner}</span>
+            )}
             <span className="crumbs__sep"> / </span>
           </>
         )}
@@ -374,7 +388,9 @@ function FullCard({ entry }: { entry: SyntaxEntry }) {
             {entry.params.map((p) => (
               <tr key={p.name}>
                 <td className="params__name">{p.name}</td>
-                <td className="params__type">{p.type ?? '—'}</td>
+                <td className="params__type">
+                  <TypeRef type={p.type} knownOwners={knownOwners} />
+                </td>
                 <td className="params__opt">{p.optional ? 'необязательный' : 'обязательный'}</td>
               </tr>
             ))}
@@ -384,7 +400,8 @@ function FullCard({ entry }: { entry: SyntaxEntry }) {
 
       {entry.returnType && (
         <div className="card__returns">
-          <span className="card__label">Возвращает:</span> <span className="typeLink">{entry.returnType}</span>
+          <span className="card__label">Возвращает:</span>{' '}
+          <TypeRef type={entry.returnType} knownOwners={knownOwners} />
         </div>
       )}
 

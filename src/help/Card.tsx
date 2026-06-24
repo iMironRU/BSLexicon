@@ -221,10 +221,24 @@ function Params({ catalog, params }: { catalog: Catalog; params: CatalogParam[] 
 }
 
 function TypeLink({ catalog, typeName }: { catalog: Catalog; typeName: string }) {
+  // 1. Тип есть в курированном каталоге — ссылка внутри /help/
   const target = catalog.byId.get(typeName);
   if (target && target.kind === 'type') {
     return (
       <a className="typeLink" href={formatHash({ kind: 'entry', entryKind: 'type', id: target.id })}>
+        {typeName}
+      </a>
+    );
+  }
+  // 2. Тип не курирован, но возможно есть в полном СП — пробрасываем туда.
+  // Это эвристика: формы, документы, СКД-объекты и пр., которые точно есть
+  // в полной выгрузке (685 из 817 типов в выгрузке имеют свою страницу).
+  // Если страницы там нет — пользователь увидит «не нашёл запись» — это
+  // приемлемая цена за надёжную линковку 84% типов.
+  if (typeName && !typeName.startsWith('<') && /[А-Яа-я]/.test(typeName)) {
+    const url = `${import.meta.env.BASE_URL}help/full/#/owner/${encodeURIComponent(typeName)}`;
+    return (
+      <a className="typeLink" href={url} title="Открыть в полном синтакс-помощнике">
         {typeName}
       </a>
     );
