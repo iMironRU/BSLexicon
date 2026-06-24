@@ -1,32 +1,45 @@
 /**
- * Текст типа с deep-link на его карточку, если такой тип есть в выгрузке.
+ * Текст типа с deep-link на его карточку.
  *
- * Тип параметра/возврата вроде «Поток», «КоллекцияВложенийPDF» — это
- * реальный owner полного СП. Если он есть в `knownOwners`, делаем
- * `<a href="#/owner/<имя>">` — пользователь кликает и видит карточку
- * типа. Если нет (примитивы, шаблонные `<Имя поля>`) — обычный текст.
+ * Резолвер ссылки идёт по приоритетам:
+ *   1. Прямой match в `knownOwners` (тип лежит как owner в выгрузке).
+ *   2. Шаблонный fallback (`ДокументОбъект` → `ДокументОбъект.<Имя документа>`).
+ *   3. Курированный примитив/коллекция (`Строка`, `Массив`, …) — линк в `/help/`.
+ *   4. Иначе — обычный текст.
+ *
+ * Дополнительно поддержан union вида `Форма; Элемент управления` и
+ * `… или …` — каждая часть линкуется независимо.
  */
 
 interface TypeRefProps {
-  /** Имя типа из data (`p.type` / `entry.returnType`); может быть `null`/`undefined`. */
   type: string | null | undefined;
-  /** Множество owner-имён, у которых есть своя страница `#/owner/<имя>`. */
   knownOwners: ReadonlySet<string>;
-  /**
-   * Формирователь href по имени owner-а. По умолчанию — hash-ссылка
-   * внутри `/help/full/` (`#/owner/<имя>`). Из `/help/events/` нужен
-   * абсолютный путь в full-help (другая страница).
-   */
+  /** Формирователь href для owner-а полной выгрузки (на /help/full/). */
   hrefFor?: (owner: string) => string;
 }
 
-const defaultHref = (owner: string): string => `#/owner/${encodeURIComponent(owner)}`;
+const defaultFullHref = (owner: string): string =>
+  `#/owner/${encodeURIComponent(owner)}`;
 
 /**
- * Резолв «короткого» имени типа в шаблонный owner. В параметрах СП 1С
- * часто пишет «ДокументОбъект», а полный owner — «ДокументОбъект.<Имя
- * документа>». Возвращает имя шаблонного owner-а (для линка) либо null.
+ * Курированные типы (примитивы + коллекции) с собственной карточкой
+ * в /help/. На лету (без загрузки YAML) — список зафиксирован вручную,
+ * он практически не меняется. Если расширим catalog/types/*.yaml — сюда
+ * добавить.
  */
+const CURATED_TYPES = new Set([
+  'Число', 'Строка', 'Булево', 'Дата', 'Неопределено', 'Null', 'Тип',
+  'Массив', 'Структура', 'Соответствие', 'КлючИЗначение',
+  'СписокЗначений', 'ЭлементСпискаЗначений',
+  'ТаблицаЗначений', 'СтрокаТаблицыЗначений',
+  'КолонкаТаблицыЗначений', 'КоллекцияКолонокТаблицыЗначений',
+]);
+
+function curatedTypeHref(type: string): string {
+  // /help/ всегда абсолютным путём — он другой Vite-entry.
+  return `${import.meta.env.BASE_URL}help/#/type/${encodeURIComponent(type)}`;
+}
+
 function resolveTemplated(type: string, knownOwners: ReadonlySet<string>): string | null {
   const prefix = type + '.<';
   for (const o of knownOwners) {
@@ -35,29 +48,69 @@ function resolveTemplated(type: string, knownOwners: ReadonlySet<string>): strin
   return null;
 }
 
-export function TypeRef({ type, knownOwners, hrefFor = defaultHref }: TypeRefProps) {
+/** Разрезает union вида `A; B`, `A, B`, `A или B` на части с разделителями. */
+function splitUnion(raw: string): { text: string; isSeparator: boolean }[] {
+  const re = /(\s*(?:;|,| или )\s*)/i;
+  const parts = raw.split(re);
+  return parts.map((p) => ({ text: p, isSeparator: re.test(p) }));
+}
+
+export function TypeRef({ type, knownOwners, hrefFor = defaultFullHref }: TypeRefProps) {
   if (!type) return <>—</>;
   const clean = type.trim();
   if (!clean) return <>—</>;
-  if (knownOwners.has(clean)) {
-    return (
-      <a className="typeLink" href={hrefFor(clean)}>
-        {clean}
-      </a>
-    );
+
+  const parts = splitUnion(clean);
+  // Если split дал больше одной не-разделительной части — это union.
+  const isUnion = parts.filter((p) => !p.isSeparator).length > 1;
+  if (!isUnion) {
+    return <SingleTypeRef raw={clean} knownOwners={knownOwners} hrefFor={hrefFor} />;
   }
-  // Шаблонный fallback: ДокументОбъект → ДокументОбъект.<Имя документа>
-  const templated = resolveTemplated(clean, knownOwners);
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.isSeparator ? (
+          <span key={i}>{p.text}</span>
+        ) : (
+          <SingleTypeRef
+            key={i}
+            raw={p.text.trim()}
+            knownOwners={knownOwners}
+            hrefFor={hrefFor}
+          />
+        ),
+      )}
+    </>
+  );
+}
+
+function SingleTypeRef({
+  raw,
+  knownOwners,
+  hrefFor,
+}: {
+  raw: string;
+  knownOwners: ReadonlySet<string>;
+  hrefFor: (owner: string) => string;
+}) {
+  if (!raw) return null;
+  if (knownOwners.has(raw)) {
+    return <a className="typeLink" href={hrefFor(raw)}>{raw}</a>;
+  }
+  const templated = resolveTemplated(raw, knownOwners);
   if (templated) {
     return (
-      <a
-        className="typeLink"
-        href={hrefFor(templated)}
-        title={`Открыть карточку «${templated}»`}
-      >
-        {clean}
+      <a className="typeLink" href={hrefFor(templated)} title={`Открыть карточку «${templated}»`}>
+        {raw}
       </a>
     );
   }
-  return <span className="typeLink typeLink--plain">{clean}</span>;
+  if (CURATED_TYPES.has(raw)) {
+    return (
+      <a className="typeLink" href={curatedTypeHref(raw)} title="Открыть в учебном справочнике">
+        {raw}
+      </a>
+    );
+  }
+  return <span className="typeLink typeLink--plain">{raw}</span>;
 }
