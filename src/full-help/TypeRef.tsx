@@ -22,6 +22,19 @@ interface TypeRefProps {
 
 const defaultHref = (owner: string): string => `#/owner/${encodeURIComponent(owner)}`;
 
+/**
+ * Резолв «короткого» имени типа в шаблонный owner. В параметрах СП 1С
+ * часто пишет «ДокументОбъект», а полный owner — «ДокументОбъект.<Имя
+ * документа>». Возвращает имя шаблонного owner-а (для линка) либо null.
+ */
+function resolveTemplated(type: string, knownOwners: ReadonlySet<string>): string | null {
+  const prefix = type + '.<';
+  for (const o of knownOwners) {
+    if (o.startsWith(prefix) && o.endsWith('>')) return o;
+  }
+  return null;
+}
+
 export function TypeRef({ type, knownOwners, hrefFor = defaultHref }: TypeRefProps) {
   if (!type) return <>—</>;
   const clean = type.trim();
@@ -29,6 +42,19 @@ export function TypeRef({ type, knownOwners, hrefFor = defaultHref }: TypeRefPro
   if (knownOwners.has(clean)) {
     return (
       <a className="typeLink" href={hrefFor(clean)}>
+        {clean}
+      </a>
+    );
+  }
+  // Шаблонный fallback: ДокументОбъект → ДокументОбъект.<Имя документа>
+  const templated = resolveTemplated(clean, knownOwners);
+  if (templated) {
+    return (
+      <a
+        className="typeLink"
+        href={hrefFor(templated)}
+        title={`Открыть карточку «${templated}»`}
+      >
         {clean}
       </a>
     );
