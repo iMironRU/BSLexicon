@@ -5,6 +5,7 @@ import type { SyntaxEntry } from '../app/reference/types';
 import { Sidebar } from './Sidebar';
 import { Card } from './Card';
 import { Home } from './Home';
+import { NavMenu } from './NavMenu';
 import { SearchOverlay } from './SearchOverlay';
 import { TargetSelector } from './TargetSelector';
 import { pushRecent } from './recent';
@@ -125,26 +126,19 @@ export function App() {
             title={`Поиск (${HOTKEY_LABEL})`}
           >
             <span aria-hidden="true">🔎</span>
-            <span className="help__search-label">Поиск</span>
+            <span className="help__search-label">
+              Поиск по каталогу — например, «СокрЛП», «Массив.Добавить»…
+            </span>
             <kbd className="help__kbd">{HOTKEY_LABEL}</kbd>
           </button>
-          <a
-            className="help__back"
-            href={`${TRAINER_URL}help/events/`}
-            title="Каталог событий 1С (При/Перед/После/Обработка)"
-          >
-            События
-          </a>
-          <a
-            className="help__back"
-            href={`${TRAINER_URL}help/full/`}
-            title="Полный СП ~20 тыс. записей (для опытных)"
-          >
-            Полный режим →
-          </a>
-          <a className="help__back" href={TRAINER_URL}>
-            ← Тренажёр
-          </a>
+          <NavMenu
+            links={[
+              { label: 'Учебный режим', href: TRAINER_URL + 'help/', current: true, hint: '~180 курированных + тренажёр' },
+              { label: 'Полный СП', href: `${TRAINER_URL}help/full/`, hint: 'Все ~20 тыс. записей платформы' },
+              { label: 'События 1С', href: `${TRAINER_URL}help/events/`, hint: '670 событий + lifecycle' },
+              { label: '← Тренажёр', href: TRAINER_URL, hint: 'Писать и отлаживать BSL' },
+            ]}
+          />
         </div>
       </header>
 

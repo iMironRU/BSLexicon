@@ -79,34 +79,115 @@ a:hover { text-decoration: underline; }
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
 }
 
+/* Большой «псевдо-input» поиска — занимает почти всё свободное место
+   в шапке. Клик открывает overlay (где уже есть настоящий input). */
 .help__search-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font: inherit;
   font-size: 13px;
   color: var(--fg-dim);
-  background: var(--bg-panel);
+  background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 5px 10px 5px 8px;
-  cursor: pointer;
+  border-radius: 6px;
+  padding: 7px 12px;
+  cursor: text;
+  flex: 1;
+  max-width: 640px;
+  min-width: 0;
+  text-align: left;
 }
-.help__search-btn:hover { color: var(--fg); border-color: var(--fg-dim); }
+.help__search-btn:hover,
+.help__search-btn:focus-visible {
+  border-color: var(--accent);
+  color: var(--fg);
+  outline: none;
+}
 
-.help__search-label { color: var(--fg); }
+.help__search-label {
+  color: var(--fg-dim);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .help__kbd {
   font-family: var(--mono);
   font-size: 11px;
   color: var(--fg-dim);
-  background: var(--bg);
+  background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 1px 5px;
+  flex-shrink: 0;
 }
+
+/* ── Выпадающее меню навигации «Перейти ▾» ──────────────────── */
+
+.navmenu { position: relative; }
+
+.navmenu__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.navmenu__btn:hover { border-color: var(--fg-dim); }
+.navmenu__btn--open { border-color: var(--accent); color: var(--accent); }
+
+.navmenu__chevron { color: var(--fg-dim); font-size: 10px; }
+
+.navmenu__list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 240px;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  z-index: 60;
+}
+
+.navmenu__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  color: var(--fg);
+  text-decoration: none;
+  font-size: 13px;
+}
+.navmenu__item:hover {
+  background: var(--bg-header);
+  text-decoration: none;
+}
+.navmenu__item--current {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.navmenu__label { font-weight: 500; }
+.navmenu__hint { font-size: 11px; color: var(--fg-dim); }
 
 .help__body {
   display: flex;
@@ -124,7 +205,9 @@ a:hover { text-decoration: underline; }
 /* ── Sidebar ──────────────────────────────────────────────────── */
 
 .sb {
-  width: 280px;
+  /* 1/3 экрана, но не уже 280px и не шире 460px — иначе на ультрашироких
+     мониторах дерево «съедает» контент карточки. */
+  width: clamp(280px, 30vw, 460px);
   flex-shrink: 0;
   padding: 16px 12px 32px;
   background: var(--bg-panel);
@@ -779,8 +862,10 @@ a:hover { text-decoration: underline; }
 }
 .card-toc { display: none; }
 
-/* На широких экранах — двухколонный layout: карточка + sticky TOC справа. */
-@media (min-width: 1180px) {
+/* На очень широких экранах — двухколонный layout: карточка + sticky TOC справа.
+   Поднял до 1440 — иначе с расширенным sidebar (30vw) контент становится
+   слишком тесным. */
+@media (min-width: 1440px) {
   .card-wrap {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 180px;
