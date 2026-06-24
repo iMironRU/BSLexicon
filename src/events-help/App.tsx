@@ -5,6 +5,7 @@ import { entryId, loadFullReference } from '../full-help/loader';
 import { SearchOverlay } from '../full-help/SearchOverlay';
 import { TypeRef } from '../full-help/TypeRef';
 import { HelpFooter } from '../help/HelpFooter';
+import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
 import { LifecycleDiagram } from './LifecycleDiagram';
 import { SCENARIOS, scenarioById } from './lifecycle';
@@ -81,11 +82,15 @@ export function App() {
   const [entries, setEntries] = useState<SyntaxEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
   const route = useHashRoute();
 
   useEffect(() => {
     let alive = true;
-    loadFullReference()
+    loadFullReference((loaded, total) => {
+      if (!alive) return;
+      setProgress(total ? loaded / total : null);
+    })
       .then((d) => alive && setEntries(d.entries))
       .catch((e: unknown) => alive && setError(e instanceof Error ? e.message : String(e)));
     return () => {
@@ -204,10 +209,11 @@ export function App() {
         <section className="help__content events__content">
           {error && <div className="help__missing"><h1>Ошибка</h1><p>{error}</p></div>}
           {!entries && !error && (
-            <div className="fhelp__loading">
-              <h1>Загружаю каталог событий…</h1>
-              <p>~600 КБ единожды, дальше браузер кэширует.</p>
-            </div>
+            <Loader
+              title="Загружаю каталог событий"
+              hint="~660 КБ — потом браузер кэширует"
+              progress={progress}
+            />
           )}
           {entries && route.kind === 'home' && <Home groups={groups} totalEvents={events.length} />}
           {entries && route.kind === 'owner' && (

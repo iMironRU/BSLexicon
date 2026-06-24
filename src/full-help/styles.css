@@ -6,14 +6,6 @@
   margin: 0 auto;
 }
 
-.fhelp__loading {
-  max-width: 600px;
-  margin: 60px auto;
-  text-align: center;
-}
-.fhelp__loading h1 { color: var(--fg-dim); font-weight: 400; }
-.fhelp__loading p { color: var(--fg-dim); }
-
 .fhelp__home { max-width: 900px; }
 
 .fhelp__title {

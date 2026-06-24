@@ -5,6 +5,7 @@ import { SearchOverlay } from './SearchOverlay';
 import { Sidebar } from './Sidebar';
 import { TypeRef } from './TypeRef';
 import { HelpFooter } from '../help/HelpFooter';
+import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
 import { entryId, loadFullReference } from './loader';
 import { search } from './search';
@@ -58,11 +59,16 @@ export function App() {
   const [data, setData] = useState<Awaited<ReturnType<typeof loadFullReference>> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  /** Прогресс fetch (0..1) или null — если Content-Length не пришёл. */
+  const [progress, setProgress] = useState<number | null>(null);
   const route = useHashRoute();
 
   useEffect(() => {
     let alive = true;
-    loadFullReference()
+    loadFullReference((loaded, total) => {
+      if (!alive) return;
+      setProgress(total ? loaded / total : null);
+    })
       .then((d) => alive && setData(d))
       .catch((e: unknown) => alive && setError(e instanceof Error ? e.message : String(e)));
     return () => {
@@ -188,7 +194,13 @@ export function App() {
       <main className="help__body">
         <section className="help__content fhelp__content">
           {error && <div className="help__missing"><h1>Ошибка</h1><p>{error}</p></div>}
-          {!data && !error && <Loading />}
+          {!data && !error && (
+            <Loader
+              title="Загружаю полный синтакс-помощник"
+              hint="~660 КБ — потом браузер кэширует"
+              progress={progress}
+            />
+          )}
           {data && route.kind === 'home' && <Home entries={entries} />}
           {data && route.kind === 'owner' && (
             <OwnerView owner={route.owner} entries={byOwner.get(route.owner) ?? []} />
@@ -219,18 +231,6 @@ export function App() {
           onClose={closeSearch}
         />
       )}
-    </div>
-  );
-}
-
-function Loading() {
-  return (
-    <div className="fhelp__loading">
-      <h1>Загружаю полный синтакс-помощник…</h1>
-      <p>
-        Около 20 тыс. записей всей платформы 1С: типы, методы, свойства, функции.
-        Один раз ~600 КБ — потом браузер кэширует.
-      </p>
     </div>
   );
 }
