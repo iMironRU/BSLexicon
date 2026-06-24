@@ -1,8 +1,10 @@
+import { useRef } from 'react';
 import type { Catalog, CatalogEntry, CatalogExample, CatalogParam } from '@core/index';
 import { builtinIds, methodIds, methodTypeOf, propertyIds } from '@core/index';
 import type { SyntaxEntry } from '../app/reference/types';
 import { encodeCodeParam } from '../app/url-params';
 import { formatHash } from './router';
+import { TableOfContents } from './TableOfContents';
 import { ALL_CONTEXTS, CONTEXT_LABELS, verdict } from './target';
 import type { Target } from './target';
 
@@ -30,69 +32,83 @@ interface CardProps {
 
 export function Card({ catalog, entry, syntax, target }: CardProps) {
   const availabilityVerdict = syntax ? verdict(syntax, target) : null;
+  const cardRef = useRef<HTMLElement | null>(null);
 
   return (
-    <article className="card">
-      <Breadcrumbs catalog={catalog} entry={entry} />
-      <header className="card__head">
-        <h1 className="card__title">
-          {entry.names.ru}
-          <span className="card__en">({entry.names.en})</span>
-        </h1>
-        <span className="card__kind">{KIND_LABEL[entry.kind]}</span>
-        <span className="card__category">· {entry.category}</span>
-        {!isRuntimeEntry(entry) && (
-          <span
-            className="card__stub-badge"
-            title="Запись только в справочнике — рантайм тренажёра её не исполняет"
-          >
-            только справка
-          </span>
+    <div className="card-wrap">
+      <article className="card" ref={cardRef}>
+        <Breadcrumbs catalog={catalog} entry={entry} />
+        <header className="card__head">
+          <h1 className="card__title">
+            {entry.names.ru}
+            <span className="card__en">({entry.names.en})</span>
+          </h1>
+          <span className="card__kind">{KIND_LABEL[entry.kind]}</span>
+          <span className="card__category">· {entry.category}</span>
+          {!isRuntimeEntry(entry) && (
+            <span
+              className="card__stub-badge"
+              title="Запись только в справочнике — рантайм тренажёра её не исполняет"
+            >
+              только справка
+            </span>
+          )}
+          {availabilityVerdict && availabilityVerdict.verdict !== 'unknown' && (
+            <AvailabilityBadge verdict={availabilityVerdict} />
+          )}
+        </header>
+
+        {entry.signature && <pre className="card__sig">{entry.signature}</pre>}
+
+        {entry.description && <p className="card__desc">{entry.description}</p>}
+
+        {entry.params && entry.params.length > 0 && (
+          <>
+            <h2 id="toc-params" data-toc data-toc-label="Параметры" className="card__h2">Параметры</h2>
+            <Params catalog={catalog} params={entry.params} />
+          </>
         )}
-        {availabilityVerdict && availabilityVerdict.verdict !== 'unknown' && (
-          <AvailabilityBadge verdict={availabilityVerdict} />
+
+        {entry.returns && (
+          <>
+            <h2 id="toc-returns" data-toc data-toc-label="Возврат" className="card__h2">Возвращаемое значение</h2>
+            <div className="card__returns">
+              <TypeLink catalog={catalog} typeName={entry.returns.type} />
+              {entry.returns.description && <span> — {entry.returns.description}</span>}
+            </div>
+          </>
         )}
-      </header>
 
-      {entry.signature && <pre className="card__sig">{entry.signature}</pre>}
+        {entry.kind === 'type' && <TypeMembers catalog={catalog} entry={entry} />}
 
-      {entry.description && <p className="card__desc">{entry.description}</p>}
+        {syntax && <AvailabilitySection syntax={syntax} target={target} />}
 
-      {entry.params && entry.params.length > 0 && <Params catalog={catalog} params={entry.params} />}
+        {entry.examples && entry.examples.length > 0 && <Examples examples={entry.examples} />}
 
-      {entry.returns && (
-        <div className="card__returns">
-          <span className="card__label">Возвращает:</span>{' '}
-          <TypeLink catalog={catalog} typeName={entry.returns.type} />
-          {entry.returns.description && <span> — {entry.returns.description}</span>}
-        </div>
-      )}
-
-      {entry.kind === 'type' && <TypeMembers catalog={catalog} entry={entry} />}
-
-      {syntax && <AvailabilitySection syntax={syntax} target={target} />}
-
-      {entry.examples && entry.examples.length > 0 && <Examples examples={entry.examples} />}
-
-      {syntax?.referenceUrl && (
-        <section className="card__source">
-          <a
-            href={syntax.referenceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="card__source-link"
-            title="Открыть статью в онлайн-синтакс-помощнике 1С"
-          >
-            📖 Описание и примеры на сайте 1С →
-          </a>
-          <p className="card__source-note">
-            Тексты и примеры синтакс-помощника — собственность «1С».
-            Мы храним только структурные факты (имена, сигнатуры, типы),
-            а полные описания — по ссылке.
-          </p>
-        </section>
-      )}
-    </article>
+        {syntax?.referenceUrl && (
+          <section className="card__source">
+            <h2 id="toc-source" data-toc data-toc-label="Источник" className="card__h2-hidden">Источник</h2>
+            <a
+              href={syntax.referenceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card__source-link"
+              title="Открыть статью в онлайн-синтакс-помощнике 1С"
+            >
+              📖 Описание и примеры на сайте 1С →
+            </a>
+            <p className="card__source-note">
+              Тексты и примеры синтакс-помощника — собственность «1С».
+              Мы храним только структурные факты (имена, сигнатуры, типы),
+              а полные описания — по ссылке.
+            </p>
+          </section>
+        )}
+      </article>
+      <aside className="card-toc">
+        <TableOfContents scopeRef={cardRef} contentKey={entry.id} />
+      </aside>
+    </div>
   );
 }
 
@@ -122,7 +138,7 @@ function AvailabilitySection({ syntax, target }: { syntax: SyntaxEntry; target: 
   const available = new Set(syntax.availabilityKeys);
   return (
     <section className="card__avail">
-      <h2 className="card__avail-title">Доступность</h2>
+      <h2 id="toc-avail" data-toc data-toc-label="Доступность" className="card__avail-title">Доступность</h2>
       {syntax.since && (
         <div className="card__avail-since">
           Доступен с версии <b>{syntax.since}</b>
@@ -227,7 +243,7 @@ function TypeMembers({ catalog, entry }: { catalog: Catalog; entry: CatalogEntry
     <>
       {methods.length > 0 && (
         <section className="members">
-          <h2 className="members__title">Методы</h2>
+          <h2 id="toc-methods" data-toc data-toc-label="Методы" className="members__title">Методы</h2>
           <ul className="members__list">
             {methods.map((m) => (
               <li key={m.id}>
@@ -242,7 +258,7 @@ function TypeMembers({ catalog, entry }: { catalog: Catalog; entry: CatalogEntry
       )}
       {properties.length > 0 && (
         <section className="members">
-          <h2 className="members__title">Свойства</h2>
+          <h2 id="toc-properties" data-toc data-toc-label="Свойства" className="members__title">Свойства</h2>
           <ul className="members__list">
             {properties.map((p) => (
               <li key={p.id}>
@@ -262,7 +278,7 @@ function TypeMembers({ catalog, entry }: { catalog: Catalog; entry: CatalogEntry
 function Examples({ examples }: { examples: CatalogExample[] }) {
   return (
     <section className="examples">
-      <h2 className="examples__title">Примеры</h2>
+      <h2 id="toc-examples" data-toc data-toc-label="Примеры" className="examples__title">Примеры</h2>
       {examples.map((ex, i) => (
         <div key={i} className="example">
           {ex.title && <div className="example__title">{ex.title}</div>}

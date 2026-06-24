@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SyntaxEntry } from '../app/reference/types';
 import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
+import { SearchOverlay } from './SearchOverlay';
 import { entryId, loadFullReference } from './loader';
 import { search } from './search';
 import type { FullHit } from './search';
 
 const TRAINER_URL = import.meta.env.BASE_URL;
 const HELP_URL = `${import.meta.env.BASE_URL}help/`;
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+const HOTKEY_LABEL = IS_MAC ? '⌘K' : 'Ctrl+K';
 
 type Route = { kind: 'home' } | { kind: 'entry'; id: string };
 
@@ -38,6 +41,7 @@ function useHashRoute(): Route {
 export function App() {
   const [entries, setEntries] = useState<SyntaxEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const route = useHashRoute();
 
   useEffect(() => {
@@ -49,6 +53,30 @@ export function App() {
       alive = false;
     };
   }, []);
+
+  // Глобальный ⌘K / Ctrl+K и `/` (вне инпутов) — переключение overlay'я.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      } else if (e.key === '/' && !searchOpen) {
+        const tag = (e.target as HTMLElement | null)?.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+          e.preventDefault();
+          setSearchOpen(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [searchOpen]);
+
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
+  const hrefFor = useCallback(
+    (e: SyntaxEntry) => formatHash({ kind: 'entry', id: entryId(e) }),
+    [],
+  );
 
   // Индекс id → запись, чтобы deep-link отрабатывал O(1).
   const byId = useMemo(() => {
@@ -73,6 +101,18 @@ export function App() {
           <span className="help__tagline">Полный синтакс-помощник</span>
         </a>
         <div className="help__head-actions">
+          {entries && (
+            <button
+              type="button"
+              className="help__search-btn"
+              onClick={() => setSearchOpen(true)}
+              title={`Поиск (${HOTKEY_LABEL})`}
+            >
+              <span aria-hidden="true">🔎</span>
+              <span className="help__search-label">Поиск</span>
+              <kbd className="help__kbd">{HOTKEY_LABEL}</kbd>
+            </button>
+          )}
           <a className="help__back" href={HELP_URL} title="Учебный режим (~180 записей с тренажёром)">
             Учебный режим
           </a>
@@ -98,6 +138,15 @@ export function App() {
           )}
         </section>
       </main>
+
+      {searchOpen && entries && (
+        <SearchOverlay
+          entries={entries}
+          hrefFor={hrefFor}
+          placeholder={`Поиск по ${entries.length.toLocaleString('ru')} записям…`}
+          onClose={closeSearch}
+        />
+      )}
     </div>
   );
 }

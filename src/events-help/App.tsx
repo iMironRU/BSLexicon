@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SyntaxEntry } from '../app/reference/types';
 import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { entryId, loadFullReference } from '../full-help/loader';
+import { SearchOverlay } from '../full-help/SearchOverlay';
 import {
   PHASE_LABELS,
   PHASE_ORDER,
@@ -15,6 +16,8 @@ import type { EventGroup, GroupKey, Phase } from './events';
 const TRAINER_URL = import.meta.env.BASE_URL;
 const HELP_URL = `${import.meta.env.BASE_URL}help/`;
 const FULL_URL = `${import.meta.env.BASE_URL}help/full/`;
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+const HOTKEY_LABEL = IS_MAC ? '⌘K' : 'Ctrl+K';
 
 /**
  * Route — выбор «что показать»:
@@ -63,6 +66,7 @@ function useHashRoute(): Route {
 export function App() {
   const [entries, setEntries] = useState<SyntaxEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const route = useHashRoute();
 
   useEffect(() => {
@@ -77,6 +81,30 @@ export function App() {
 
   // Только методы-события из полной выгрузки.
   const events = useMemo(() => (entries ? entries.filter(isEvent) : []), [entries]);
+
+  // Глобальный ⌘K / Ctrl+K — переключение поиска по событиям.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      } else if (e.key === '/' && !searchOpen) {
+        const tag = (e.target as HTMLElement | null)?.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+          e.preventDefault();
+          setSearchOpen(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [searchOpen]);
+
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
+  const hrefFor = useCallback(
+    (e: SyntaxEntry) => formatHash({ kind: 'entry', id: entryId(e) }),
+    [],
+  );
   const groups = useMemo(() => buildGroups(events), [events]);
 
   // owner → его события (для центральной секции и навигации внутри)
@@ -121,6 +149,18 @@ export function App() {
           <span className="help__tagline">События 1С</span>
         </a>
         <div className="help__head-actions">
+          {events.length > 0 && (
+            <button
+              type="button"
+              className="help__search-btn"
+              onClick={() => setSearchOpen(true)}
+              title={`Поиск по событиям (${HOTKEY_LABEL})`}
+            >
+              <span aria-hidden="true">🔎</span>
+              <span className="help__search-label">Поиск</span>
+              <kbd className="help__kbd">{HOTKEY_LABEL}</kbd>
+            </button>
+          )}
           <a className="help__back" href={HELP_URL}>Учебный режим</a>
           <a className="help__back" href={FULL_URL}>Полный СП</a>
           <a className="help__back" href={TRAINER_URL}>← Тренажёр</a>
@@ -156,6 +196,15 @@ export function App() {
         </section>
         {entries && <Sidebar groups={groups} route={route} />}
       </main>
+
+      {searchOpen && events.length > 0 && (
+        <SearchOverlay
+          entries={events}
+          hrefFor={hrefFor}
+          placeholder={`Поиск по ${events.length} событиям…`}
+          onClose={closeSearch}
+        />
+      )}
     </div>
   );
 }

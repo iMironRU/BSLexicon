@@ -772,6 +772,87 @@ a:hover { text-decoration: underline; }
   max-width: 600px;
 }
 
+/* ── Оглавление карточки (TOC) ──────────────────────────────── */
+
+.card-wrap {
+  display: block;
+}
+.card-toc { display: none; }
+
+/* На широких экранах — двухколонный layout: карточка + sticky TOC справа. */
+@media (min-width: 1180px) {
+  .card-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 180px;
+    gap: 32px;
+    align-items: start;
+  }
+  .card-toc {
+    display: block;
+    position: sticky;
+    top: 72px;
+    align-self: start;
+  }
+}
+
+.toc {
+  font-size: 12px;
+}
+
+.toc__title {
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-dim);
+  font-weight: 600;
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+
+.toc__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-left: 1px solid var(--border);
+}
+
+.toc__link {
+  display: block;
+  padding: 5px 12px;
+  color: var(--fg-dim);
+  border-left: 2px solid transparent;
+  margin-left: -1px;
+  text-decoration: none;
+  line-height: 1.4;
+}
+.toc__link:hover {
+  color: var(--fg);
+  text-decoration: none;
+}
+.toc__link--active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 500;
+}
+
+/* Общий стиль для добавленных h2 в карточке. */
+.card__h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 24px 0 8px;
+}
+.card__h2-hidden {
+  /* Невидимый якорь для TOC (для секции «Источник» — заголовка нет, но
+     место в TOC есть). */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
 /* ── Бейдж «только справка» — для stub-записей ───────────────── */
 
 .card__stub-badge {
