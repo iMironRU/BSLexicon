@@ -33,7 +33,10 @@ a:hover { text-decoration: underline; }
 .help {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  /* height (не min-height) фиксирует контейнер на высоту окна — тогда
+     внутренний overflow-y в .help__content скроллится, а footer всегда
+     виден снизу (как в тренажёре). */
+  height: 100%;
 }
 
 .help__header {
@@ -188,6 +191,43 @@ a:hover { text-decoration: underline; }
 
 .navmenu__label { font-weight: 500; }
 .navmenu__hint { font-size: 11px; color: var(--fg-dim); }
+
+/* ── Статусная строка снизу (единый стиль с тренажёром) ─────── */
+
+.help__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 16px;
+  font-size: 11px;
+  color: var(--fg-dim);
+  background: var(--bg-header);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.help__footer-hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.help__footer-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+.help__footer-meta a { color: var(--fg-dim); text-decoration: none; }
+.help__footer-meta a:hover { color: var(--accent); text-decoration: underline; }
+
+.help__build { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 820px) {
+  .help__footer-hint { display: none; }
+  .help__footer { justify-content: flex-end; }
+}
 
 .help__body {
   display: flex;

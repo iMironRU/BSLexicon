@@ -4,6 +4,7 @@ import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { entryId, loadFullReference } from '../full-help/loader';
 import { SearchOverlay } from '../full-help/SearchOverlay';
 import { TypeRef } from '../full-help/TypeRef';
+import { HelpFooter } from '../help/HelpFooter';
 import { NavMenu } from '../help/NavMenu';
 import { LifecycleDiagram } from './LifecycleDiagram';
 import { SCENARIOS, scenarioById } from './lifecycle';
@@ -236,6 +237,8 @@ export function App() {
         </section>
         {entries && <Sidebar groups={groups} route={route} />}
       </main>
+
+      <HelpFooter hint={`События 1С · ${events.length || '…'} событий + lifecycle-диаграммы · ${HOTKEY_LABEL} — поиск`} />
 
       {searchOpen && events.length > 0 && (
         <SearchOverlay

@@ -5,6 +5,7 @@ import type { SyntaxEntry } from '../app/reference/types';
 import { Sidebar } from './Sidebar';
 import { Card } from './Card';
 import { Home } from './Home';
+import { HelpFooter } from './HelpFooter';
 import { NavMenu } from './NavMenu';
 import { SearchOverlay } from './SearchOverlay';
 import { TargetSelector } from './TargetSelector';
@@ -176,6 +177,8 @@ export function App() {
         </section>
         <Sidebar catalog={catalog} route={route} syntaxIndex={syntaxIndex} target={target} />
       </main>
+
+      <HelpFooter hint={`Учебный режим · курированный каталог + примеры в тренажёре · ${HOTKEY_LABEL} — поиск`} />
 
       {searchOpen && (
         <SearchOverlay

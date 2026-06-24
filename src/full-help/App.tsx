@@ -4,6 +4,7 @@ import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { SearchOverlay } from './SearchOverlay';
 import { Sidebar } from './Sidebar';
 import { TypeRef } from './TypeRef';
+import { HelpFooter } from '../help/HelpFooter';
 import { NavMenu } from '../help/NavMenu';
 import { entryId, loadFullReference } from './loader';
 import { search } from './search';
@@ -207,6 +208,8 @@ export function App() {
           <Sidebar tree={tree} activeOwner={activeOwner} ownerHref={ownerHref} />
         )}
       </main>
+
+      <HelpFooter hint={`Полный синтакс-помощник · ${entries.length.toLocaleString('ru')} записей · ${HOTKEY_LABEL} — поиск`} />
 
       {searchOpen && entries.length > 0 && (
         <SearchOverlay
