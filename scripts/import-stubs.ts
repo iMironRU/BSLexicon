@@ -83,8 +83,11 @@ function fileSlug(category: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-/** Превращает SyntaxEntry → CatalogEntry в формате stub. */
-function toCatalogEntry(e: SyntaxEntry, ownerCategory: string): CatalogEntry {
+/** Превращает SyntaxEntry → CatalogEntry в формате stub. События исключены до этой точки. */
+function toCatalogEntry(
+  e: SyntaxEntry & { kind: Exclude<SyntaxEntry['kind'], 'event'> },
+  ownerCategory: string,
+): CatalogEntry {
   // Сигнатура: или из выгрузки (когда есть), или синтез из nameRu+params.
   const signature =
     e.signature?.trim() ||
@@ -117,7 +120,13 @@ const curated = readCuratedIds();
 console.log(`→ курированных записей в catalog/: ${curated.size}`);
 console.log(`→ записей в выгрузке: ${json.entries.length}`);
 
-const missing = json.entries.filter((e) => !curated.has(idOf(e)));
+// События — отдельный домен (страница `/help/events/`); в курированный
+// каталог тренажёра не пихаем.
+type NonEventSyntax = SyntaxEntry & { kind: Exclude<SyntaxEntry['kind'], 'event'> };
+const importable: NonEventSyntax[] = json.entries.filter(
+  (e): e is NonEventSyntax => e.kind !== 'event',
+);
+const missing = importable.filter((e) => !curated.has(idOf(e)));
 console.log(`→ stub-кандидатов (есть в выгрузке, нет в каталоге): ${missing.length}`);
 
 // Группируем по учебной категории / типу

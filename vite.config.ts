@@ -54,6 +54,7 @@ export default defineConfig(({ command }) => ({
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         help: fileURLToPath(new URL('./help/index.html', import.meta.url)),
         fullHelp: fileURLToPath(new URL('./help/full/index.html', import.meta.url)),
+        eventsHelp: fileURLToPath(new URL('./help/events/index.html', import.meta.url)),
       },
     },
   },

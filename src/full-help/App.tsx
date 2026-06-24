@@ -76,6 +76,9 @@ export function App() {
           <a className="help__back" href={HELP_URL} title="Учебный режим (~180 записей с тренажёром)">
             Учебный режим
           </a>
+          <a className="help__back" href={`${TRAINER_URL}help/events/`} title="Каталог событий 1С">
+            События
+          </a>
           <a className="help__back" href={TRAINER_URL}>← Тренажёр</a>
         </div>
       </header>

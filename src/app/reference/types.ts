@@ -8,7 +8,7 @@ export interface SyntaxParam {
 export interface SyntaxEntry {
   owner: string;
   ownerEn: string;
-  kind: 'function' | 'method' | 'property';
+  kind: 'function' | 'method' | 'property' | 'event';
   /** Учебная категория: Строки, Даты, Числа, Коллекции, Прочее… */
   category: string;
   nameRu: string;

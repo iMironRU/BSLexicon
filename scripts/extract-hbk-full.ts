@@ -64,11 +64,16 @@ function classify(path: string): Cls | null {
   const parts = path.split('/');
   if (parts.length < 4 || !parts[parts.length - 1].endsWith('.html')) return null;
   let i = parts.length - 2;
-  while (i > 0 && parts[i] !== 'methods' && parts[i] !== 'properties') i -= 1;
+  while (i > 0 && parts[i] !== 'methods' && parts[i] !== 'properties' && parts[i] !== 'events') {
+    i -= 1;
+  }
   if (i <= 0) return null;
   const kindFolder = parts[i];
   const ownerFromPath = parts[i - 1];
   if (parts[parts.length - 1] === '__categories__') return null;
+
+  // События — отдельный kind: лежат в .../<TYPE>/events/<Event><ID>.html
+  if (kindFolder === 'events') return { kind: 'event', ownerFromPath };
 
   if (ownerFromPath === 'Global context') return { kind: 'function', ownerFromPath };
   return {

@@ -54,7 +54,7 @@ export interface Param {
 export interface Entry {
   owner: string;
   ownerEn: string;
-  kind: 'function' | 'method' | 'property';
+  kind: 'function' | 'method' | 'property' | 'event';
   category: string;
   nameRu: string;
   nameEn: string;

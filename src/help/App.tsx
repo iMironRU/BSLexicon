@@ -130,6 +130,13 @@ export function App() {
           </button>
           <a
             className="help__back"
+            href={`${TRAINER_URL}help/events/`}
+            title="Каталог событий 1С (При/Перед/После/Обработка)"
+          >
+            События
+          </a>
+          <a
+            className="help__back"
             href={`${TRAINER_URL}help/full/`}
             title="Полный СП ~20 тыс. записей (для опытных)"
           >

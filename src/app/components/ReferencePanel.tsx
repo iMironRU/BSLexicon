@@ -13,6 +13,7 @@ const KIND_LABEL: Record<SyntaxEntry['kind'], string> = {
   function: 'функция',
   method: 'метод',
   property: 'свойство',
+  event: 'событие',
 };
 
 /** Стабильный порядок категорий: сначала самое массовое и часто нужное. */
