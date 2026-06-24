@@ -128,6 +128,13 @@ export function App() {
             <span className="help__search-label">Поиск</span>
             <kbd className="help__kbd">{HOTKEY_LABEL}</kbd>
           </button>
+          <a
+            className="help__back"
+            href={`${TRAINER_URL}help/full/`}
+            title="Полный СП ~20 тыс. записей (для опытных)"
+          >
+            Полный режим →
+          </a>
           <a className="help__back" href={TRAINER_URL}>
             ← Тренажёр
           </a>

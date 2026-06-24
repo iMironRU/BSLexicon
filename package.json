@@ -21,6 +21,7 @@
     "check:catalog": "tsx scripts/check-catalog.ts",
     "extract:sp": "tsx scripts/extract-syntax-help.ts",
     "extract:hbk": "tsx scripts/extract-hbk.ts",
+    "extract:hbk-full": "tsx scripts/extract-hbk-full.ts",
     "import:stubs": "tsx scripts/import-stubs.ts",
     "lint": "eslint . --ext .ts,.tsx",
     "verify": "npm run typecheck && npm run check:catalog && npm run test"
