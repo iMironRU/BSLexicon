@@ -1,21 +1,32 @@
 import type { SyntaxEntry } from '../app/reference/types';
 
 /**
- * Ленивая загрузка полной выгрузки СП (~600 КБ gzip). Кэшируем промис —
- * подгружаем один раз; повторные вызовы возвращают тот же массив без
- * повторного network/parse.
+ * Полная выгрузка СП с метаданными для дерева. Грузится один раз
+ * (~660 КБ gzip), повторные вызовы — из кэша промиса.
  */
-let cache: Promise<SyntaxEntry[]> | null = null;
+export interface FullReference {
+  entries: SyntaxEntry[];
+  /** Карта `имя_типа → catalog-сегменты пути` для построения дерева. */
+  ownerPaths: Record<string, string[]>;
+  /** Карта `catalog<N> → русское имя категории`. */
+  categoryNames: Record<string, string>;
+}
 
-export function loadFullReference(): Promise<SyntaxEntry[]> {
+let cache: Promise<FullReference> | null = null;
+
+export function loadFullReference(): Promise<FullReference> {
   if (!cache) {
     const url = `${import.meta.env.BASE_URL}reference/syntax-help-full.json`;
     cache = fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error(`Не удалось загрузить полную выгрузку (${r.status})`);
-        return r.json() as Promise<{ entries: SyntaxEntry[] }>;
+        return r.json() as Promise<FullReference>;
       })
-      .then((d) => d.entries);
+      .then((d) => ({
+        entries: d.entries,
+        ownerPaths: d.ownerPaths ?? {},
+        categoryNames: d.categoryNames ?? {},
+      }));
   }
   return cache;
 }

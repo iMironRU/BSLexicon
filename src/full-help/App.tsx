@@ -2,22 +2,34 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SyntaxEntry } from '../app/reference/types';
 import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { SearchOverlay } from './SearchOverlay';
+import { Sidebar } from './Sidebar';
 import { entryId, loadFullReference } from './loader';
 import { search } from './search';
 import type { FullHit } from './search';
+import { buildTree } from './tree';
 
 const TRAINER_URL = import.meta.env.BASE_URL;
 const HELP_URL = `${import.meta.env.BASE_URL}help/`;
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const HOTKEY_LABEL = IS_MAC ? '⌘K' : 'Ctrl+K';
 
-type Route = { kind: 'home' } | { kind: 'entry'; id: string };
+type Route =
+  | { kind: 'home' }
+  | { kind: 'owner'; owner: string }
+  | { kind: 'entry'; id: string };
 
 function parseHash(hash: string): Route {
-  const trimmed = hash.replace(/^#\/?/, '');
-  if (trimmed === '') return { kind: 'home' };
+  const t = hash.replace(/^#\/?/, '');
+  if (t === '') return { kind: 'home' };
+  if (t.startsWith('owner/')) {
+    try {
+      return { kind: 'owner', owner: decodeURIComponent(t.slice('owner/'.length)) };
+    } catch {
+      return { kind: 'home' };
+    }
+  }
   try {
-    return { kind: 'entry', id: decodeURIComponent(trimmed) };
+    return { kind: 'entry', id: decodeURIComponent(t) };
   } catch {
     return { kind: 'home' };
   }
@@ -25,6 +37,7 @@ function parseHash(hash: string): Route {
 
 function formatHash(route: Route): string {
   if (route.kind === 'home') return '#/';
+  if (route.kind === 'owner') return `#/owner/${encodeURIComponent(route.owner)}`;
   return `#/${encodeURIComponent(route.id)}`;
 }
 
@@ -39,7 +52,7 @@ function useHashRoute(): Route {
 }
 
 export function App() {
-  const [entries, setEntries] = useState<SyntaxEntry[] | null>(null);
+  const [data, setData] = useState<Awaited<ReturnType<typeof loadFullReference>> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const route = useHashRoute();
@@ -47,12 +60,14 @@ export function App() {
   useEffect(() => {
     let alive = true;
     loadFullReference()
-      .then((data) => alive && setEntries(data))
+      .then((d) => alive && setData(d))
       .catch((e: unknown) => alive && setError(e instanceof Error ? e.message : String(e)));
     return () => {
       alive = false;
     };
   }, []);
+
+  const entries: SyntaxEntry[] = data?.entries ?? [];
 
   // Глобальный ⌘K / Ctrl+K и `/` (вне инпутов) — переключение overlay'я.
   useEffect(() => {
@@ -77,21 +92,55 @@ export function App() {
     (e: SyntaxEntry) => formatHash({ kind: 'entry', id: entryId(e) }),
     [],
   );
+  const ownerHref = useCallback(
+    (owner: string) => formatHash({ kind: 'owner', owner }),
+    [],
+  );
 
   // Индекс id → запись, чтобы deep-link отрабатывал O(1).
   const byId = useMemo(() => {
     const m = new Map<string, SyntaxEntry>();
-    if (entries) for (const e of entries) m.set(entryId(e), e);
+    for (const e of entries) m.set(entryId(e), e);
     return m;
   }, [entries]);
 
+  // owner → его записи, для страницы типа.
+  const byOwner = useMemo(() => {
+    const m = new Map<string, SyntaxEntry[]>();
+    for (const e of entries) {
+      const list = m.get(e.owner) ?? [];
+      list.push(e);
+      m.set(e.owner, list);
+    }
+    for (const list of m.values()) list.sort((a, b) => a.nameRu.localeCompare(b.nameRu, 'ru'));
+    return m;
+  }, [entries]);
+
+  // Дерево разделов — строится один раз после загрузки.
+  const tree = useMemo(() => {
+    if (!data) return [];
+    return buildTree({
+      ownerPaths: data.ownerPaths,
+      categoryNames: data.categoryNames,
+      entriesByOwner: new Map([...byOwner.entries()].map(([o, l]) => [o, l.length])),
+    });
+  }, [data, byOwner]);
+
   const entry = route.kind === 'entry' ? byId.get(route.id) ?? null : null;
+  const activeOwner =
+    route.kind === 'owner' ? route.owner :
+    entry ? entry.owner :
+    null;
 
   useEffect(() => {
-    document.title = entry
-      ? `${entryId(entry)} — Полный синтакс-помощник BSL`
-      : 'Полный синтакс-помощник BSL';
-  }, [entry]);
+    if (entry) {
+      document.title = `${entryId(entry)} — Полный синтакс-помощник BSL`;
+    } else if (route.kind === 'owner') {
+      document.title = `${route.owner} — Полный синтакс-помощник BSL`;
+    } else {
+      document.title = 'Полный синтакс-помощник BSL';
+    }
+  }, [entry, route]);
 
   return (
     <div className="help">
@@ -101,7 +150,7 @@ export function App() {
           <span className="help__tagline">Полный синтакс-помощник</span>
         </a>
         <div className="help__head-actions">
-          {entries && (
+          {entries.length > 0 && (
             <button
               type="button"
               className="help__search-btn"
@@ -123,13 +172,16 @@ export function App() {
         </div>
       </header>
 
-      <main className="help__body fhelp__body">
+      <main className="help__body">
         <section className="help__content fhelp__content">
           {error && <div className="help__missing"><h1>Ошибка</h1><p>{error}</p></div>}
-          {!entries && !error && <Loading />}
-          {entries && route.kind === 'home' && <Home entries={entries} />}
-          {entries && route.kind === 'entry' && entry && <FullCard entry={entry} />}
-          {entries && route.kind === 'entry' && !entry && (
+          {!data && !error && <Loading />}
+          {data && route.kind === 'home' && <Home entries={entries} />}
+          {data && route.kind === 'owner' && (
+            <OwnerView owner={route.owner} entries={byOwner.get(route.owner) ?? []} />
+          )}
+          {data && route.kind === 'entry' && entry && <FullCard entry={entry} />}
+          {data && route.kind === 'entry' && !entry && (
             <div className="help__missing">
               <h1>Не нашёл запись</h1>
               <p>В выгрузке нет элемента <code>{route.id}</code>.</p>
@@ -137,9 +189,12 @@ export function App() {
             </div>
           )}
         </section>
+        {data && tree.length > 0 && (
+          <Sidebar tree={tree} activeOwner={activeOwner} ownerHref={ownerHref} />
+        )}
       </main>
 
-      {searchOpen && entries && (
+      {searchOpen && entries.length > 0 && (
         <SearchOverlay
           entries={entries}
           hrefFor={hrefFor}
@@ -372,4 +427,75 @@ function FullCard({ entry }: { entry: SyntaxEntry }) {
       <p className="fhelp__id">id для шаринга: <code>{id}</code></p>
     </article>
   );
+}
+
+const KIND_BLOCK_LABEL: Record<SyntaxEntry['kind'], string> = {
+  function: 'Функции',
+  method: 'Методы',
+  property: 'Свойства',
+  event: 'События',
+};
+
+const KIND_BLOCK_ORDER: SyntaxEntry['kind'][] = ['method', 'property', 'event', 'function'];
+
+function OwnerView({ owner, entries }: { owner: string; entries: SyntaxEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <div className="help__missing">
+        <h1>{owner}</h1>
+        <p>В выгрузке нет членов этого типа.</p>
+      </div>
+    );
+  }
+  const byKind = new Map<SyntaxEntry['kind'], SyntaxEntry[]>();
+  for (const e of entries) {
+    const list = byKind.get(e.kind) ?? [];
+    list.push(e);
+    byKind.set(e.kind, list);
+  }
+  const ownerEn = entries[0].ownerEn;
+  return (
+    <article className="fhelp__owner">
+      <nav className="crumbs">
+        <a href="#/">Главная</a>
+        <span className="crumbs__sep"> / </span>
+        <span className="crumbs__active">{owner}</span>
+      </nav>
+      <h1 className="fhelp__owner-title">
+        {owner} <span className="fhelp__owner-en">({ownerEn})</span>
+      </h1>
+      <p className="fhelp__owner-meta">{entries.length} членов</p>
+      {KIND_BLOCK_ORDER.map((k) => {
+        const list = byKind.get(k);
+        if (!list || list.length === 0) return null;
+        return (
+          <section key={k} className="fhelp__owner-block">
+            <h2 className="fhelp__owner-block-title">
+              {KIND_BLOCK_LABEL[k]} <span className="fhelp__owner-block-n">{list.length}</span>
+            </h2>
+            <ul className="fhelp__owner-list">
+              {list.map((e) => (
+                <li key={entryId(e)}>
+                  <a className="fhelp__owner-item" href={formatHash({ kind: 'entry', id: entryId(e) })}>
+                    <span className="fhelp__owner-item-name">{e.nameRu}</span>
+                    <span className="fhelp__owner-item-en">{e.nameEn}</span>
+                    {e.signature && (
+                      <span className="fhelp__owner-item-sig" title={e.signature}>
+                        {shortSig(e.signature)}
+                      </span>
+                    )}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+    </article>
+  );
+}
+
+function shortSig(sig: string): string {
+  const m = sig.match(/\(([^)]*)\)/);
+  return m ? `(${m[1]})` : '';
 }

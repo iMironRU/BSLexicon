@@ -1,13 +1,8 @@
 /* Стили полного синтакс-помощника (`/help/full/`). Лежат поверх общих
-   help/styles.css. Главная страница — поиск-first (без дерева). */
-
-.fhelp__body {
-  /* у полной версии нет sidebar — занимаем всю ширину */
-  display: block;
-}
+   help/styles.css. Layout: content + sidebar справа (как в /help/). */
 
 .fhelp__content {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -142,4 +137,89 @@
     grid-template-columns: 70px 1fr;
   }
   .fhelp__r-en, .fhelp__r-owner { display: none; }
+}
+
+/* ── Страница owner-а (Тип) ──────────────────────────────────── */
+
+.fhelp__owner { max-width: 1000px; }
+
+.fhelp__owner-title {
+  font-family: var(--mono);
+  font-size: 28px;
+  color: var(--accent);
+  margin: 8px 0 4px;
+}
+
+.fhelp__owner-en {
+  font-family: var(--mono);
+  color: var(--fg-dim);
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.fhelp__owner-meta {
+  color: var(--fg-dim);
+  margin: 0 0 22px;
+}
+
+.fhelp__owner-block { margin-bottom: 24px; }
+
+.fhelp__owner-block-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 0 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fhelp__owner-block-n {
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.fhelp__owner-list { list-style: none; padding: 0; margin: 0; }
+
+.fhelp__owner-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 14px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--fg);
+}
+.fhelp__owner-item:hover {
+  background: var(--bg-header);
+  text-decoration: none;
+}
+
+.fhelp__owner-item-name {
+  font-family: var(--mono);
+  color: var(--accent);
+}
+
+.fhelp__owner-item-en {
+  font-size: 12px;
+  color: var(--fg-dim);
+  font-family: var(--mono);
+}
+
+.fhelp__owner-item-sig {
+  font-family: var(--mono);
+  color: var(--fg-dim);
+  font-size: 12px;
+  white-space: nowrap;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 820px) {
+  .fhelp__owner-item { grid-template-columns: 1fr; gap: 2px; }
+  .fhelp__owner-item-sig { max-width: 100%; }
 }

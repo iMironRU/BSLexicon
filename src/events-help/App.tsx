@@ -72,7 +72,7 @@ export function App() {
   useEffect(() => {
     let alive = true;
     loadFullReference()
-      .then((d) => alive && setEntries(d))
+      .then((d) => alive && setEntries(d.entries))
       .catch((e: unknown) => alive && setError(e instanceof Error ? e.message : String(e)));
     return () => {
       alive = false;

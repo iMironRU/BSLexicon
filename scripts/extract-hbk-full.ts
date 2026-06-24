@@ -58,6 +58,8 @@ interface Cls {
   kind: Entry['kind'];
   /** Имя владельца как лежит в архиве (англ. или «Global context»). */
   ownerFromPath: string;
+  /** Catalog-сегменты пути ДО владельца — для дерева навигации. */
+  catalogPath: string[];
 }
 
 function classify(path: string): Cls | null {
@@ -72,17 +74,38 @@ function classify(path: string): Cls | null {
   const ownerFromPath = parts[i - 1];
   if (parts[parts.length - 1] === '__categories__') return null;
 
-  // События — отдельный kind: лежат в .../<TYPE>/events/<Event><ID>.html
-  if (kindFolder === 'events') return { kind: 'event', ownerFromPath };
+  // Catalog-сегменты от `objects/` до владельца (исключая `Global context`).
+  // Пример: objects/catalog234/Array/methods/Add772.html → ['catalog234'].
+  const catalogPath = parts
+    .slice(1, i - 1)
+    .filter((p) => p.startsWith('catalog'));
 
-  if (ownerFromPath === 'Global context') return { kind: 'function', ownerFromPath };
+  if (kindFolder === 'events') return { kind: 'event', ownerFromPath, catalogPath };
+  if (ownerFromPath === 'Global context') return { kind: 'function', ownerFromPath, catalogPath };
   return {
     kind: kindFolder === 'properties' ? 'property' : 'method',
     ownerFromPath,
+    catalogPath,
   };
 }
 
+// ── Пред-проход: catalog<N> → его русское имя из V8SH_pagetitle ──────
+// Используется UI-деревом: вместо «catalog63» показываем «Общие объекты».
+const categoryNames: Record<string, string> = {};
+for (const f of htmlFiles) {
+  const m = f.path.match(/^objects\/(?:[^/]+\/)*(catalog\d+)\.html$/);
+  if (!m) continue;
+  const html = (await f.read()).replace(/^﻿/, '');
+  const tm = html.match(PAGETITLE_RE);
+  if (tm) categoryNames[m[1]] = tm[1].trim();
+}
+console.log(`→ распознано category-имён: ${Object.keys(categoryNames).length}`);
+
 const entries: Entry[] = [];
+// Карта «русское имя owner-а → catalog-путь от корня». Для дерева хватит
+// одного пути на owner (даже если он встречается в нескольких разделах —
+// в выгрузке это редкость, берём первый).
+const ownerPaths: Record<string, string[]> = {};
 let skipped = 0;
 
 for (const f of htmlFiles) {
@@ -98,6 +121,10 @@ for (const f of htmlFiles) {
   if (!parsed) {
     skipped += 1;
     continue;
+  }
+  // Сохраняем путь к владельцу один раз
+  if (!ownerPaths[parsed.owner]) {
+    ownerPaths[parsed.owner] = cls.catalogPath;
   }
   entries.push({
     owner: parsed.owner,
@@ -118,7 +145,10 @@ entries.sort((a, b) =>
 
 mkdirSync(dirname(outPath), { recursive: true });
 // Без отступов — экономим ~30% объёма JSON. UI всё равно парсит через JSON.parse.
-writeFileSync(outPath, JSON.stringify({ total: entries.length, entries }));
+writeFileSync(
+  outPath,
+  JSON.stringify({ total: entries.length, entries, ownerPaths, categoryNames }),
+);
 
 const byKind = new Map<string, number>();
 for (const e of entries) byKind.set(e.kind, (byKind.get(e.kind) ?? 0) + 1);
