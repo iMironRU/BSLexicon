@@ -2,12 +2,15 @@
   <title>BSLexicon</title>
   <!-- Фон: accent палитры приложения (#4ec9b0) -->
   <rect width="32" height="32" rx="6" fill="#4ec9b0"/>
-  <!-- {B} — отсылка к коду + первая буква BSL/Б. Тёмный цвет — наш --bg.
-       Шрифт монопространственный, чтобы читалось как код. -->
-  <text x="16" y="22"
-        font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
-        font-size="20"
-        font-weight="700"
-        text-anchor="middle"
-        fill="#1e1e1e">{B}</text>
+  <!-- {B} собрана из трёх отдельных <text>, чтобы B стояла точно по
+       центру скобок: моноширинные fonts могут чуть смещать прописные
+       буквы внутри ячейки глифа. Цвет — тёмный --bg. -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+     font-weight="700"
+     text-anchor="middle"
+     fill="#1e1e1e">
+    <text x="8"  y="23" font-size="22">{</text>
+    <text x="16" y="22" font-size="18">B</text>
+    <text x="24" y="23" font-size="22">}</text>
+  </g>
 </svg>
