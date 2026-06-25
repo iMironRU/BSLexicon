@@ -4,7 +4,7 @@
   <rect width="32" height="32" rx="6" fill="#4ec9b0"/>
   <!-- {B} собрана из трёх отдельных <text>, чтобы B стояла точно по
        центру скобок: моноширинные fonts могут чуть смещать прописные
-       буквы внутри ячейки глифа. Цвет — тёмный --bg. -->
+       буквы внутри ячейки глифа. Цвет совпадает с переменной bg темы. -->
   <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
      font-weight="700"
      text-anchor="middle"
