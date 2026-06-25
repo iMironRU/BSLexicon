@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <title>BSLexicon</title>
+  <!-- Фон: accent палитры приложения (#4ec9b0) -->
+  <rect width="32" height="32" rx="6" fill="#4ec9b0"/>
+  <!-- {B} — отсылка к коду + первая буква BSL/Б. Тёмный цвет — наш --bg.
+       Шрифт монопространственный, чтобы читалось как код. -->
+  <text x="16" y="22"
+        font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+        font-size="20"
+        font-weight="700"
+        text-anchor="middle"
+        fill="#1e1e1e">{B}</text>
+</svg>
