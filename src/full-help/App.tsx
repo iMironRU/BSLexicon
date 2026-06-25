@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SyntaxEntry } from '../app/reference/types';
+import { encodeCodeParam } from '../app/url-params';
 import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { SearchOverlay } from './SearchOverlay';
 import { Sidebar } from './Sidebar';
@@ -429,6 +430,35 @@ function FullCard({ entry, knownOwners }: { entry: SyntaxEntry; knownOwners: Rea
           })}
         </ul>
       </section>
+
+      {(entry.bslNote || entry.bslExample) && (
+        <section className="card__bsl-annot">
+          <h2 className="card__bsl-annot-title">
+            BSLexicon
+            <span className="card__bsl-annot-badge" title="Наше описание, не текст 1С">наше</span>
+          </h2>
+          {entry.bslNote && <p className="card__bsl-annot-note">{entry.bslNote}</p>}
+          {entry.bslExample && (
+            <div className="card__bsl-annot-example">
+              <pre className="example__code">{entry.bslExample.code}</pre>
+              {entry.bslExample.expect !== undefined && (
+                <div className="example__expect">
+                  <span className="example__label">Ожидаемый вывод:</span>
+                  <pre>{entry.bslExample.expect}</pre>
+                </div>
+              )}
+              <a
+                className="example__open"
+                href={`${TRAINER_URL}?code=${encodeCodeParam(entry.bslExample.code)}`}
+                target="_self"
+                title="Открыть код в тренажёре"
+              >
+                ▶ В тренажёре
+              </a>
+            </div>
+          )}
+        </section>
+      )}
 
       {entry.referenceUrl && (
         <section className="card__source">

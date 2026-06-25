@@ -24,4 +24,11 @@ export interface SyntaxEntry {
   since: string | null;
   /** Публичная ссылка на онлайн-синтакс-помощник 1С с описанием/примерами. */
   referenceUrl: string | null;
+  /**
+   * Наше короткое описание (BSLexicon, ЭТО НЕ ТЕКСТ 1С). `null` — нет.
+   * Берётся из курированного `catalog/` при extract-этапе.
+   */
+  bslNote?: string | null;
+  /** Наш doctest-проверенный пример. `null` — нет. */
+  bslExample?: { code: string; expect?: string } | null;
 }

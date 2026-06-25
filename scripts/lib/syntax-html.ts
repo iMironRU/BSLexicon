@@ -69,6 +69,10 @@ export interface Entry {
   since: string | null;
   /** Публичная ссылка на онлайн-синтакс-помощник 1С (источник описаний и примеров). */
   referenceUrl: string | null;
+  /** Наше описание (BSLexicon, не из 1С). Заполняется на этапе extract. */
+  bslNote?: string | null;
+  /** Наш пример (BSLexicon, doctest-проверенный). */
+  bslExample?: { code: string; expect?: string } | null;
 }
 
 /** Снимает HTML-теги и декодирует HTML-сущности до читаемого текста. */

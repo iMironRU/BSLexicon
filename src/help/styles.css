@@ -953,6 +953,49 @@ a:hover { text-decoration: underline; }
   .card__avail-matrix { grid-template-columns: 1fr; }
 }
 
+/* ── BSLexicon-аннотация (наше описание + пример) ─────────────── */
+
+.card__bsl-annot {
+  margin-top: 28px;
+  padding: 16px 18px;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+}
+
+.card__bsl-annot-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card__bsl-annot-badge {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  text-transform: lowercase;
+}
+
+.card__bsl-annot-note {
+  margin: 0 0 12px;
+  color: var(--fg);
+  line-height: 1.55;
+}
+
+.card__bsl-annot-example {
+  margin: 0;
+}
+
 /* ── Источник — ссылка на 1С ─────────────────────────────────── */
 
 .card__source {

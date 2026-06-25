@@ -14,12 +14,57 @@
  * ВАЖНО (лицензия): описания и примеры 1С НЕ извлекаем — только структурные
  * факты (имена, сигнатуры, типы, доступность) + публичная ссылка на сайт 1С.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import JSZip from 'jszip';
+import { load as yamlLoad } from 'js-yaml';
 import { extractSections, parsePageTitle } from './lib/syntax-html';
 import type { Entry } from './lib/syntax-html';
+
+interface BslAnnotation {
+  note: string;
+  example: { code: string; expect?: string } | null;
+}
+
+/**
+ * Прочитать курированный catalog/*.yaml рекурсивно, собрать index
+ * `id → { note, example }`. Описания и примеры здесь — НАШИ (BSLexicon),
+ * НЕ извлечённые из текстов 1С: их можно публиковать как угодно.
+ */
+function loadAnnotations(catalogRoot: string): Map<string, BslAnnotation> {
+  const out = new Map<string, BslAnnotation>();
+  if (!existsSync(catalogRoot)) return out;
+
+  const walk = (dir: string): void => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) { walk(p); continue; }
+      if (!name.endsWith('.yaml')) continue;
+      const raw = readFileSync(p, 'utf8');
+      const parsed = yamlLoad(raw) as unknown;
+      if (!Array.isArray(parsed)) continue;
+      for (const item of parsed) {
+        if (!item || typeof item !== 'object') continue;
+        const e = item as Record<string, unknown>;
+        const id = typeof e.id === 'string' ? e.id : null;
+        const note = typeof e.description === 'string' ? e.description : null;
+        if (!id || !note) continue;
+        let example: BslAnnotation['example'] = null;
+        const exs = e.examples;
+        if (Array.isArray(exs) && exs.length > 0) {
+          const x = exs[0] as Record<string, unknown>;
+          const code = typeof x?.code === 'string' ? x.code.trim() : null;
+          const expect = typeof x?.expect === 'string' ? x.expect : undefined;
+          if (code) example = { code, ...(expect ? { expect } : {}) };
+        }
+        out.set(id, { note, example });
+      }
+    }
+  };
+  walk(catalogRoot);
+  return out;
+}
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const source =
@@ -101,12 +146,18 @@ for (const f of htmlFiles) {
 }
 console.log(`→ распознано category-имён: ${Object.keys(categoryNames).length}`);
 
+// Курированные аннотации BSLexicon (наши описания/примеры) для подмеса
+// в полную выгрузку. Источник — catalog/**/*.yaml.
+const annotations = loadAnnotations(join(root, 'catalog'));
+console.log(`→ загружено BSLexicon-аннотаций: ${annotations.size}`);
+
 const entries: Entry[] = [];
 // Карта «русское имя owner-а → catalog-путь от корня». Для дерева хватит
 // одного пути на owner (даже если он встречается в нескольких разделах —
 // в выгрузке это редкость, берём первый).
 const ownerPaths: Record<string, string[]> = {};
 let skipped = 0;
+let annotated = 0;
 
 for (const f of htmlFiles) {
   const cls = classify(f.path);
@@ -126,6 +177,13 @@ for (const f of htmlFiles) {
   if (!ownerPaths[parsed.owner]) {
     ownerPaths[parsed.owner] = cls.catalogPath;
   }
+  const sections = extractSections(html, cls.kind);
+  // id-схема: function — `nameRu`; method/property/event — `owner.nameRu`.
+  // Совпадает с тем, что использует /help/full/ и /help/events/.
+  const id = cls.kind === 'function' ? parsed.nameRu : `${parsed.owner}.${parsed.nameRu}`;
+  const ann = annotations.get(id);
+  if (ann) annotated += 1;
+
   entries.push({
     owner: parsed.owner,
     ownerEn: parsed.ownerEn,
@@ -133,7 +191,9 @@ for (const f of htmlFiles) {
     category: parsed.owner, // в полной версии «категория» = имя типа-владельца
     nameRu: parsed.nameRu,
     nameEn: parsed.nameEn,
-    ...extractSections(html, cls.kind),
+    ...sections,
+    bslNote: ann?.note ?? null,
+    bslExample: ann?.example ?? null,
   });
 }
 
@@ -157,4 +217,5 @@ console.log(
   `\n✓ Извлечено ${entries.length} записей (пропущено без заголовка/parsePageTitle: ${skipped}).`,
 );
 for (const [k, n] of byKind) console.log(`  ${String(n).padStart(6)}  ${k}`);
+console.log(`  с BSLexicon-аннотацией: ${annotated} (${((annotated / entries.length) * 100).toFixed(1)}%)`);
 console.log(`  → ${outPath.slice(root.length + 1)}`);
