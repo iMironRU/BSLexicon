@@ -8,6 +8,8 @@ import { DebugSession, run } from '@core/index';
 import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } from '@core/index';
 import { loadCatalog } from './catalog';
 import { EXAMPLES } from './examples';
+import { loadDraft, saveDraft } from './snippets';
+import { SnippetsMenu } from './components/SnippetsMenu';
 import { useVersionCheck } from './useVersionCheck';
 import { useUrlParams } from './useUrlParams';
 import { ProvenanceBanner } from './components/ProvenanceBanner';
@@ -28,9 +30,15 @@ const IDLE: PanelView = { output: null, error: null, variables: [], callStack: [
 export function App() {
   const urlParams = useUrlParams();
   const hasUrlCode = urlParams.code !== null || urlParams.loading;
-  const [source, setSource] = useState<string>(urlParams.code ?? EXAMPLES[0].code);
+  // Приоритет источников кода: URL-параметр → черновик из localStorage → дефолт.
+  // Черновик считывается один раз при mount — потом сам себя перезаписывает
+  // из useEffect ниже.
+  const initialDraft = useMemo(() => (hasUrlCode ? null : loadDraft()), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [source, setSource] = useState<string>(
+    urlParams.code ?? initialDraft ?? EXAMPLES[0].code,
+  );
   const [activeExample, setActiveExample] = useState<string | null>(
-    hasUrlCode ? null : EXAMPLES[0].id,
+    hasUrlCode || initialDraft !== null ? null : EXAMPLES[0].id,
   );
   const [decodeError, setDecodeError] = useState<string | null>(urlParams.decodeError);
   const [showProvenance, setShowProvenance] = useState(urlParams.sourceUrl !== null);
@@ -51,6 +59,14 @@ export function App() {
     }
     if (urlParams.decodeError) setDecodeError(urlParams.decodeError);
   }, [urlParams.loading, urlParams.code, urlParams.decodeError]);
+
+  // Автосохранение черновика: пишем последний код с дебаунсом 500 мс,
+  // чтобы не долбить localStorage на каждый keystroke. Работает
+  // best-effort — при заблокированном storage тихо ничего не делает.
+  useEffect(() => {
+    const id = window.setTimeout(() => saveDraft(source), 500);
+    return () => window.clearTimeout(id);
+  }, [source]);
 
   /** Новая сессия из текущего кода с перенесёнными точками останова. */
   const ensureSession = useCallback((): DebugSession => {
@@ -112,6 +128,19 @@ export function App() {
     (id: string, code: string) => {
       setSource(code);
       setActiveExample(id);
+      setBreakpoints(new Set());
+      setBatch(null);
+      reset();
+    },
+    [reset],
+  );
+
+  /** Загрузить сохранённый сниппет из localStorage (то же поведение
+   *  что и «выбрать пример», но activeExample гасим — это не пресет). */
+  const handleLoadSnippet = useCallback(
+    (code: string) => {
+      setSource(code);
+      setActiveExample(null);
       setBreakpoints(new Set());
       setBatch(null);
       reset();
@@ -197,6 +226,7 @@ export function App() {
               <span className="btn-label">Стоп</span>
             </button>
           </div>
+          <SnippetsMenu currentCode={source} onLoad={handleLoadSnippet} />
           <button
             className={'app__step app__ref-btn' + (showReference ? ' app__step--on' : '')}
             onClick={() => setShowReference((v) => !v)}
