@@ -86,17 +86,27 @@ export function GitSettingsModal({ onClose, onConnected }: GitSettingsModalProps
           <summary>Как получить безопасный токен (fine-grained PAT)</summary>
           <ol className="git-modal__steps">
             <li>
-              Открой{' '}
+              <b>Сначала заведи новый пустой репозиторий</b> — только для этих сниппетов
+              (например <code>bslexicon-snippets</code>). Можно private, README/lisense не нужны.
+              Ссылка:{' '}
+              <a href="https://github.com/new" target="_blank" rel="noopener noreferrer">
+                github.com/new
+              </a>.
+            </li>
+            <li>
+              Теперь открой{' '}
               <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">
                 github.com/settings/personal-access-tokens/new
               </a>{' '}
               (это <b>fine-grained</b> PAT, а не classic).
             </li>
-            <li>Заведи отдельный репозиторий, только для BSLexicon (например <code>bslexicon-snippets</code>).</li>
             <li><b>Token name:</b> BSLexicon snippets. <b>Expiration:</b> 90 дней (или дольше).</li>
-            <li><b>Repository access → Only select repositories → выбери один</b> тот самый репозиторий.</li>
+            <li>
+              <b>Repository access → Only select repositories</b> → выбери
+              из выпадающего списка тот самый репозиторий, что завёл на шаге 1.
+            </li>
             <li><b>Repository permissions → Contents → Read and write.</b> Больше ничего.</li>
-            <li>Generate token → скопируй → вставь в поле ниже.</li>
+            <li>Generate token → скопируй → вставь в поле «Personal Access Token» ниже.</li>
           </ol>
           <p className="git-modal__warn">
             ⚠ Токен лежит в localStorage этого браузера. Если браузер скомпрометирован — злоумышленник получит доступ ко всему, что разрешает токен.
