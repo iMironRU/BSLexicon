@@ -43,6 +43,7 @@ export function Editor({
   const monacoRef = useRef<MonacoApi | null>(null);
   const decorationsRef = useRef<Decorations | null>(null);
   const [ready, setReady] = useState(false);
+  const isMobile = useIsMobile();
 
   // Колбэк тоггла читаем через ref: слушатель мыши регистрируем один раз.
   const toggleRef = useRef(onToggleBreakpoint);
@@ -102,14 +103,34 @@ export function Editor({
       beforeMount={handleBeforeMount}
       onMount={handleMount}
       options={{
-        fontSize: 14,
+        fontSize: isMobile ? 13 : 14,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         tabSize: 4,
         renderWhitespace: 'selection',
         automaticLayout: true,
-        glyphMargin: true,
+        // Мобильные экраны узкие — режем всё, что съедает горизонталь:
+        // glyphMargin (иконки breakpoints), folding-колонку, и уменьшаем
+        // padding под номера строк. Пошаговая отладка на мобиле не сценарий.
+        glyphMargin: !isMobile,
+        folding: !isMobile,
+        lineNumbersMinChars: isMobile ? 2 : 5,
+        lineDecorationsWidth: isMobile ? 4 : 10,
       }}
     />
   );
+}
+
+/** Отслеживание mobile viewport для перерендера Monaco-опций. */
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)');
+    const onChange = (e: MediaQueryListEvent): void => setIsMobile(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isMobile;
 }
