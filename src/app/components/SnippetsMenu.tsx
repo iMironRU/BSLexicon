@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import type { GitConfig } from '../git-config';
+import { GitApiError, readFile, snippetsFilePath, writeFile } from '../git-storage';
 import {
   deleteSnippet,
   exportAll,
@@ -13,6 +15,8 @@ interface SnippetsMenuProps {
   currentCode: string;
   /** Загрузить сниппет в редактор. */
   onLoad: (code: string) => void;
+  /** Настройки подключения к GitHub (null — не подключено). */
+  gitCfg: GitConfig | null;
 }
 
 /**
@@ -22,11 +26,12 @@ interface SnippetsMenuProps {
  *  • «⬇ Экспорт» скачивает JSON, «⬆ Импорт» — читает файл.
  * Всё хранится в localStorage через `snippets.ts`.
  */
-export function SnippetsMenu({ currentCode, onLoad }: SnippetsMenuProps) {
+export function SnippetsMenu({ currentCode, onLoad, gitCfg }: SnippetsMenuProps) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Snippet[]>(() => (canUseStorage() ? listSnippets() : []));
   const [name, setName] = useState('');
   const [flash, setFlash] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -88,6 +93,50 @@ export function SnippetsMenu({ currentCode, onLoad }: SnippetsMenuProps) {
   };
 
   const handleImportClick = (): void => fileRef.current?.click();
+
+  const handlePushGit = async (): Promise<void> => {
+    if (!gitCfg) return;
+    setSyncing(true);
+    try {
+      const filePath = snippetsFilePath(gitCfg);
+      const existing = await readFile(gitCfg, filePath);
+      const body = exportAll(listSnippets());
+      const msg = `BSLexicon: sync ${items.length} snippet${items.length === 1 ? '' : 's'}`;
+      await writeFile(gitCfg, filePath, body, msg, existing?.sha ?? null);
+      setFlash(`↑ Отправлено в ${gitCfg.owner}/${gitCfg.repo}`);
+    } catch (e) {
+      const m = e instanceof GitApiError ? e.message : (e as Error).message;
+      setFlash(`Ошибка push: ${m}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handlePullGit = async (): Promise<void> => {
+    if (!gitCfg) return;
+    if (items.length > 0 && !window.confirm('Загрузка из git заменит текущий список сниппетов. Продолжить?')) return;
+    setSyncing(true);
+    try {
+      const filePath = snippetsFilePath(gitCfg);
+      const existing = await readFile(gitCfg, filePath);
+      if (!existing) {
+        setFlash(`В репо ещё нет ${filePath}. Сначала «↑ В git».`);
+        return;
+      }
+      const result = importAll(existing.text, 'replace');
+      if (result.error) {
+        setFlash(`Ошибка pull: ${result.error}`);
+        return;
+      }
+      setItems(listSnippets());
+      setFlash(`↓ Загружено из ${gitCfg.owner}/${gitCfg.repo}: ${result.added} шт.`);
+    } catch (e) {
+      const m = e instanceof GitApiError ? e.message : (e as Error).message;
+      setFlash(`Ошибка pull: ${m}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = e.target.files?.[0];
@@ -199,6 +248,34 @@ export function SnippetsMenu({ currentCode, onLoad }: SnippetsMenuProps) {
               style={{ display: 'none' }}
             />
           </div>
+
+          {gitCfg && (
+            <div className="snippets__git">
+              <div className="snippets__git-label">
+                git: <b>{gitCfg.owner}/{gitCfg.repo}</b>
+              </div>
+              <div className="snippets__toolbar">
+                <button
+                  type="button"
+                  className="snippets__tool-btn"
+                  onClick={handlePushGit}
+                  disabled={syncing || items.length === 0}
+                  title="Отправить весь список в bslexicon-snippets.json"
+                >
+                  ↑ В git
+                </button>
+                <button
+                  type="button"
+                  className="snippets__tool-btn"
+                  onClick={handlePullGit}
+                  disabled={syncing}
+                  title="Загрузить из bslexicon-snippets.json (заменит текущий список)"
+                >
+                  ↓ Из git
+                </button>
+              </div>
+            </div>
+          )}
 
           {flash && <div className="snippets__flash">{flash}</div>}
         </div>

@@ -9,6 +9,10 @@ import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } fro
 import { loadCatalog } from './catalog';
 import { EXAMPLES } from './examples';
 import { loadDraft, saveDraft } from './snippets';
+import { loadGitConfig } from './git-config';
+import type { GitConfig } from './git-config';
+import { GitSettingsModal } from './components/GitSettingsModal';
+import { GitStatusBadge } from './components/GitStatusBadge';
 import { ShareButton } from './components/ShareButton';
 import { SnippetsMenu } from './components/SnippetsMenu';
 import { useVersionCheck } from './useVersionCheck';
@@ -48,6 +52,8 @@ export function App() {
   const [breakpoints, setBreakpoints] = useState<Set<number>>(new Set());
   const [selectedFrame, setSelectedFrame] = useState(0);
   const [showReference, setShowReference] = useState(false);
+  const [gitCfg, setGitCfg] = useState<GitConfig | null>(() => loadGitConfig());
+  const [showGitModal, setShowGitModal] = useState(false);
   const sessionRef = useRef<DebugSession | null>(null);
   const catalog = useMemo(() => loadCatalog(), []);
   const updateAvailable = useVersionCheck();
@@ -228,7 +234,8 @@ export function App() {
             </button>
           </div>
           <ShareButton code={source} />
-          <SnippetsMenu currentCode={source} onLoad={handleLoadSnippet} />
+          <SnippetsMenu currentCode={source} onLoad={handleLoadSnippet} gitCfg={gitCfg} />
+          <GitStatusBadge cfg={gitCfg} onClick={() => setShowGitModal(true)} />
           <button
             className={'app__step app__ref-btn' + (showReference ? ' app__step--on' : '')}
             onClick={() => setShowReference((v) => !v)}
@@ -332,6 +339,13 @@ export function App() {
             Обновить
           </button>
         </div>
+      )}
+
+      {showGitModal && (
+        <GitSettingsModal
+          onClose={() => setShowGitModal(false)}
+          onConnected={() => setGitCfg(loadGitConfig())}
+        />
       )}
     </div>
   );

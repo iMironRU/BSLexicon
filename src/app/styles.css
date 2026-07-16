@@ -119,6 +119,230 @@ body {
   cursor: pointer;
 }
 
+/* ── GitStatusBadge ────────────────────────────────────────── */
+
+.git-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.git-badge:hover { border-color: var(--fg-dim); color: var(--fg); }
+.git-badge--on {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.git-badge__repo {
+  font-variant-numeric: tabular-nums;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── GitSettingsModal ──────────────────────────────────────── */
+
+.git-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.git-modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--fg);
+}
+
+.git-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.git-modal__title { margin: 0; font-size: 18px; color: var(--accent); }
+.git-modal__close {
+  background: transparent;
+  border: none;
+  color: var(--fg-dim);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.git-modal__close:hover { color: var(--fg); }
+
+.git-modal__lead {
+  font-size: 13px;
+  color: var(--fg-dim);
+  margin: 0;
+  line-height: 1.5;
+}
+.git-modal__lead code {
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--bg-panel);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.git-modal__howto {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.git-modal__howto summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.git-modal__steps {
+  margin: 10px 0 8px 20px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--fg);
+}
+.git-modal__steps li { margin-bottom: 4px; }
+.git-modal__steps code {
+  font-size: 11px;
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--accent);
+}
+.git-modal__steps a { color: var(--accent-link); }
+.git-modal__warn {
+  margin: 8px 0 4px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, #f4a261 12%, transparent);
+  border-left: 3px solid #f4a261;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+.git-modal__form { display: flex; flex-direction: column; gap: 10px; }
+.git-modal__row { display: flex; gap: 10px; }
+.git-modal__field { display: flex; flex-direction: column; gap: 4px; }
+.git-modal__field--half { flex: 1; }
+.git-modal__field span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-dim);
+}
+.git-modal__field input {
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.git-modal__field input:focus { outline: none; border-color: var(--accent); }
+
+.git-modal__token-row { display: flex; gap: 4px; }
+.git-modal__token-row input { flex: 1; font-family: var(--mono, monospace); }
+.git-modal__eye {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.git-modal__status {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.git-modal__status--ok {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+.git-modal__status--error {
+  background: color-mix(in srgb, var(--error, #f48771) 12%, transparent);
+  color: var(--error, #f48771);
+}
+
+.git-modal__actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.git-modal__actions-right { display: flex; gap: 8px; }
+.git-modal__btn {
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--fg);
+  cursor: pointer;
+}
+.git-modal__btn:hover:not(:disabled) { border-color: var(--fg-dim); }
+.git-modal__btn:disabled { opacity: 0.4; cursor: default; }
+.git-modal__btn--primary {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.git-modal__btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.git-modal__btn--danger {
+  color: var(--error, #f48771);
+  border-color: color-mix(in srgb, var(--error, #f48771) 60%, var(--border));
+}
+.git-modal__btn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--error, #f48771) 12%, transparent);
+}
+
+/* Секция «git» в SnippetsMenu popover */
+.snippets__git {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.snippets__git-label {
+  font-size: 11px;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.snippets__git-label b { color: var(--accent); }
+
 /* ── ShareButton (🔗 Поделиться) ─────────────────────────── */
 
 .share-btn { transition: color 200ms, border-color 200ms; }
