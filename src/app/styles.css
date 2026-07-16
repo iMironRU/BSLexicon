@@ -924,6 +924,29 @@ body {
   }
 }
 
+/* ── Очень узкие экраны (телефоны): прячем редкие step-кнопки ──── */
+@media (max-width: 640px) {
+  /* Войти/Выйти/Продолжить в шапке — на мобиле их 4 иконки не нужны;
+     остаются Шаг и Стоп + основные действия (Share/Мои/Git/Спр/▶). */
+  .app__step--advanced {
+    display: none;
+  }
+  .app__controls {
+    gap: 4px;
+  }
+  .app__step,
+  .app__run,
+  .git-badge,
+  .share-btn,
+  .snippets__btn {
+    padding: 6px 8px;
+  }
+  /* Логотип без tagline не должен занимать много места */
+  .app__brand {
+    gap: 0;
+  }
+}
+
 /* ── Панель-справочник (выезжающий правый док) ──────────────────── */
 .ref {
   position: absolute;

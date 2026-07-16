@@ -35,6 +35,7 @@ export function App() {
   const catalog = useMemo(() => loadCatalog(), []);
   const route = useHashRoute();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [syntaxEntries, setSyntaxEntries] = useState<SyntaxEntry[] | null>(null);
   const [target, setTargetState] = useState<Target>(() => defaultTarget());
 
@@ -111,6 +112,14 @@ export function App() {
 
   const closeSearch = useCallback(() => setSearchOpen(false), []);
 
+  // Клик по пункту дерева меняет hash — закрываем drawer автоматически,
+  // чтобы контент карточки сразу оказался виден на мобиле.
+  useEffect(() => {
+    const onHash = (): void => setSidebarOpen(false);
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
   return (
     <div className="help">
       <header className="help__header">
@@ -119,6 +128,15 @@ export function App() {
           <span className="help__tagline">Синтакс-помощник</span>
         </a>
         <div className="help__head-actions">
+          <button
+            type="button"
+            className="help__drawer-btn"
+            onClick={() => setSidebarOpen((v) => !v)}
+            aria-label="Показать дерево навигации"
+            aria-expanded={sidebarOpen}
+          >
+            <span aria-hidden="true">☰</span>
+          </button>
           <TargetSelector versions={versions} target={target} onChange={setTarget} />
           <button
             type="button"
@@ -143,7 +161,10 @@ export function App() {
         </div>
       </header>
 
-      <main className="help__body">
+      <main className={'help__body' + (sidebarOpen ? ' help__body--drawer-open' : '')}>
+        {sidebarOpen && (
+          <div className="help__backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
+        )}
         <section className="help__content">
           {route.kind === 'home' && <Home catalog={catalog} />}
           {route.kind === 'entry' && entry && (

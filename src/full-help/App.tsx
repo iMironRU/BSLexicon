@@ -60,6 +60,7 @@ export function App() {
   const [data, setData] = useState<Awaited<ReturnType<typeof loadFullReference>> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   /** Прогресс fetch (0..1) или null — если Content-Length не пришёл. */
   const [progress, setProgress] = useState<number | null>(null);
   const route = useHashRoute();
@@ -98,6 +99,12 @@ export function App() {
   }, [searchOpen]);
 
   const closeSearch = useCallback(() => setSearchOpen(false), []);
+
+  useEffect(() => {
+    const onHash = (): void => setSidebarOpen(false);
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
   const hrefFor = useCallback(
     (e: SyntaxEntry) => formatHash({ kind: 'entry', id: entryId(e) }),
     [],
@@ -167,6 +174,15 @@ export function App() {
           <span className="help__tagline">Полный синтакс-помощник</span>
         </a>
         <div className="help__head-actions">
+          <button
+            type="button"
+            className="help__drawer-btn"
+            onClick={() => setSidebarOpen((v) => !v)}
+            aria-label="Показать дерево навигации"
+            aria-expanded={sidebarOpen}
+          >
+            <span aria-hidden="true">☰</span>
+          </button>
           {entries.length > 0 && (
             <button
               type="button"
@@ -192,7 +208,10 @@ export function App() {
         </div>
       </header>
 
-      <main className="help__body">
+      <main className={'help__body' + (sidebarOpen ? ' help__body--drawer-open' : '')}>
+        {sidebarOpen && (
+          <div className="help__backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
+        )}
         <section className="help__content fhelp__content">
           {error && <div className="help__missing"><h1>Ошибка</h1><p>{error}</p></div>}
           {!data && !error && (

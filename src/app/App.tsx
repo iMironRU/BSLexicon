@@ -210,15 +210,15 @@ export function App() {
               <span aria-hidden="true">⏭</span>
               <span className="btn-label">Шаг</span>
             </button>
-            <button className="app__step" onClick={handleStepInto} type="button" title="Войти в функцию (step into)">
+            <button className="app__step app__step--advanced" onClick={handleStepInto} type="button" title="Войти в функцию (step into)">
               <span aria-hidden="true">⤵</span>
               <span className="btn-label">Войти</span>
             </button>
-            <button className="app__step" onClick={handleStepOut} type="button" title="Выйти из функции (step out)">
+            <button className="app__step app__step--advanced" onClick={handleStepOut} type="button" title="Выйти из функции (step out)">
               <span aria-hidden="true">⤴</span>
               <span className="btn-label">Выйти</span>
             </button>
-            <button className="app__step" onClick={handleContinue} type="button" title="Продолжить до точки останова">
+            <button className="app__step app__step--advanced" onClick={handleContinue} type="button" title="Продолжить до точки останова">
               <span aria-hidden="true">▷</span>
               <span className="btn-label">Продолжить</span>
             </button>
