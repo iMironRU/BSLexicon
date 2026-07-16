@@ -119,6 +119,14 @@ body {
   cursor: pointer;
 }
 
+/* ── ShareButton (🔗 Поделиться) ─────────────────────────── */
+
+.share-btn { transition: color 200ms, border-color 200ms; }
+.share-btn--ok {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* ── SnippetsMenu (📂 Мои) ─────────────────────────────────── */
 
 .snippets { position: relative; display: inline-block; }

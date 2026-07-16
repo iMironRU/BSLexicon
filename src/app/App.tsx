@@ -9,6 +9,7 @@ import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } fro
 import { loadCatalog } from './catalog';
 import { EXAMPLES } from './examples';
 import { loadDraft, saveDraft } from './snippets';
+import { ShareButton } from './components/ShareButton';
 import { SnippetsMenu } from './components/SnippetsMenu';
 import { useVersionCheck } from './useVersionCheck';
 import { useUrlParams } from './useUrlParams';
@@ -226,6 +227,7 @@ export function App() {
               <span className="btn-label">Стоп</span>
             </button>
           </div>
+          <ShareButton code={source} />
           <SnippetsMenu currentCode={source} onLoad={handleLoadSnippet} />
           <button
             className={'app__step app__ref-btn' + (showReference ? ' app__step--on' : '')}
