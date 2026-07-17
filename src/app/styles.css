@@ -234,6 +234,43 @@ body {
   color: var(--accent);
 }
 .git-modal__steps a { color: var(--accent-link); }
+.git-modal__cli-hint,
+.git-modal__cli-note {
+  display: inline;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.git-modal__cli {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  color: var(--fg);
+}
+.git-modal__cli code {
+  flex: 1;
+  overflow-x: auto;
+  white-space: nowrap;
+  background: transparent;
+  padding: 0;
+}
+.git-modal__cli-copy {
+  background: transparent;
+  border: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.git-modal__cli-copy:hover { color: var(--accent); }
+
 .git-modal__warn {
   margin: 8px 0 4px;
   padding: 8px 10px;

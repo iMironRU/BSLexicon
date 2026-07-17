@@ -153,19 +153,30 @@ export function GitSettingsModal({ onClose, onConnected }: GitSettingsModalProps
           <summary>Как получить безопасный токен (fine-grained PAT)</summary>
           <ol className="git-modal__steps">
             <li>
-              <b>Сначала заведи новый пустой репозиторий</b> — только для этих сниппетов
-              (например <code>bslexicon-snippets</code>). Можно private, README/license не нужны.
-              Ссылка:{' '}
-              <a href="https://github.com/new" target="_blank" rel="noopener noreferrer">
-                github.com/new
-              </a>.
+              <b>Заведи новый пустой репозиторий</b> — только для этих сниппетов.
+              Проще всего:{' '}
+              <a
+                href="https://github.com/new?name=bslexicon-snippets&visibility=private"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                открыть форму с уже вписанным именем
+              </a>{' '}
+              и нажать «Create». README/license не нужны.
+              <br />
+              <span className="git-modal__cli-hint">
+                Или одной командой в терминале, если стоит{' '}
+                <a href="https://cli.github.com/" target="_blank" rel="noopener noreferrer">GitHub CLI</a>:
+              </span>
+              <CliBlock command="gh repo create bslexicon-snippets --private --clone=false" />
             </li>
             <li>
-              Теперь открой{' '}
+              Открой{' '}
               <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">
                 github.com/settings/personal-access-tokens/new
               </a>{' '}
-              (это <b>fine-grained</b> PAT, а не classic).
+              (это <b>fine-grained</b> PAT, а не classic —{' '}
+              <span className="git-modal__cli-note">через CLI создать fine-grained нельзя</span>).
             </li>
             <li><b>Token name:</b> BSLexicon snippets. <b>Expiration:</b> 90 дней (или дольше).</li>
             <li>
@@ -280,6 +291,37 @@ export function GitSettingsModal({ onClose, onConnected }: GitSettingsModalProps
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Копируемый однострочник CLI: `<code>` + кнопка «Копировать». */
+function CliBlock({ command }: { command: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return undefined;
+    const id = window.setTimeout(() => setCopied(false), 1500);
+    return () => window.clearTimeout(id);
+  }, [copied]);
+  const handleCopy = async (): Promise<void> => {
+    try {
+      await navigator.clipboard?.writeText(command);
+      setCopied(true);
+    } catch {
+      window.prompt('Скопируй команду:', command);
+    }
+  };
+  return (
+    <div className="git-modal__cli">
+      <code>{command}</code>
+      <button
+        type="button"
+        className="git-modal__cli-copy"
+        onClick={handleCopy}
+        title="Скопировать команду"
+      >
+        {copied ? '✓' : '📋'}
+      </button>
     </div>
   );
 }
