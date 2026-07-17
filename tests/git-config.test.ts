@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { clearGitConfig, loadGitConfig, normalizePath, saveGitConfig } from '../src/app/git-config';
+import {
+  clearGitConfig,
+  loadGitConfig,
+  normalizePath,
+  parseRepoLink,
+  repoUrl,
+  saveGitConfig,
+} from '../src/app/git-config';
 
 function installLocalStorage(): void {
   const store: Record<string, string> = {};
@@ -62,5 +69,76 @@ describe('git-config', () => {
     delete (globalThis as unknown as { localStorage?: Storage }).localStorage;
     expect(() => saveGitConfig({ owner: 'a', repo: 'b', branch: 'main', path: '', token: 'x' })).not.toThrow();
     expect(loadGitConfig()).toBeNull();
+  });
+});
+
+describe('parseRepoLink', () => {
+  it('короткая user/repo', () => {
+    expect(parseRepoLink('iMironRU/bslexicon-snippets')).toEqual({
+      owner: 'iMironRU',
+      repo: 'bslexicon-snippets',
+    });
+  });
+
+  it('короткая с .git — расширение отрезается', () => {
+    expect(parseRepoLink('user/repo.git')).toEqual({ owner: 'user', repo: 'repo' });
+  });
+
+  it('полный https URL', () => {
+    expect(parseRepoLink('https://github.com/iMironRU/bslexicon-snippets')).toEqual({
+      owner: 'iMironRU',
+      repo: 'bslexicon-snippets',
+    });
+  });
+
+  it('URL с trailing slash', () => {
+    expect(parseRepoLink('https://github.com/a/b/')).toEqual({ owner: 'a', repo: 'b' });
+  });
+
+  it('URL с .git', () => {
+    expect(parseRepoLink('https://github.com/a/b.git')).toEqual({ owner: 'a', repo: 'b' });
+  });
+
+  it('URL с /tree/<branch>', () => {
+    expect(parseRepoLink('https://github.com/a/b/tree/dev')).toEqual({
+      owner: 'a',
+      repo: 'b',
+      branch: 'dev',
+    });
+  });
+
+  it('URL с /tree/<branch>/<path>', () => {
+    expect(parseRepoLink('https://github.com/a/b/tree/dev/sub/dir')).toEqual({
+      owner: 'a',
+      repo: 'b',
+      branch: 'dev',
+      path: 'sub/dir',
+    });
+  });
+
+  it('SSH remote', () => {
+    expect(parseRepoLink('git@github.com:a/b.git')).toEqual({ owner: 'a', repo: 'b' });
+  });
+
+  it('чужой хост → null', () => {
+    expect(parseRepoLink('https://gitlab.com/a/b')).toBeNull();
+  });
+
+  it('мусор → null', () => {
+    expect(parseRepoLink('это не ссылка')).toBeNull();
+    expect(parseRepoLink('')).toBeNull();
+    expect(parseRepoLink('https://github.com/only-owner')).toBeNull();
+  });
+
+  it('пробелы вокруг обрезаются', () => {
+    expect(parseRepoLink('  a/b  ')).toEqual({ owner: 'a', repo: 'b' });
+  });
+});
+
+describe('repoUrl', () => {
+  it('собирает https URL из owner/repo', () => {
+    expect(repoUrl({ owner: 'iMironRU', repo: 'bslexicon-snippets' })).toBe(
+      'https://github.com/iMironRU/bslexicon-snippets',
+    );
   });
 });

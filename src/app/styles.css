@@ -245,6 +245,52 @@ body {
   line-height: 1.5;
 }
 
+.git-modal__connected {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-radius: 6px;
+  font-size: 13px;
+}
+.git-modal__connected-label { color: var(--fg-dim); }
+.git-modal__connected-repo {
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.git-modal__copy {
+  margin-left: auto;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.git-modal__copy:hover { color: var(--fg); border-color: var(--fg-dim); }
+
+.git-modal__advanced {
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+  margin-top: 2px;
+}
+.git-modal__advanced-toggle {
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.git-modal__advanced-toggle:hover { color: var(--fg); }
+
 .git-modal__form { display: flex; flex-direction: column; gap: 10px; }
 .git-modal__row { display: flex; gap: 10px; }
 .git-modal__field { display: flex; flex-direction: column; gap: 4px; }

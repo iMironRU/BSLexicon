@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import {
   clearGitConfig,
   loadGitConfig,
+  parseRepoLink,
+  repoUrl,
   saveGitConfig,
   type GitConfig,
 } from '../git-config';
@@ -18,21 +20,31 @@ type Status =
   | { kind: 'ok'; info: RepoInfo }
   | { kind: 'error'; message: string };
 
-const EMPTY: GitConfig = { owner: '', repo: '', branch: 'main', path: '', token: '' };
-
 /**
- * Модалка настроек подключения к GitHub-репо. Открывается по клику
- * на индикатор в шапке. Мысль: минимум магии — форма owner/repo/token,
- * кнопка «Проверить и подключиться» дёргает /repos/:owner/:repo и
- * сохраняет только если пришёл 200. Инструкция по fine-grained token —
- * прямо тут же, без внешней документации.
+ * Модалка настроек GitHub-подключения. Форма минимальна: ссылка на репо
+ * (полный URL или короткая `user/repo`) + fine-grained PAT. Ветку и
+ * подпапку — только по запросу под спойлером «Дополнительно».
+ *
+ * «Проверить и подключиться» парсит ссылку, дёргает /repos/:owner/:repo
+ * и сохраняет конфиг только при 200.
  */
 export function GitSettingsModal({ onClose, onConnected }: GitSettingsModalProps) {
   const initial = loadGitConfig();
-  const [cfg, setCfg] = useState<GitConfig>(initial ?? EMPTY);
-  const [status, setStatus] = useState<Status>({ kind: 'idle' });
-  const [showToken, setShowToken] = useState(false);
   const isConnected = initial !== null;
+
+  // Единое поле «ссылка на репо» — если уже подключено, реконструируем
+  // URL из сохранённых owner/repo, чтобы пользователю не нужно было
+  // вводить его повторно.
+  const [linkInput, setLinkInput] = useState(() =>
+    initial ? repoUrl(initial) : '',
+  );
+  const [token, setToken] = useState(initial?.token ?? '');
+  const [branch, setBranch] = useState(initial?.branch ?? 'main');
+  const [path, setPath] = useState(initial?.path ?? '');
+  const [showAdvanced, setShowAdvanced] = useState(Boolean(initial?.path));
+  const [showToken, setShowToken] = useState(false);
+  const [status, setStatus] = useState<Status>({ kind: 'idle' });
+  const [copyFlash, setCopyFlash] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -42,12 +54,30 @@ export function GitSettingsModal({ onClose, onConnected }: GitSettingsModalProps
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  useEffect(() => {
+    if (!copyFlash) return undefined;
+    const id = window.setTimeout(() => setCopyFlash(false), 1500);
+    return () => window.clearTimeout(id);
+  }, [copyFlash]);
+
   const handleConnect = async (): Promise<void> => {
+    const parsed = parseRepoLink(linkInput);
+    if (!parsed) {
+      setStatus({ kind: 'error', message: 'Не распознал ссылку. Ожидаю https://github.com/user/repo или user/repo.' });
+      return;
+    }
+    const cfg: GitConfig = {
+      owner: parsed.owner,
+      repo: parsed.repo,
+      branch: (parsed.branch || branch || 'main').trim(),
+      path: parsed.path ?? path,
+      token: token.trim(),
+    };
     setStatus({ kind: 'testing' });
     try {
       const info = await testConnection(cfg);
       if (info.permissions && !info.permissions.push) {
-        setStatus({ kind: 'error', message: 'Токен есть, но у него нет прав на запись (push). Проверь Contents: Read and write.' });
+        setStatus({ kind: 'error', message: 'Токен принят, но у него нет прав на запись (push). Проверь Contents: Read and write.' });
         return;
       }
       saveGitConfig(cfg);
@@ -62,12 +92,26 @@ export function GitSettingsModal({ onClose, onConnected }: GitSettingsModalProps
   const handleDisconnect = (): void => {
     if (!window.confirm('Отключить репо? Токен будет удалён из этого браузера. Сниппеты в localStorage останутся.')) return;
     clearGitConfig();
-    setCfg(EMPTY);
+    setLinkInput('');
+    setToken('');
+    setBranch('main');
+    setPath('');
     setStatus({ kind: 'idle' });
     onConnected();
   };
 
-  const canSubmit = cfg.owner && cfg.repo && cfg.token && status.kind !== 'testing';
+  const handleCopyRepo = async (): Promise<void> => {
+    if (!initial) return;
+    const url = repoUrl(initial);
+    try {
+      await navigator.clipboard?.writeText(url);
+      setCopyFlash(true);
+    } catch {
+      window.prompt('Скопируй ссылку:', url);
+    }
+  };
+
+  const canSubmit = linkInput.trim() && token.trim() && status.kind !== 'testing';
 
   return (
     <div className="git-modal__backdrop" onClick={onClose} role="dialog" aria-modal="true">
@@ -79,15 +123,38 @@ export function GitSettingsModal({ onClose, onConnected }: GitSettingsModalProps
 
         <p className="git-modal__lead">
           Сохраняй код в свой репозиторий на GitHub. Push/pull делаются одной кнопкой
-          из меню «📂 Мои». Файл в репо — <code>bslexicon-snippets.json</code>{cfg.path && <> в папке <code>{cfg.path}/</code></>}.
+          из меню «📂 Мои». Файл в репо — <code>bslexicon-snippets.json</code>{path && <> в папке <code>{path}/</code></>}.
         </p>
+
+        {isConnected && initial && (
+          <div className="git-modal__connected">
+            <span className="git-modal__connected-label">Сейчас подключено:</span>
+            <a
+              className="git-modal__connected-repo"
+              href={repoUrl(initial)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Открыть на GitHub"
+            >
+              {initial.owner}/{initial.repo}
+            </a>
+            <button
+              type="button"
+              className="git-modal__copy"
+              onClick={handleCopyRepo}
+              title="Скопировать ссылку на репо"
+            >
+              {copyFlash ? '✓ Скопировано' : '📋 Копировать'}
+            </button>
+          </div>
+        )}
 
         <details className="git-modal__howto" open={!isConnected}>
           <summary>Как получить безопасный токен (fine-grained PAT)</summary>
           <ol className="git-modal__steps">
             <li>
               <b>Сначала заведи новый пустой репозиторий</b> — только для этих сниппетов
-              (например <code>bslexicon-snippets</code>). Можно private, README/lisense не нужны.
+              (например <code>bslexicon-snippets</code>). Можно private, README/license не нужны.
               Ссылка:{' '}
               <a href="https://github.com/new" target="_blank" rel="noopener noreferrer">
                 github.com/new
@@ -116,57 +183,24 @@ export function GitSettingsModal({ onClose, onConnected }: GitSettingsModalProps
 
         <div className="git-modal__form">
           <label className="git-modal__field">
-            <span>Owner (username или org)</span>
+            <span>Ссылка на репозиторий</span>
             <input
               type="text"
-              value={cfg.owner}
-              onChange={(e) => setCfg({ ...cfg, owner: e.target.value })}
-              placeholder="iMironRU"
+              value={linkInput}
+              onChange={(e) => setLinkInput(e.target.value)}
+              placeholder="https://github.com/username/bslexicon-snippets"
               autoComplete="off"
+              spellCheck={false}
             />
           </label>
-
-          <label className="git-modal__field">
-            <span>Репозиторий</span>
-            <input
-              type="text"
-              value={cfg.repo}
-              onChange={(e) => setCfg({ ...cfg, repo: e.target.value })}
-              placeholder="bslexicon-snippets"
-              autoComplete="off"
-            />
-          </label>
-
-          <div className="git-modal__row">
-            <label className="git-modal__field git-modal__field--half">
-              <span>Ветка</span>
-              <input
-                type="text"
-                value={cfg.branch}
-                onChange={(e) => setCfg({ ...cfg, branch: e.target.value })}
-                placeholder="main"
-                autoComplete="off"
-              />
-            </label>
-            <label className="git-modal__field git-modal__field--half">
-              <span>Папка (необязательно)</span>
-              <input
-                type="text"
-                value={cfg.path}
-                onChange={(e) => setCfg({ ...cfg, path: e.target.value })}
-                placeholder="learn"
-                autoComplete="off"
-              />
-            </label>
-          </div>
 
           <label className="git-modal__field">
             <span>Personal Access Token</span>
             <div className="git-modal__token-row">
               <input
                 type={showToken ? 'text' : 'password'}
-                value={cfg.token}
-                onChange={(e) => setCfg({ ...cfg, token: e.target.value })}
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
                 placeholder="github_pat_..."
                 autoComplete="off"
                 spellCheck={false}
@@ -181,6 +215,41 @@ export function GitSettingsModal({ onClose, onConnected }: GitSettingsModalProps
               </button>
             </div>
           </label>
+
+          <div className="git-modal__advanced">
+            <button
+              type="button"
+              className="git-modal__advanced-toggle"
+              onClick={() => setShowAdvanced((v) => !v)}
+              aria-expanded={showAdvanced}
+            >
+              {showAdvanced ? '▾' : '▸'} Дополнительно (ветка, папка)
+            </button>
+            {showAdvanced && (
+              <div className="git-modal__row">
+                <label className="git-modal__field git-modal__field--half">
+                  <span>Ветка</span>
+                  <input
+                    type="text"
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    placeholder="main"
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="git-modal__field git-modal__field--half">
+                  <span>Папка (необязательно)</span>
+                  <input
+                    type="text"
+                    value={path}
+                    onChange={(e) => setPath(e.target.value)}
+                    placeholder="learn"
+                    autoComplete="off"
+                  />
+                </label>
+              </div>
+            )}
+          </div>
         </div>
 
         {status.kind === 'error' && (
