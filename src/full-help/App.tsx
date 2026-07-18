@@ -8,6 +8,7 @@ import { TypeRef } from './TypeRef';
 import { HelpFooter } from '../help/HelpFooter';
 import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
+import { PwaBanners } from '../app/components/PwaBanners';
 import { entryId, loadFullReference } from './loader';
 import { search } from './search';
 import type { FullHit } from './search';
@@ -251,6 +252,8 @@ export function App() {
           onClose={closeSearch}
         />
       )}
+
+      <PwaBanners />
     </div>
   );
 }

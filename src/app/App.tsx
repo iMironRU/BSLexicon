@@ -15,6 +15,7 @@ import { GitSettingsModal } from './components/GitSettingsModal';
 import { GitStatusBadge } from './components/GitStatusBadge';
 import { ShareButton } from './components/ShareButton';
 import { SnippetsMenu } from './components/SnippetsMenu';
+import { PwaBanners } from './components/PwaBanners';
 import { useVersionCheck } from './useVersionCheck';
 import { useUrlParams } from './useUrlParams';
 import { ProvenanceBanner } from './components/ProvenanceBanner';
@@ -347,6 +348,8 @@ export function App() {
           onConnected={() => setGitCfg(loadGitConfig())}
         />
       )}
+
+      <PwaBanners />
     </div>
   );
 }

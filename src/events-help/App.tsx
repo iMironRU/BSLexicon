@@ -7,6 +7,7 @@ import { TypeRef } from '../full-help/TypeRef';
 import { HelpFooter } from '../help/HelpFooter';
 import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
+import { PwaBanners } from '../app/components/PwaBanners';
 import { LifecycleDiagram } from './LifecycleDiagram';
 import { SCENARIOS, scenarioById } from './lifecycle';
 import {
@@ -273,6 +274,8 @@ export function App() {
           onClose={closeSearch}
         />
       )}
+
+      <PwaBanners />
     </div>
   );
 }

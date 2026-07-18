@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar';
 import { Card } from './Card';
 import { Home } from './Home';
 import { HelpFooter } from './HelpFooter';
+import { PwaBanners } from '../app/components/PwaBanners';
 import { NavMenu } from './NavMenu';
 import { SearchOverlay } from './SearchOverlay';
 import { TargetSelector } from './TargetSelector';
@@ -209,6 +210,8 @@ export function App() {
           onClose={closeSearch}
         />
       )}
+
+      <PwaBanners />
     </div>
   );
 }
