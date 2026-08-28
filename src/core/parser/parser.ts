@@ -91,6 +91,18 @@ class Parser {
 
   private parseStatement(): Stmt {
     const t = this.peek();
+    // Директива компиляции (&НаКлиенте и т.п.) — только перед Процедура/Функция.
+    // Runtime её игнорирует, но парсер обязан её принять и сохранить, иначе
+    // весь файл с директивой не парсится.
+    if (t.type === 'directive') {
+      const directive = this.advance().value as string;
+      if (this.checkKeyword('Procedure')) return this.parseProcDecl(false, directive);
+      if (this.checkKeyword('Function')) return this.parseProcDecl(true, directive);
+      throw new ParseError(
+        `После директивы «&${directive}» ожидалось «Процедура» или «Функция»`,
+        t.line,
+      );
+    }
     if (t.type === 'keyword') {
       switch (t.value as KeywordKind) {
         case 'Var':
@@ -170,7 +182,7 @@ class Parser {
     return { kind: 'VarDecl', names, line };
   }
 
-  private parseProcDecl(isFunction: boolean): Stmt {
+  private parseProcDecl(isFunction: boolean, directive?: string): Stmt {
     const line = this.advance().line; // Процедура / Функция
     const name = this.expect('ident', 'имя процедуры или функции').lexeme;
     this.expect('lparen', '«(»');
@@ -193,7 +205,10 @@ class Parser {
     const endKind: KeywordKind = isFunction ? 'EndFunction' : 'EndProcedure';
     const body = this.parseBlock([endKind]);
     this.expectKeyword(endKind, isFunction ? '«КонецФункции»' : '«КонецПроцедуры»');
-    return { kind: 'ProcDecl', name, params, body, isFunction, exported, line };
+    return {
+      kind: 'ProcDecl', name, params, body, isFunction, exported, line,
+      ...(directive ? { directive } : {}),
+    };
   }
 
   private parseIf(): Stmt {

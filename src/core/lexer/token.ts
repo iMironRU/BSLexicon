@@ -11,6 +11,7 @@ export type TokenType =
   | 'star'
   | 'slash'
   | 'percent'
+  | 'directive'
   | 'eq'
   | 'neq'
   | 'lt'

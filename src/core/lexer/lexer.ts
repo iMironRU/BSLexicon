@@ -129,6 +129,22 @@ export function lex(source: string): Token[] {
       continue;
     }
 
+    // Директива компиляции: &НаКлиенте, &НаСервере и т.п.
+    // Обычно стоит перед Процедура/Функция; в контексте параметров запроса
+    // (внутри строки "ВЫБРАТЬ ... &Дата") мы её не видим — там лексер строки.
+    if (ch === '&') {
+      const startLine = line;
+      pos += 1;
+      if (!isIdentStart(peek())) {
+        throw new LexError('После «&» ожидается имя директивы', startLine);
+      }
+      const start = pos;
+      while (isIdentPart(peek())) pos += 1;
+      const name = source.slice(start, pos);
+      push('directive', '&' + name, name);
+      continue;
+    }
+
     // Идентификатор или ключевое слово
     if (isIdentStart(ch)) {
       const start = pos;

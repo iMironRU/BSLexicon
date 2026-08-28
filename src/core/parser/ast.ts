@@ -148,6 +148,8 @@ export interface ProcDecl {
   body: Stmt[];
   isFunction: boolean;
   exported: boolean;
+  /** Директива компиляции: `НаКлиенте`, `НаСервере` и т.п. без `&`. Runtime игнорирует. */
+  directive?: string;
   line: number;
 }
 export interface Assign {

@@ -101,6 +101,57 @@ describe('арифметика и присваивание', () => {
     expect(output(src)).toBe('он сказал "да"\nи ушёл');
   });
 
+  it('директива &НаКлиенте перед Процедурой парсится', () => {
+    const src = [
+      '&НаКлиенте',
+      'Процедура ПоказатьПривет()',
+      '    Сообщить("привет");',
+      'КонецПроцедуры',
+      'ПоказатьПривет();',
+    ].join('\n');
+    expect(output(src)).toBe('привет');
+  });
+
+  it('директива &НаСервере перед Функцией парсится', () => {
+    const src = [
+      '&НаСервере',
+      'Функция МойОтвет() Экспорт',
+      '    Возврат 42;',
+      'КонецФункции',
+      'Сообщить(МойОтвет());',
+    ].join('\n');
+    expect(output(src)).toBe('42');
+  });
+
+  it('директива и Экспорт живут вместе', () => {
+    const src = [
+      '&НаКлиентеНаСервереБезКонтекста',
+      'Функция Сумма(А, Б) Экспорт',
+      '    Возврат А + Б;',
+      'КонецФункции',
+      'Сообщить(Сумма(2, 3));',
+    ].join('\n');
+    expect(output(src)).toBe('5');
+  });
+
+  it('директива без Процедура/Функция → ParseError', () => {
+    const result = run('&НаКлиенте\nСообщить("x");');
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.stage).toBe('parser');
+      expect(result.error.message).toMatch(/директивы.*Процедура/);
+    }
+  });
+
+  it('& без имени директивы → LexError', () => {
+    const result = run('& 5;');
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.stage).toBe('lexer');
+      expect(result.error.message).toContain('имя директивы');
+    }
+  });
+
   it('% работает в задаче про чётность', () => {
     // Кейс из tasks.json 1c-razgovornik, ради которого баг всплыл.
     const src = [
