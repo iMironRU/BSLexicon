@@ -156,6 +156,7 @@ export function App() {
               { label: 'Учебный режим', href: TRAINER_URL + 'help/', current: true, hint: '~180 курированных + тренажёр' },
               { label: 'Полный СП', href: `${TRAINER_URL}help/full/`, hint: 'Все ~20 тыс. записей платформы' },
               { label: 'События 1С', href: `${TRAINER_URL}help/events/`, hint: '670 событий + lifecycle' },
+              { label: 'Judge', href: `${TRAINER_URL}help/judge/`, hint: 'Задачи из книг серии с чек-поинтами' },
               { label: '← Тренажёр', href: TRAINER_URL, hint: 'Писать и отлаживать BSL' },
             ]}
           />

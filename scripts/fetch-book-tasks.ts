@@ -45,11 +45,22 @@ if (enabled.length === 0) {
 const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as Record<string, unknown>;
 mkdirSync(outDir, { recursive: true });
 
+interface IndexEntry {
+  id: string;
+  title: string;
+  version: string;
+  repo: string;
+  site?: string;
+  taskCount: number;
+}
+
 let hadFailure = false;
+const indexEntries: IndexEntry[] = [];
 for (const book of enabled) {
   try {
-    await fetchOne(book);
-    console.log(`  ✓ ${book.id} (${book.repo}@${book.pinned_tag})`);
+    const meta = await fetchOne(book);
+    indexEntries.push(meta);
+    console.log(`  ✓ ${book.id} (${book.repo}@${book.pinned_tag}) · ${meta.taskCount} задач`);
   } catch (e) {
     hadFailure = true;
     console.error(`  ✗ ${book.id}: ${(e as Error).message}`);
@@ -60,9 +71,15 @@ if (hadFailure) {
   console.error('\n✗ Хотя бы одна книга не прошла загрузку/валидацию. Сборка прервана.');
   process.exit(1);
 }
+
+// Индекс: UI грузит его первым, чтобы знать какие judge-*.json искать.
+writeFileSync(
+  join(outDir, 'judge-index.json'),
+  JSON.stringify({ books: indexEntries }),
+);
 console.log(`\n✓ Загружено книг: ${enabled.length}`);
 
-async function fetchOne(book: BookRecord): Promise<void> {
+async function fetchOne(book: BookRecord): Promise<IndexEntry> {
   const url = assetUrl(book);
   const r = await fetch(url, { redirect: 'follow' });
   if (!r.ok) throw new Error(`GET ${url} → ${r.status} ${r.statusText}`);
@@ -75,4 +92,12 @@ async function fetchOne(book: BookRecord): Promise<void> {
   }
   const file = validateTasksJson(raw, schema, book);
   writeFileSync(join(outDir, `judge-${book.id}.json`), JSON.stringify(file));
+  return {
+    id: file.book.id,
+    title: file.book.title,
+    version: file.book.version,
+    repo: file.book.repo,
+    site: file.book.site,
+    taskCount: file.tasks.length,
+  };
 }

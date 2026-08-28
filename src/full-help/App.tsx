@@ -203,6 +203,7 @@ export function App() {
               { label: 'Полный СП', href: `${TRAINER_URL}help/full/`, current: true, hint: 'Все ~20 тыс. записей платформы' },
               { label: 'Учебный режим', href: HELP_URL, hint: '~180 записей с тренажёром' },
               { label: 'События 1С', href: `${TRAINER_URL}help/events/`, hint: '670 событий + lifecycle' },
+              { label: 'Judge', href: `${TRAINER_URL}help/judge/`, hint: 'Задачи из книг серии с чек-поинтами' },
               { label: '← Тренажёр', href: TRAINER_URL, hint: 'Писать и отлаживать BSL' },
             ]}
           />
