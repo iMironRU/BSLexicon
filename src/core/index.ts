@@ -39,8 +39,23 @@ export type RunResult =
 /**
  * Удобная обёртка: лексер → парсер → интерпретатор до завершения.
  * Для пошаговой отладки используйте `Interpreter#run` напрямую (это генератор).
+ *
+ * REPL-fallback (см. #21): книги часто показывают семантику одиночным
+ * выражением без `;` (`10 / 3`, `"а" = "а"`). Если parse упал на такой
+ * форме — пробуем `Сообщить(<source>);` — так читатель видит значение.
+ * Fallback безопасен: если новая версия тоже не парсится, возвращаем
+ * ОРИГИНАЛЬНУЮ ошибку (её легче интерпретировать пользователю).
  */
 export function run(source: string): RunResult {
+  const first = runOnce(source);
+  if (first.ok) return first;
+  if (first.error.stage !== 'parser') return first;
+  if (source.trim().endsWith(';')) return first;
+  const wrapped = runOnce(`Сообщить(${source.trim()});`);
+  return wrapped.ok ? wrapped : first;
+}
+
+function runOnce(source: string): RunResult {
   let tokens: Token[];
   try {
     tokens = lex(source);

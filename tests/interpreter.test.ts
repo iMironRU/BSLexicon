@@ -152,6 +152,34 @@ describe('арифметика и присваивание', () => {
     }
   });
 
+  it('REPL: одиночное выражение → выводится через Сообщить', () => {
+    expect(output('10 / 3')).toMatch(/^3\.333/);
+    expect(output('"да" = "да"')).toBe('Да');
+    expect(output('2 + 2 * 2')).toBe('6');
+  });
+
+  it('REPL: source с ; в конце — как statement, ошибка если ломается', () => {
+    // 10 / 3; — это выражение-statement, наш парсер не примет как statement,
+    // но с ; в конце fallback не активируется, ошибка остаётся.
+    const result = run('10 / 3;');
+    // Может быть ok или fail — не проверяем; главное что fallback НЕ
+    // подменил её на Сообщить (тогда бы вывелось «3.333»).
+    if (result.ok) expect(result.output).toEqual([]); // ничего не напечатали
+  });
+
+  it('REPL: multi-statement — fallback не срабатывает', () => {
+    // Полностью валидный код — fallback не нужен
+    expect(output('А = 5; Сообщить(А);')).toBe('5');
+  });
+
+  it('REPL: битый код остаётся с оригинальной ошибкой парсера', () => {
+    const result = run('Если 1 > 0 Сообщить("да")');
+    // fallback попробует Сообщить(Если ...) — тоже упадёт. Первую ошибку
+    // сохранили — она про исходную конструкцию, а не про наш wrap.
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.stage).toBe('parser');
+  });
+
   it('% работает в задаче про чётность', () => {
     // Кейс из tasks.json 1c-razgovornik, ради которого баг всплыл.
     const src = [
