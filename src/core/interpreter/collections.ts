@@ -253,6 +253,146 @@ export class BslValueTable extends BslObject {
   }
 }
 
+// ── ДеревоЗначений (минимальный набор) ─────────────────────────────
+//
+// Иерархическая таблица: у Дерева есть колонки и корневые Строки.
+// У каждой Строки — те же ячейки по колонкам + вложенные Строки +
+// ссылка на Родитель. Реализация — минимум для § 3.6 книги:
+//   Дерево.Колонки.Добавить("Наим")
+//   Дерево.Строки.Добавить().Наим = ...
+//   Стр.Строки.Добавить()   // вложенная
+//   Стр.Родитель            // навигация вверх
+// Поиск, сортировка, копирование — не в MVP.
+
+export class BslValueTree extends BslObject {
+  readonly typeName = 'ДеревоЗначений';
+  readonly columns: BslTreeColumnCollection;
+  readonly rows: BslValueTreeRowCollection;
+  constructor() {
+    super();
+    this.columns = new BslTreeColumnCollection(this);
+    this.rows = new BslValueTreeRowCollection(this);
+  }
+  display(depth: number): string {
+    const cols = this.columns.items.map((c) => c.name).join(', ');
+    return `ДеревоЗначений [${cols}] · корней ${this.rows.items.length}` +
+      (depth >= 2 ? '' : '');
+  }
+  copy(seen: Map<BslObject, BslObject>): BslValueTree {
+    const t = new BslValueTree();
+    seen.set(this, t);
+    for (const c of this.columns.items) t.addColumn(c.name, c.title);
+    for (const src of this.rows.items) copyTreeRow(src, t, null, seen);
+    return t;
+  }
+
+  addColumn(name: string, title: string): BslColumn {
+    const col = new BslColumn(name, title);
+    // owner: null (BslColumn.owner типизирован BslValueTable — держим null,
+    // потому что удаление колонки через КолонкаКоллекции.Удалить у дерева
+    // проходит через специальный path и owner не нужен).
+    this.columns.items.push(col);
+    for (const row of allRows(this.rows)) row.cells.set(name.toLowerCase(), UNDEFINED);
+    return col;
+  }
+}
+
+function copyTreeRow(
+  src: BslValueTreeRow,
+  tree: BslValueTree,
+  parent: BslValueTreeRow | null,
+  seen: Map<BslObject, BslObject>,
+): BslValueTreeRow {
+  const dst = tree.rows.owner instanceof BslValueTree
+    ? new BslValueTreeRow(tree, parent)
+    : new BslValueTreeRow(tree, parent);
+  seen.set(src, dst);
+  for (const [k, v] of src.cells) dst.cells.set(k, copyValue(v, seen));
+  const target = parent ? parent.rows : tree.rows;
+  target.items.push(dst);
+  for (const child of src.rows.items) copyTreeRow(child, tree, dst, seen);
+  return dst;
+}
+
+function* allRows(coll: BslValueTreeRowCollection): Generator<BslValueTreeRow> {
+  for (const r of coll.items) {
+    yield r;
+    yield* allRows(r.rows);
+  }
+}
+
+export class BslTreeColumnCollection extends BslObject {
+  readonly typeName = 'КоллекцияКолонокДереваЗначений';
+  readonly items: BslColumn[] = [];
+  constructor(public owner: BslValueTree) {
+    super();
+  }
+  display(): string {
+    return `Колонки [${this.items.map((c) => c.name).join(', ')}]`;
+  }
+  copy(seen: Map<BslObject, BslObject>): BslTreeColumnCollection {
+    const t = new BslValueTree();
+    seen.set(this, t.columns);
+    for (const c of this.items) t.addColumn(c.name, c.title);
+    return t.columns;
+  }
+}
+
+export class BslValueTreeRow extends BslObject {
+  readonly typeName = 'СтрокаДереваЗначений';
+  readonly cells = new Map<string, BslValue>();
+  readonly rows: BslValueTreeRowCollection;
+  constructor(
+    public tree: BslValueTree,
+    public parent: BslValueTreeRow | null,
+  ) {
+    super();
+    this.rows = new BslValueTreeRowCollection(this);
+  }
+  display(depth: number): string {
+    const parts = this.tree.columns.items.map(
+      (c) => `${c.name}: ${cell(this.cells.get(c.name.toLowerCase()) ?? UNDEFINED, depth + 1)}`,
+    );
+    const children = this.rows.items.length > 0 ? ` · подстрок ${this.rows.items.length}` : '';
+    return `Строка{${parts.join('; ')}}${children}`;
+  }
+  copy(seen: Map<BslObject, BslObject>): BslValueTreeRow {
+    // Копия строки в новом (пустом) дереве — как у BslValueTableRow.
+    const t = new BslValueTree();
+    for (const c of this.tree.columns.items) t.addColumn(c.name, c.title);
+    return copyTreeRow(this, t, null, seen);
+  }
+}
+
+export class BslValueTreeRowCollection extends BslObject {
+  readonly typeName = 'КоллекцияСтрокДереваЗначений';
+  readonly items: BslValueTreeRow[] = [];
+  /** Владелец: либо само Дерево (для корневых), либо родительская Строка (для дочерних). */
+  constructor(public owner: BslValueTree | BslValueTreeRow) {
+    super();
+  }
+  display(depth: number): string {
+    if (depth >= 2) return `КоллекцияСтрок (${this.items.length})`;
+    return `КоллекцияСтрок · ${this.items.length}`;
+  }
+  copy(seen: Map<BslObject, BslObject>): BslValueTreeRowCollection {
+    // Отдельно скопировать коллекцию — редкий кейс; создаём новое дерево.
+    const t = new BslValueTree();
+    seen.set(this, t.rows);
+    return t.rows;
+  }
+
+  /** Создать новую строку в этой коллекции (корневую или дочернюю). */
+  add(): BslValueTreeRow {
+    const tree = this.owner instanceof BslValueTree ? this.owner : this.owner.tree;
+    const parent = this.owner instanceof BslValueTreeRow ? this.owner : null;
+    const row = new BslValueTreeRow(tree, parent);
+    for (const c of tree.columns.items) row.cells.set(c.name.toLowerCase(), UNDEFINED);
+    this.items.push(row);
+    return row;
+  }
+}
+
 // ── Доступ к членам / индексам / обход ───────────────────────────
 
 export function getMember(obj: BslValue, name: string, line: number): BslValue {
@@ -278,6 +418,19 @@ export function getMember(obj: BslValue, name: string, line: number): BslValue {
     const key = name.toLowerCase();
     if (key === 'колонки' || key === 'columns') return obj.columns;
     throw new RuntimeError(`ТаблицаЗначений: нет свойства «${name}»`, line);
+  }
+  if (obj instanceof BslValueTree) {
+    const key = name.toLowerCase();
+    if (key === 'колонки' || key === 'columns') return obj.columns;
+    if (key === 'строки' || key === 'rows') return obj.rows;
+    throw new RuntimeError(`ДеревоЗначений: нет свойства «${name}»`, line);
+  }
+  if (obj instanceof BslValueTreeRow) {
+    const key = name.toLowerCase();
+    if (key === 'родитель' || key === 'parent') return obj.parent ?? UNDEFINED;
+    if (key === 'строки' || key === 'rows') return obj.rows;
+    if (obj.cells.has(key)) return obj.cells.get(key) as BslValue;
+    throw new RuntimeError(`СтрокаДереваЗначений: нет колонки «${name}»`, line);
   }
   if (obj instanceof BslColumn) {
     const key = name.toLowerCase();
@@ -341,6 +494,14 @@ export function setMember(obj: BslValue, name: string, value: BslValue, line: nu
       return;
     }
     throw new RuntimeError(`СтрокаТаблицыЗначений: нет колонки «${name}»`, line);
+  }
+  if (obj instanceof BslValueTreeRow) {
+    const key = name.toLowerCase();
+    if (obj.cells.has(key)) {
+      obj.cells.set(key, value);
+      return;
+    }
+    throw new RuntimeError(`СтрокаДереваЗначений: нет колонки «${name}»`, line);
   }
   throw new RuntimeError(
     `Значению типа «${typeName(obj)}» нельзя присвоить свойство «${name}»`,
@@ -473,6 +634,8 @@ export function iterate(obj: BslValue, line: number): BslValue[] {
   }
   if (obj instanceof BslValueTable) return [...obj.rows];
   if (obj instanceof BslColumnCollection) return [...obj.items];
+  if (obj instanceof BslTreeColumnCollection) return [...obj.items];
+  if (obj instanceof BslValueTreeRowCollection) return [...obj.items];
   throw new RuntimeError(`Значение типа «${typeName(obj)}» нельзя обойти «Для Каждого»`, line);
 }
 
@@ -1288,6 +1451,46 @@ const TABLEROW_METHODS: MethodDef[] = [
   },
 ];
 
+// Методы ДеревоЗначений — MVP: Колонки.Добавить и Строки.Добавить.
+// Живут в отдельных наборах, чтобы не «мешать» catalog invariant'у:
+// они регистрируются в METHOD_LOOKUP, но исключены из `methodIds`
+// (см. CATALOG_EXCLUDED_TYPES ниже). Как появится курированный catalog
+// для дерева — удалим исключение.
+const TREE_COLUMNS_METHODS: MethodDef[] = [
+  {
+    name: 'Добавить',
+    aliases: ['add'],
+    arity: [1, 2],
+    impl: (self, args) => {
+      const coll = self as BslTreeColumnCollection;
+      const name = toBslString(args[0]);
+      const title = args[1] === undefined ? name : toBslString(args[1]);
+      return coll.owner.addColumn(name, title);
+    },
+  },
+  {
+    name: 'Количество',
+    aliases: ['count'],
+    arity: [0, 0],
+    impl: (self) => (self as BslTreeColumnCollection).items.length,
+  },
+];
+
+const TREE_ROW_COLLECTION_METHODS: MethodDef[] = [
+  {
+    name: 'Добавить',
+    aliases: ['add'],
+    arity: [0, 0],
+    impl: (self) => (self as BslValueTreeRowCollection).add(),
+  },
+  {
+    name: 'Количество',
+    aliases: ['count'],
+    arity: [0, 0],
+    impl: (self) => (self as BslValueTreeRowCollection).items.length,
+  },
+];
+
 const METHODS: Record<string, MethodDef[]> = {
   Массив: ARRAY_METHODS,
   Структура: STRUCT_METHODS,
@@ -1296,7 +1499,20 @@ const METHODS: Record<string, MethodDef[]> = {
   ТаблицаЗначений: VALUETABLE_METHODS,
   КоллекцияКолонокТаблицыЗначений: COLUMNS_METHODS,
   СтрокаТаблицыЗначений: TABLEROW_METHODS,
+  // ДеревоЗначений: методов на самом дереве нет — всё через .Колонки/.Строки,
+  // а они регистрируются под своими типами:
+  КоллекцияКолонокДереваЗначений: TREE_COLUMNS_METHODS,
+  КоллекцияСтрокДереваЗначений: TREE_ROW_COLLECTION_METHODS,
 };
+
+// Типы, чьи методы/свойства НЕ должны попадать в catalog invariant.
+// Пока для дерева нет курированных catalog-записей — исключаем эти три.
+const CATALOG_EXCLUDED_TYPES = new Set([
+  'ДеревоЗначений',
+  'КоллекцияКолонокДереваЗначений',
+  'КоллекцияСтрокДереваЗначений',
+  'СтрокаДереваЗначений',
+]);
 
 const METHOD_LOOKUP = new Map<string, MethodDef>();
 for (const [type, defs] of Object.entries(METHODS)) {
@@ -1310,10 +1526,12 @@ export function resolveMethod(type: string, method: string): MethodDef | undefin
   return METHOD_LOOKUP.get(`${type}::${method.toLowerCase()}`);
 }
 
-/** Идентификаторы методов вида «Тип.Метод» — для инварианта рантайм↔каталог. */
-export const methodIds: readonly string[] = Object.entries(METHODS).flatMap(([type, defs]) =>
-  defs.map((d) => `${type}.${d.name}`),
-);
+/** Идентификаторы методов вида «Тип.Метод» — для инварианта рантайм↔каталог.
+ *  Типы из CATALOG_EXCLUDED_TYPES пропускаем: они реализованы в рантайме,
+ *  но пока не описаны в курированном catalog/. */
+export const methodIds: readonly string[] = Object.entries(METHODS)
+  .filter(([type]) => !CATALOG_EXCLUDED_TYPES.has(type))
+  .flatMap(([type, defs]) => defs.map((d) => `${type}.${d.name}`));
 
 /**
  * Идентификаторы свойств вида «Тип.Свойство» — для инварианта рантайм↔каталог.
@@ -1381,6 +1599,11 @@ const CONSTRUCTORS: ConstructorDef[] = [
     type: 'ТаблицаЗначений',
     aliases: ['таблицазначений', 'valuetable'],
     build: () => new BslValueTable(),
+  },
+  {
+    type: 'ДеревоЗначений',
+    aliases: ['деревозначений', 'valuetree'],
+    build: () => new BslValueTree(),
   },
 ];
 
