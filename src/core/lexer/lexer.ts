@@ -148,6 +148,7 @@ export function lex(source: string): Token[] {
       '-': 'minus',
       '*': 'star',
       '/': 'slash',
+      '%': 'percent',
       '=': 'eq',
       '<': 'lt',
       '>': 'gt',

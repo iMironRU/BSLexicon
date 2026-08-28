@@ -5,6 +5,7 @@ export type BinaryOp =
   | 'sub'
   | 'mul'
   | 'div'
+  | 'mod'
   | 'eq'
   | 'neq'
   | 'lt'

@@ -62,7 +62,7 @@ function buildMonarch(catalog: Catalog): MonarchLanguage {
             },
           },
         ],
-        [/<>|<=|>=|[-+*/=<>]/, 'operator'],
+        [/<>|<=|>=|[-+*/%=<>]/, 'operator'],
         [/[()[\],.;?]/, 'delimiter'],
         [/\s+/, 'white'],
       ],

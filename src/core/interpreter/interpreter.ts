@@ -393,6 +393,13 @@ export class Interpreter {
         if (d === 0) throw new RuntimeError('Деление на ноль', e.line);
         return toNumber(l) / d;
       }
+      case 'mod': {
+        // Знак результата совпадает со знаком делимого — как в 1С и в JS
+        // (JS `%` возвращает именно так, дополнительная нормализация не нужна).
+        const d = toNumber(r);
+        if (d === 0) throw new RuntimeError('Деление на ноль', e.line);
+        return toNumber(l) % d;
+      }
       case 'eq':
         return valuesEqual(l, r);
       case 'neq':

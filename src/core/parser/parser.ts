@@ -349,9 +349,12 @@ class Parser {
 
   private parseMultiplicative(): Expr {
     let left = this.parseUnary();
-    while (this.check('star') || this.check('slash')) {
+    while (this.check('star') || this.check('slash') || this.check('percent')) {
       const tok = this.advance();
-      const op: BinaryOp = tok.type === 'star' ? 'mul' : 'div';
+      const op: BinaryOp =
+        tok.type === 'star' ? 'mul' :
+        tok.type === 'slash' ? 'div' :
+        'mod';
       left = { kind: 'Binary', op, left, right: this.parseUnary(), line: tok.line };
     }
     return left;

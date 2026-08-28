@@ -10,6 +10,7 @@ export type TokenType =
   | 'minus'
   | 'star'
   | 'slash'
+  | 'percent'
   | 'eq'
   | 'neq'
   | 'lt'
