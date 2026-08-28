@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](tsconfig.app.json)
 
-[Демо](https://imironru.github.io/BSLexicon/) · [Концепция](docs/concept.md) · [Интеграция с книгами](docs/book-integration.md) · [Дорожная карта](#дорожная-карта) · [Вклад](CONTRIBUTING.md)
+[Демо](https://imironru.github.io/BSLexicon/) · [Концепция](docs/concept.md) · [Интеграция с книгами](docs/book-integration/) · [Дорожная карта](#дорожная-карта) · [Вклад](CONTRIBUTING.md)
 
 </div>
 
@@ -149,7 +149,7 @@ BSLexicon принимает листинги по URL — книга форми
 видит готовый код в редакторе. Поддерживается `?code`, `?gzcode` (gzip для QR-кодов),
 `?source`/`?title` (провенанс-баннер), `?embed=1` (режим iframe).
 
-Подробности, примеры и готовые функции кодирования — в [docs/book-integration.md](docs/book-integration.md).
+Подробности, примеры и готовые функции кодирования — в [docs/book-integration/](docs/book-integration/).
 
 ## Вклад
 
