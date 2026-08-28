@@ -315,6 +315,39 @@ describe('арифметика и присваивание', () => {
     expect(output(src)).toBe('а');
   });
 
+  it('Структура: С["Имя"] эквивалентно С.Имя (чтение)', () => {
+    const src = [
+      'С = Новый Структура("Наименование, Цена", "Ручка", 45);',
+      'Сообщить(С["Наименование"]);',
+      'Сообщить(С.Наименование);',
+      'Сообщить(С["Цена"]);',
+    ].join('\n');
+    expect(output(src)).toBe('Ручка\nРучка\n45');
+  });
+
+  it('Структура: запись через С["ключ"] = значение', () => {
+    const src = [
+      'С = Новый Структура;',
+      'С["Новое"] = 10;',
+      'Сообщить(С.Новое);',
+    ].join('\n');
+    expect(output(src)).toBe('10');
+  });
+
+  it('Структура: несуществующий ключ через [] → RuntimeError', () => {
+    const src = 'С = Новый Структура; Сообщить(С["Нет"]);';
+    const result = run(src);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('не содержит ключа «Нет»');
+  });
+
+  it('Структура: числовой ключ через [] → RuntimeError', () => {
+    const src = 'С = Новый Структура("А", 1); Сообщить(С[0]);';
+    const result = run(src);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('только строковые ключи');
+  });
+
   it('% работает в задаче про чётность', () => {
     // Кейс из tasks.json 1c-razgovornik, ради которого баг всплыл.
     const src = [

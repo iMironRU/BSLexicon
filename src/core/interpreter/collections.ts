@@ -370,6 +370,15 @@ export function getIndex(obj: BslValue, key: BslValue, line: number): BslValue {
     const hit = obj.pairs.find((p) => valuesEqual(p.key, key));
     return hit ? hit.value : UNDEFINED;
   }
+  if (obj instanceof BslStructure) {
+    // В 1С С["Имя"] и С.Имя — синонимы. Ключ только строковый.
+    if (typeof key !== 'string') {
+      throw new RuntimeError('Структура принимает только строковые ключи', line);
+    }
+    const hit = obj.props.get(key.toLowerCase());
+    if (!hit) throw new RuntimeError(`Структура не содержит ключа «${key}»`, line);
+    return hit.value;
+  }
   if (obj instanceof BslValueTable) {
     const i = toNumber(key);
     if (!Number.isInteger(i) || i < 0 || i >= obj.rows.length) {
@@ -433,6 +442,16 @@ export function setIndex(obj: BslValue, key: BslValue, value: BslValue, line: nu
     const hit = obj.pairs.find((p) => valuesEqual(p.key, key));
     if (hit) hit.value = value;
     else obj.pairs.push({ key, value });
+    return;
+  }
+  if (obj instanceof BslStructure) {
+    if (typeof key !== 'string') {
+      throw new RuntimeError('Структура принимает только строковые ключи', line);
+    }
+    const lower = key.toLowerCase();
+    const hit = obj.props.get(lower);
+    if (hit) hit.value = value;
+    else obj.props.set(lower, { display: key, value });
     return;
   }
   if (obj instanceof BslValueTableRow) {
