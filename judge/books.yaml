@@ -1,0 +1,34 @@
+# Реестр книг, из которых BSLexicon тянет задачи Judge.
+#
+# BSLexicon реализует язык, а не платформу. Поэтому источники задач —
+# только книги, работающие с языком (не с формами/регистрами/метаданными).
+#
+# Каждая запись = одна книга. Скрипт scripts/fetch-book-tasks.ts берёт
+# tasks.json из релиз-ассета указанного тега, валидирует по
+# docs/book-integration/task-schema.json и кладёт в
+# public/reference/judge-<book_id>.json.
+#
+# Обновление задач у читателя = осознанный шаг «книга выпустила версию»,
+# а не следствие мержа в main → поэтому pinned_tag, а не ветка.
+#
+# Формат:
+#   - id: <book_id>          # стабильный slug, совпадает с book.id в tasks.json
+#     repo: <owner>/<name>   # github-репо книги
+#     pinned_tag: <tag>      # тег релиза, откуда качаем tasks.json
+#     enabled: true|false    # false — книга в реестре, но пропускается
+#     min_version: "X.Y"     # опц. — если tasks.json.book.version меньше,
+#                            # скрипт падает: тег указывает на несовместимую сборку
+
+- id: 1c-razgovornik
+  repo: iMironRU/1c-razgovornik
+  pinned_tag: nightly
+  enabled: true
+  # min_version не задан — nightly катим как есть, обычный релиз с
+  # min_version появится, когда автор bump'нет 0.2.0 → 0.3.0.
+
+# «1С как иностранный язык» — в tasks/ пока пусто, автор ещё не написал
+# ни одной задачи. Когда напишет и выйдет tasks.json — раскомментируем.
+# - id: 1c-reading-code
+#   repo: iMironRU/1c-reading-code
+#   pinned_tag: nightly
+#   enabled: true

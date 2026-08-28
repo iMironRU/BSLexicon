@@ -38,3 +38,4 @@ Thumbs.db
 # Сюда можно класть «Файл выгрузки.xml»; берётся скриптом через BSL_SP_EXPORT.
 reference/source/
 *.dt
+public/reference/judge-*.json

@@ -12,7 +12,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm run check:catalog",
+    "prebuild": "npm run check:catalog && npm run fetch:book-tasks",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
@@ -23,6 +23,7 @@
     "extract:hbk": "tsx scripts/extract-hbk.ts",
     "extract:hbk-full": "tsx scripts/extract-hbk-full.ts",
     "gen:pwa-icons": "tsx scripts/gen-pwa-icons.ts",
+    "fetch:book-tasks": "tsx scripts/fetch-book-tasks.ts",
     "import:stubs": "tsx scripts/import-stubs.ts",
     "lint": "eslint . --ext .ts,.tsx",
     "verify": "npm run typecheck && npm run check:catalog && npm run test"
@@ -40,7 +41,8 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "ajv": "^8.17.1",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "jszip": "^3.10.1",
     "sharp": "^0.35.3",
     "tsx": "^4.19.2",
