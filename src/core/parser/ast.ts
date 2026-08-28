@@ -222,6 +222,18 @@ export interface Raise {
   message?: Expr;
   line: number;
 }
+/** `~Имя:` — объявление метки перехода в теле функции/программы. */
+export interface Label {
+  kind: 'Label';
+  name: string;
+  line: number;
+}
+/** `Перейти ~Имя` — прыжок на метку. */
+export interface Goto {
+  kind: 'Goto';
+  name: string;
+  line: number;
+}
 
 export type Stmt =
   | VarDecl
@@ -236,6 +248,8 @@ export type Stmt =
   | Break
   | Continue
   | Try
-  | Raise;
+  | Raise
+  | Label
+  | Goto;
 
 export type Program = Stmt[];

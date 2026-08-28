@@ -129,6 +129,30 @@ export function lex(source: string): Token[] {
       continue;
     }
 
+    // Метки перехода: `~Имя:` (объявление) и `~Имя` (ссылка после Перейти).
+    // Атомарно захватываем `~ident` — двоеточие после «~ident» превращает
+    // токен в `label`, без двоеточия — `labelRef` (для «Перейти ~Имя»).
+    if (ch === '~') {
+      const startLine = line;
+      pos += 1;
+      if (!isIdentStart(peek())) {
+        throw new LexError('После «~» ожидается имя метки', startLine);
+      }
+      const start = pos;
+      while (isIdentPart(peek())) pos += 1;
+      const name = source.slice(start, pos);
+      // Пропустим пробелы для проверки : после (двоеточие может быть с пробелом).
+      let ni = pos;
+      while (ni < source.length && (source[ni] === ' ' || source[ni] === '\t')) ni += 1;
+      if (source[ni] === ':') {
+        pos = ni + 1;
+        push('label', '~' + name + ':', name);
+      } else {
+        push('labelRef', '~' + name, name);
+      }
+      continue;
+    }
+
     // Директива компиляции: &НаКлиенте, &НаСервере и т.п.
     // Обычно стоит перед Процедура/Функция; в контексте параметров запроса
     // (внутри строки "ВЫБРАТЬ ... &Дата") мы её не видим — там лексер строки.

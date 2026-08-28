@@ -12,6 +12,8 @@ export type TokenType =
   | 'slash'
   | 'percent'
   | 'directive'
+  | 'label'
+  | 'labelRef'
   | 'eq'
   | 'neq'
   | 'lt'

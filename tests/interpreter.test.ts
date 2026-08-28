@@ -180,6 +180,61 @@ describe('арифметика и присваивание', () => {
     if (!result.ok) expect(result.error.stage).toBe('parser');
   });
 
+  it('метка + переход назад (примитивный цикл через goto)', () => {
+    const src = [
+      'К = 1;',
+      '~Начало:',
+      'Сообщить(К);',
+      'К = К + 1;',
+      'Если К <= 3 Тогда Перейти ~Начало; КонецЕсли;',
+    ].join('\n');
+    expect(output(src)).toBe('1\n2\n3');
+  });
+
+  it('переход вперёд пропускает код между', () => {
+    const src = [
+      'Сообщить("до");',
+      'Перейти ~Мимо;',
+      'Сообщить("не вижу");',
+      '~Мимо:',
+      'Сообщить("после");',
+    ].join('\n');
+    expect(output(src)).toBe('до\nпосле');
+  });
+
+  it('переход из тела Если наружу', () => {
+    const src = [
+      'Х = 5;',
+      'Если Х > 0 Тогда',
+      '    Перейти ~Дальше;',
+      'КонецЕсли;',
+      'Сообщить("сюда не должны");',
+      '~Дальше:',
+      'Сообщить("тут");',
+    ].join('\n');
+    expect(output(src)).toBe('тут');
+  });
+
+  it('несуществующая метка → RuntimeError', () => {
+    const result = run('Перейти ~НетТакой;');
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.stage).toBe('runtime');
+      expect(result.error.message).toContain('Метка «~НетТакой» не найдена');
+    }
+  });
+
+  it('метка без перехода — просто маркер, ничего не ломает', () => {
+    const src = 'Сообщить("а");\n~Метка:\nСообщить("б");';
+    expect(output(src)).toBe('а\nб');
+  });
+
+  it('Перейти без ~ имени → ParseError', () => {
+    const result = run('Перейти;');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.stage).toBe('parser');
+  });
+
   it('% работает в задаче про чётность', () => {
     // Кейс из tasks.json 1c-razgovornik, ради которого баг всплыл.
     const src = [

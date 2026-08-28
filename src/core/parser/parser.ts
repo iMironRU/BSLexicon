@@ -91,6 +91,13 @@ class Parser {
 
   private parseStatement(): Stmt {
     const t = this.peek();
+    // Метка перехода: `~Имя:` — самостоятельный statement, тело — то, что
+    // после неё до следующего statement/метки. У нас метки — маркеры-цели
+    // для `Перейти`, «содержимого» они не имеют.
+    if (t.type === 'label') {
+      this.advance();
+      return { kind: 'Label', name: t.value as string, line: t.line };
+    }
     // Директива компиляции (&НаКлиенте и т.п.) — только перед Процедура/Функция.
     // Runtime её игнорирует, но парсер обязан её принять и сохранить, иначе
     // весь файл с директивой не парсится.
@@ -133,6 +140,19 @@ class Parser {
           return this.parseTry();
         case 'Raise':
           return this.parseRaise();
+        case 'Goto': {
+          const line = this.advance().line;
+          const tok = this.peek();
+          if (tok.type !== 'labelRef') {
+            throw new ParseError(
+              `После «Перейти» ожидалось «~Имя», получено «${tok.lexeme || tok.type}»`,
+              tok.line,
+            );
+          }
+          this.advance();
+          this.expect('semicolon', '«;»');
+          return { kind: 'Goto', name: tok.value as string, line };
+        }
         default:
           throw new ParseError(
             `Конструкция «${t.lexeme}» пока не поддерживается ядром-скелетом`,

@@ -37,7 +37,8 @@ export type KeywordKind =
   | 'And'
   | 'Or'
   | 'Not'
-  | 'New';
+  | 'New'
+  | 'Goto';
 
 /**
  * Соответствие «написание (в нижнем регистре) → вид».
@@ -119,4 +120,7 @@ export const KEYWORDS: ReadonlyMap<string, KeywordKind> = new Map([
   // Конструктор
   ['новый', 'New'],
   ['new', 'New'],
+  // Метки перехода
+  ['перейти', 'Goto'],
+  ['goto', 'Goto'],
 ]);

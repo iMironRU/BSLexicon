@@ -13,7 +13,7 @@ import {
 } from './collections';
 import { BslDate, makeDateTime } from './dates';
 import { Scope } from './scope';
-import { BreakSignal, ContinueSignal, ReturnSignal } from './signals';
+import { BreakSignal, ContinueSignal, GotoSignal, ReturnSignal } from './signals';
 import {
   BslObject,
   NULL,
@@ -120,6 +120,9 @@ export class Interpreter {
       if (e instanceof BreakSignal || e instanceof ContinueSignal) {
         throw new RuntimeError('«Прервать»/«Продолжить» вне цикла');
       }
+      if (e instanceof GotoSignal) {
+        throw new RuntimeError(`Метка «~${e.name}» не найдена`);
+      }
       throw e;
     } finally {
       this.frames.pop();
@@ -127,7 +130,25 @@ export class Interpreter {
   }
 
   private *execBlock(stmts: Stmt[], scope: Scope): Generator<StepEvent, void, void> {
-    for (const s of stmts) yield* this.execStatement(s, scope);
+    // Индексный цикл (не for-of) — нужен для «Перейти ~Имя»: при поимке
+    // GotoSignal ищем метку в этом же массиве и переставляем cursor.
+    // Если метка не найдена — пробрасываем сигнал наверх; поймает
+    // execBlock того блока, где метка объявлена.
+    let cursor = 0;
+    while (cursor < stmts.length) {
+      try {
+        yield* this.execStatement(stmts[cursor], scope);
+      } catch (e) {
+        if (e instanceof GotoSignal) {
+          const idx = stmts.findIndex((s) => s.kind === 'Label' && s.name === e.name);
+          if (idx === -1) throw e;
+          cursor = idx;
+          continue;
+        }
+        throw e;
+      }
+      cursor += 1;
+    }
   }
 
   private *execStatement(s: Stmt, scope: Scope): Generator<StepEvent, void, void> {
@@ -256,6 +277,12 @@ export class Interpreter {
         }
         throw new RuntimeError(current, s.line);
       }
+
+      case 'Label':
+        return; // маркер, execBlock находит по имени при GotoSignal
+
+      case 'Goto':
+        throw new GotoSignal(s.name);
     }
   }
 
