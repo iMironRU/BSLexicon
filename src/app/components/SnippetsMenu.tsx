@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GitConfig } from '../git-config';
-import { GitApiError, readFile, snippetsFilePath, writeFile } from '../git-storage';
+import { GitApiError } from '../git-storage';
+import { syncPull, syncPush } from '../git-sync';
 import {
   deleteSnippet,
   exportAll,
@@ -98,11 +99,7 @@ export function SnippetsMenu({ currentCode, onLoad, gitCfg }: SnippetsMenuProps)
     if (!gitCfg) return;
     setSyncing(true);
     try {
-      const filePath = snippetsFilePath(gitCfg);
-      const existing = await readFile(gitCfg, filePath);
-      const body = exportAll(listSnippets());
-      const msg = `BSLexicon: sync ${items.length} snippet${items.length === 1 ? '' : 's'}`;
-      await writeFile(gitCfg, filePath, body, msg, existing?.sha ?? null);
+      await syncPush(gitCfg, listSnippets());
       setFlash(`↑ Отправлено в ${gitCfg.owner}/${gitCfg.repo}`);
     } catch (e) {
       const m = e instanceof GitApiError ? e.message : (e as Error).message;
@@ -117,15 +114,9 @@ export function SnippetsMenu({ currentCode, onLoad, gitCfg }: SnippetsMenuProps)
     if (items.length > 0 && !window.confirm('Загрузка из git заменит текущий список сниппетов. Продолжить?')) return;
     setSyncing(true);
     try {
-      const filePath = snippetsFilePath(gitCfg);
-      const existing = await readFile(gitCfg, filePath);
-      if (!existing) {
-        setFlash(`В репо ещё нет ${filePath}. Сначала «↑ В git».`);
-        return;
-      }
-      const result = importAll(existing.text, 'replace');
-      if (result.error) {
-        setFlash(`Ошибка pull: ${result.error}`);
+      const result = await syncPull(gitCfg);
+      if (result.kind === 'empty') {
+        setFlash(`В репо ещё нет ${result.path}. Сначала «↑ В git».`);
         return;
       }
       setItems(listSnippets());
