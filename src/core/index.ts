@@ -4,6 +4,7 @@ import { lex } from './lexer/lexer';
 import type { Token } from './lexer/token';
 import type { Program } from './parser/ast';
 import { parse } from './parser/parser';
+import { preprocess } from './preprocessor';
 import { toRunError } from './run-error';
 import type { RunError } from './run-error';
 
@@ -56,9 +57,18 @@ export function run(source: string): RunResult {
 }
 
 function runOnce(source: string): RunResult {
+  let preprocessed: string;
+  try {
+    preprocessed = preprocess(source);
+  } catch (e) {
+    // Ошибки препроцессора репортим как ошибки лексера — это единая фаза
+    // «до parsing», отдельный stage читателю не важен.
+    return { ok: false, output: [], error: toRunError('lexer', e) };
+  }
+
   let tokens: Token[];
   try {
-    tokens = lex(source);
+    tokens = lex(preprocessed);
   } catch (e) {
     return { ok: false, output: [], error: toRunError('lexer', e) };
   }
