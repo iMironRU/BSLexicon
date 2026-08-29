@@ -224,6 +224,28 @@ a:hover { text-decoration: underline; }
 
 .help__build { font-variant-numeric: tabular-nums; }
 
+/* ── Online-индикатор (используется и в /help/, и в тренажёре) ── */
+
+.online-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #f4a261;
+  animation: online-dot-in 200ms ease-out both;
+}
+.online-dot__mark {
+  font-size: 10px;
+  line-height: 1;
+}
+@keyframes online-dot-in {
+  from { opacity: 0; transform: translateX(4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@media (max-width: 640px) {
+  .online-dot__label { display: none; }
+}
+
 @media (max-width: 820px) {
   .help__footer-hint { display: none; }
   .help__footer { justify-content: flex-end; }

@@ -9,6 +9,7 @@ import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } fro
 import { loadCatalog } from './catalog';
 import { EXAMPLES } from './examples';
 import { loadDraft, saveDraft } from './snippets';
+import { useOnline } from './useOnline';
 import { loadGitConfig } from './git-config';
 import type { GitConfig } from './git-config';
 import { GitSettingsModal } from './components/GitSettingsModal';
@@ -59,6 +60,7 @@ export function App() {
   const sessionRef = useRef<DebugSession | null>(null);
   const catalog = useMemo(() => loadCatalog(), []);
   const updateAvailable = useVersionCheck();
+  const online = useOnline();
 
   // Применяем код из URL когда ?gzcode завершил асинхронное декодирование
   useEffect(() => {
@@ -326,6 +328,16 @@ export function App() {
           Клик в левом поле — точка останова · Шаг / Войти / Выйти / Продолжить
         </span>
         <span className="app__footer-meta">
+          {!online && (
+            <span
+              className="online-dot online-dot--offline"
+              title="Работаешь без сети — PWA-кэш всё покрывает"
+              aria-label="Оффлайн"
+            >
+              <span className="online-dot__mark" aria-hidden="true">●</span>
+              <span className="online-dot__label">оффлайн</span>
+            </span>
+          )}
           <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
             GitHub
           </a>

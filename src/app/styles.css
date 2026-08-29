@@ -121,6 +121,24 @@ body {
 
 /* Toast — стили в src/app/toast/toast.css (импорт из компонента). */
 
+/* ── Online-индикатор (footer) ──────────────────────────────── */
+.online-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #f4a261;
+  animation: online-dot-in 200ms ease-out both;
+}
+.online-dot__mark { font-size: 10px; line-height: 1; }
+@keyframes online-dot-in {
+  from { opacity: 0; transform: translateX(4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@media (max-width: 640px) {
+  .online-dot__label { display: none; }
+}
+
 /* ── PWA-баннеры (установка / обновление) ─────────────────── */
 
 .pwa-banner {
