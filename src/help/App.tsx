@@ -7,6 +7,7 @@ import { Card } from './Card';
 import { Home } from './Home';
 import { HelpFooter } from './HelpFooter';
 import { PwaBanners } from '../app/components/PwaBanners';
+import { ToastHost } from '../app/toast/toast';
 import { NavMenu } from './NavMenu';
 import { SearchOverlay } from './SearchOverlay';
 import { TargetSelector } from './TargetSelector';
@@ -122,6 +123,7 @@ export function App() {
   }, []);
 
   return (
+    <ToastHost>
     <div className="help">
       <header className="help__header">
         <a className="help__brand" href={TRAINER_URL} title="Открыть тренажёр BSLexicon">
@@ -214,5 +216,6 @@ export function App() {
 
       <PwaBanners />
     </div>
+    </ToastHost>
   );
 }

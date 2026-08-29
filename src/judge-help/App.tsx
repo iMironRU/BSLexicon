@@ -3,6 +3,7 @@ import { HelpFooter } from '../help/HelpFooter';
 import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
 import { PwaBanners } from '../app/components/PwaBanners';
+import { ToastHost } from '../app/toast/toast';
 import { runTask } from '../judge/runner';
 import type { Task, TaskResult, TasksFile } from '../judge/types';
 import { findTask, loadBookTasks, loadJudgeIndex, type JudgeIndex } from './loader';
@@ -75,6 +76,7 @@ export function App() {
   };
 
   return (
+    <ToastHost>
     <div className="help">
       <header className="help__header">
         <a className="help__brand" href={TRAINER_URL} title="К тренажёру">
@@ -149,6 +151,7 @@ export function App() {
 
       <PwaBanners />
     </div>
+    </ToastHost>
   );
 }
 

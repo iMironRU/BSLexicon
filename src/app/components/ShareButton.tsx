@@ -1,12 +1,10 @@
-import { useEffect, useState } from 'react';
 import { encodeCodeParam } from '../url-params';
+import { useToast } from '../toast/context';
 
 interface ShareButtonProps {
   /** Текущий код редактора — из него формируется ?code=… */
   code: string;
 }
-
-type FlashState = 'idle' | 'copied' | 'error';
 
 /**
  * Кнопка «🔗 Поделиться» — копирует ссылку на текущий код в буфер обмена.
@@ -14,17 +12,14 @@ type FlashState = 'idle' | 'copied' | 'error';
  * «▶ В тренажёре» на карточках справочника, так что механика полностью
  * симметричная share ↔ open.
  *
+ * Результат показывается общим toast'ом (bottom-right) — виден
+ * независимо от того, где сейчас курсор.
+ *
  * Если navigator.clipboard недоступен (старый браузер, http-контекст) —
  * fallback: prompt со ссылкой, пользователь копирует руками.
  */
 export function ShareButton({ code }: ShareButtonProps) {
-  const [flash, setFlash] = useState<FlashState>('idle');
-
-  useEffect(() => {
-    if (flash === 'idle') return undefined;
-    const id = window.setTimeout(() => setFlash('idle'), 2000);
-    return () => window.clearTimeout(id);
-  }, [flash]);
+  const toast = useToast();
 
   const handleClick = async (): Promise<void> => {
     const url =
@@ -36,32 +31,24 @@ export function ShareButton({ code }: ShareButtonProps) {
     if (navigator.clipboard?.writeText) {
       try {
         await navigator.clipboard.writeText(url);
-        setFlash('copied');
+        toast.show('Ссылка скопирована');
         return;
       } catch {
         // упало (denied, insecure context) — уходим в fallback
       }
     }
-    // Fallback: prompt показывает ссылку, пользователь сам Cmd+C
     window.prompt('Скопируй ссылку:', url);
-    setFlash('idle');
   };
-
-  const label =
-    flash === 'copied' ? 'Скопировано ✓' :
-    flash === 'error'  ? 'Ошибка'         :
-    'Поделиться';
-  const icon = flash === 'copied' ? '✓' : '🔗';
 
   return (
     <button
       type="button"
-      className={'app__step share-btn' + (flash === 'copied' ? ' share-btn--ok' : '')}
+      className="app__step share-btn"
       onClick={handleClick}
       title="Скопировать ссылку на текущий код"
     >
-      <span aria-hidden="true">{icon}</span>
-      <span className="btn-label">{label}</span>
+      <span aria-hidden="true">🔗</span>
+      <span className="btn-label">Поделиться</span>
     </button>
   );
 }

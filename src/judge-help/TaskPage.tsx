@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useToast } from '../app/toast/context';
 import type { Task, TaskResult } from '../judge/types';
 import type { BookIndexEntry } from './loader';
 
@@ -26,6 +27,7 @@ export function TaskPage({
   const [source, setSource] = useState(initialSolution);
   const [result, setResult] = useState<TaskResult | null>(null);
   const [expandedHints, setExpandedHints] = useState<Set<number>>(() => new Set());
+  const toast = useToast();
 
   // При переключении задачи (только при смене task.id) — сбрасываем
   // локальное состояние. НЕ вешаемся на initialSolution: он меняется
@@ -47,8 +49,15 @@ export function TaskPage({
   const handleCheck = useCallback((): void => {
     const r = runner(task, source);
     setResult(r);
-    if (r.overall === 'pass') onPassed(source);
-  }, [runner, task, source, onPassed]);
+    if (r.overall === 'pass') {
+      onPassed(source);
+      // Первый успех — ощутимый маркер; повторные показы toast прикроет
+      // dedup (одинаковое сообщение подряд не дублируется).
+      if (passedAt === 0) toast.show('Задача пройдена!');
+    } else if (r.overall === 'error') {
+      toast.show('Ошибка при прогонке — смотри детали ниже', 'error');
+    }
+  }, [runner, task, source, onPassed, passedAt, toast]);
 
   const handleReset = (): void => {
     if (source === task.starter) return;

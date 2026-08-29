@@ -8,6 +8,7 @@ import { HelpFooter } from '../help/HelpFooter';
 import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
 import { PwaBanners } from '../app/components/PwaBanners';
+import { ToastHost } from '../app/toast/toast';
 import { LifecycleDiagram } from './LifecycleDiagram';
 import { SCENARIOS, scenarioById } from './lifecycle';
 import {
@@ -181,6 +182,7 @@ export function App() {
   }, [currentEntry, currentOwner]);
 
   return (
+    <ToastHost>
     <div className="help">
       <header className="help__header">
         <a className="help__brand" href={TRAINER_URL} title="К тренажёру">
@@ -278,6 +280,7 @@ export function App() {
 
       <PwaBanners />
     </div>
+    </ToastHost>
   );
 }
 

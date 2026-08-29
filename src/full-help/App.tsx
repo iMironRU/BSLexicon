@@ -9,6 +9,7 @@ import { HelpFooter } from '../help/HelpFooter';
 import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
 import { PwaBanners } from '../app/components/PwaBanners';
+import { ToastHost } from '../app/toast/toast';
 import { entryId, loadFullReference } from './loader';
 import { search } from './search';
 import type { FullHit } from './search';
@@ -168,6 +169,7 @@ export function App() {
   }, [entry, route]);
 
   return (
+    <ToastHost>
     <div className="help">
       <header className="help__header">
         <a className="help__brand" href={TRAINER_URL} title="К тренажёру">
@@ -256,6 +258,7 @@ export function App() {
 
       <PwaBanners />
     </div>
+    </ToastHost>
   );
 }
 

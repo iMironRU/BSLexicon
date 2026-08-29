@@ -16,6 +16,7 @@ import { GitStatusBadge } from './components/GitStatusBadge';
 import { ShareButton } from './components/ShareButton';
 import { SnippetsMenu } from './components/SnippetsMenu';
 import { PwaBanners } from './components/PwaBanners';
+import { ToastHost } from './toast/toast';
 import { useVersionCheck } from './useVersionCheck';
 import { useUrlParams } from './useUrlParams';
 import { ProvenanceBanner } from './components/ProvenanceBanner';
@@ -195,6 +196,7 @@ export function App() {
   const shownVariables = view.callStack[selectedFrame]?.variables ?? view.variables;
 
   return (
+    <ToastHost>
     <div className={'app' + (urlParams.embed ? ' app--embed' : '')}>
       <header className="app__header">
         <div className="app__brand">
@@ -351,6 +353,7 @@ export function App() {
 
       <PwaBanners />
     </div>
+    </ToastHost>
   );
 }
 

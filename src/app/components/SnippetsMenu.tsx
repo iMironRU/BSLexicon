@@ -10,6 +10,7 @@ import {
   saveSnippet,
   type Snippet,
 } from '../snippets';
+import { useToast } from '../toast/context';
 
 interface SnippetsMenuProps {
   /** Текущий код редактора — попадает в «Сохранить как…». */
@@ -31,10 +32,10 @@ export function SnippetsMenu({ currentCode, onLoad, gitCfg }: SnippetsMenuProps)
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Snippet[]>(() => (canUseStorage() ? listSnippets() : []));
   const [name, setName] = useState('');
-  const [flash, setFlash] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const toast = useToast();
 
   // Пере-читать список при каждом открытии — на случай если параллельная
   // вкладка что-то дописала.
@@ -58,19 +59,13 @@ export function SnippetsMenu({ currentCode, onLoad, gitCfg }: SnippetsMenuProps)
     };
   }, [open]);
 
-  useEffect(() => {
-    if (!flash) return undefined;
-    const id = window.setTimeout(() => setFlash(null), 2500);
-    return () => window.clearTimeout(id);
-  }, [flash]);
-
   const handleSave = (): void => {
     const trimmed = name.trim();
     if (!trimmed) return;
     saveSnippet(trimmed, currentCode);
     setName('');
     setItems(listSnippets());
-    setFlash(`Сохранён: ${trimmed}`);
+    toast.show(`Сохранён: ${trimmed}`);
   };
 
   const handleDelete = (id: string, snippetName: string): void => {
@@ -100,10 +95,10 @@ export function SnippetsMenu({ currentCode, onLoad, gitCfg }: SnippetsMenuProps)
     setSyncing(true);
     try {
       await syncPush(gitCfg, listSnippets());
-      setFlash(`↑ Отправлено в ${gitCfg.owner}/${gitCfg.repo}`);
+      toast.show(`↑ Отправлено в ${gitCfg.owner}/${gitCfg.repo}`);
     } catch (e) {
       const m = e instanceof GitApiError ? e.message : (e as Error).message;
-      setFlash(`Ошибка push: ${m}`);
+      toast.show(`Ошибка push: ${m}`, 'error');
     } finally {
       setSyncing(false);
     }
@@ -116,14 +111,14 @@ export function SnippetsMenu({ currentCode, onLoad, gitCfg }: SnippetsMenuProps)
     try {
       const result = await syncPull(gitCfg);
       if (result.kind === 'empty') {
-        setFlash(`В репо ещё нет ${result.path}. Сначала «↑ В git».`);
+        toast.show(`В репо ещё нет ${result.path}. Сначала «↑ В git».`, 'info');
         return;
       }
       setItems(listSnippets());
-      setFlash(`↓ Загружено из ${gitCfg.owner}/${gitCfg.repo}: ${result.added} шт.`);
+      toast.show(`↓ Загружено из ${gitCfg.owner}/${gitCfg.repo}: ${result.added} шт.`);
     } catch (e) {
       const m = e instanceof GitApiError ? e.message : (e as Error).message;
-      setFlash(`Ошибка pull: ${m}`);
+      toast.show(`Ошибка pull: ${m}`, 'error');
     } finally {
       setSyncing(false);
     }
@@ -136,11 +131,11 @@ export function SnippetsMenu({ currentCode, onLoad, gitCfg }: SnippetsMenuProps)
     const result = importAll(text, 'merge');
     e.target.value = ''; // сброс, чтобы можно было выбрать тот же файл повторно
     if (result.error) {
-      setFlash(`Ошибка импорта: ${result.error}`);
+      toast.show(`Ошибка импорта: ${result.error}`, 'error');
       return;
     }
     setItems(listSnippets());
-    setFlash(
+    toast.show(
       `Импортировано: ${result.added}` + (result.skipped ? ` (пропущено ${result.skipped})` : ''),
     );
   };
@@ -268,7 +263,6 @@ export function SnippetsMenu({ currentCode, onLoad, gitCfg }: SnippetsMenuProps)
             </div>
           )}
 
-          {flash && <div className="snippets__flash">{flash}</div>}
         </div>
       )}
     </div>

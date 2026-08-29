@@ -119,6 +119,8 @@ body {
   cursor: pointer;
 }
 
+/* Toast — стили в src/app/toast/toast.css (импорт из компонента). */
+
 /* ── PWA-баннеры (установка / обновление) ─────────────────── */
 
 .pwa-banner {
