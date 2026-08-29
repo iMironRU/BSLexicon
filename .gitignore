@@ -39,3 +39,4 @@ Thumbs.db
 reference/source/
 *.dt
 public/reference/judge-*.json
+public/reference/syntax-availability.json

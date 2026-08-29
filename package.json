@@ -12,7 +12,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm run check:catalog && npm run fetch:book-tasks",
+    "prebuild": "npm run check:catalog && npm run fetch:book-tasks && npm run extract:availability",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
@@ -24,6 +24,7 @@
     "extract:hbk-full": "tsx scripts/extract-hbk-full.ts",
     "gen:pwa-icons": "tsx scripts/gen-pwa-icons.ts",
     "fetch:book-tasks": "tsx scripts/fetch-book-tasks.ts",
+    "extract:availability": "tsx scripts/extract-availability-index.ts",
     "import:stubs": "tsx scripts/import-stubs.ts",
     "lint": "eslint . --ext .ts,.tsx",
     "verify": "npm run typecheck && npm run check:catalog && npm run test"

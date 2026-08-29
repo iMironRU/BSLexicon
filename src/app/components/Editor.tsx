@@ -4,6 +4,7 @@ import type { BeforeMount, OnMount } from '@monaco-editor/react';
 import type { Catalog } from '@core/index';
 import { registerCatalogProviders } from '../monaco/providers';
 import { BSL_LANGUAGE_ID, BSL_THEME, registerBslLanguage } from '../monaco/language';
+import { useAvailabilityMarkers } from '../availability/useAvailabilityMarkers';
 
 type CodeEditor = Parameters<OnMount>[0];
 type MonacoApi = Parameters<OnMount>[1];
@@ -67,6 +68,10 @@ export function Editor({
     });
     setReady(true);
   };
+
+  // Warnings по availability: недоступные функции/типы для выбранной
+  // платформы. Пусто пока пользователь не задал Target в /help/.
+  useAvailabilityMarkers(editorRef, monacoRef, value, ready);
 
   // Пересобираем декорации при смене точек останова или текущей строки.
   useEffect(() => {
