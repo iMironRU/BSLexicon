@@ -8,6 +8,7 @@ import { Home } from './Home';
 import { HelpFooter } from './HelpFooter';
 import { PwaBanners } from '../app/components/PwaBanners';
 import { ToastHost } from '../app/toast/toast';
+import { useSwipeToCloseDrawer } from './useSwipeToCloseDrawer';
 import { NavMenu } from './NavMenu';
 import { SearchOverlay } from './SearchOverlay';
 import { TargetSelector } from './TargetSelector';
@@ -38,6 +39,7 @@ export function App() {
   const route = useHashRoute();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  useSwipeToCloseDrawer(sidebarOpen, () => setSidebarOpen(false));
   const [syntaxEntries, setSyntaxEntries] = useState<SyntaxEntry[] | null>(null);
   const [target, setTargetState] = useState<Target>(() => defaultTarget());
 

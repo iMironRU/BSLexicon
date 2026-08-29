@@ -9,6 +9,7 @@ import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
 import { PwaBanners } from '../app/components/PwaBanners';
 import { ToastHost } from '../app/toast/toast';
+import { useSwipeToCloseDrawer } from '../help/useSwipeToCloseDrawer';
 import { LifecycleDiagram } from './LifecycleDiagram';
 import { SCENARIOS, scenarioById } from './lifecycle';
 import {
@@ -85,6 +86,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  useSwipeToCloseDrawer(sidebarOpen, () => setSidebarOpen(false));
   const [progress, setProgress] = useState<number | null>(null);
   const route = useHashRoute();
 

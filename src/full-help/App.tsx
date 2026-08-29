@@ -10,6 +10,7 @@ import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
 import { PwaBanners } from '../app/components/PwaBanners';
 import { ToastHost } from '../app/toast/toast';
+import { useSwipeToCloseDrawer } from '../help/useSwipeToCloseDrawer';
 import { entryId, loadFullReference } from './loader';
 import { search } from './search';
 import type { FullHit } from './search';
@@ -63,6 +64,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  useSwipeToCloseDrawer(sidebarOpen, () => setSidebarOpen(false));
   /** Прогресс fetch (0..1) или null — если Content-Length не пришёл. */
   const [progress, setProgress] = useState<number | null>(null);
   const route = useHashRoute();

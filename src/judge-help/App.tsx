@@ -4,6 +4,7 @@ import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
 import { PwaBanners } from '../app/components/PwaBanners';
 import { ToastHost } from '../app/toast/toast';
+import { useSwipeToCloseDrawer } from '../help/useSwipeToCloseDrawer';
 import { runTask } from '../judge/runner';
 import type { Task, TaskResult, TasksFile } from '../judge/types';
 import { findTask, loadBookTasks, loadJudgeIndex, type JudgeIndex } from './loader';
@@ -49,6 +50,7 @@ export function App() {
   const [indexError, setIndexError] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressMap>(() => loadProgress());
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  useSwipeToCloseDrawer(sidebarOpen, () => setSidebarOpen(false));
 
   useEffect(() => {
     let alive = true;
