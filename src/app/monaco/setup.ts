@@ -13,7 +13,9 @@
 import * as monaco from 'monaco-editor';
 import { loader } from '@monaco-editor/react';
 // eslint-disable-next-line import/no-unresolved -- Vite-специфичный URL-импорт воркера
-import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+// Monaco 0.56 перешёл на строгий exports field: путь /esm/vs/... больше не
+// резолвится, доступен только сокращённый /editor/... (см. package exports).
+import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 
 declare global {
   interface Window {

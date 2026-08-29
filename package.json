@@ -30,9 +30,9 @@
     "verify": "npm run typecheck && npm run check:catalog && npm run test"
   },
   "dependencies": {
-    "@monaco-editor/react": "^4.6.0",
+    "@monaco-editor/react": "^4.7.0",
     "js-yaml": "^4.1.0",
-    "monaco-editor": "^0.55.1",
+    "monaco-editor": "^0.56.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -54,5 +54,10 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "overrides": {
+    "monaco-editor": {
+      "dompurify": "^3.4.14"
+    }
   }
 }
