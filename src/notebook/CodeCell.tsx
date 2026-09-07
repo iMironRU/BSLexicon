@@ -1,8 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import type { BeforeMount, OnMount } from '@monaco-editor/react';
-import { run } from '@core/index';
-import type { Catalog } from '@core/index';
+import type { Catalog, Session } from '@core/index';
 import { registerCatalogProviders } from '../app/monaco/providers';
 import { BSL_LANGUAGE_ID, BSL_THEME, registerBslLanguage } from '../app/monaco/language';
 import type { CodeCellOutput } from './types';
@@ -13,6 +12,10 @@ interface CodeCellProps {
   source: string;
   onChange: (next: string) => void;
   catalog: Catalog;
+  /** Общий persistent kernel всего ноутбука — переменные и процедуры живут. */
+  session: Session;
+  /** Инкрементируется при «Перезапустить kernel»: чистим локальный [N]. */
+  sessionEpoch: number;
 }
 
 /**
@@ -25,10 +28,19 @@ interface CodeCellProps {
  * Высота редактора динамическая по числу строк (min 3 строки, max 20).
  * Пользователь не должен возиться с ресайзом внутри статьи-notebook'а.
  */
-export function CodeCell({ source, onChange, catalog }: CodeCellProps) {
+export function CodeCell({ source, onChange, catalog, session, sessionEpoch }: CodeCellProps) {
   const [output, setOutput] = useState<CodeCellOutput | null>(null);
+  const [runIndex, setRunIndex] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
   const editorRef = useRef<CodeEditor | null>(null);
+
+  // Restart kernel — сбрасываем локальный индикатор прогона у каждой
+  // ячейки; сам output оставляем видимым (как в Jupyter): пользователь
+  // потерял живой kernel, но не летопись что было. Первое повторное ▶
+  // возьмёт свежий [1].
+  useEffect(() => {
+    if (sessionEpoch > 0) setRunIndex(null);
+  }, [sessionEpoch]);
 
   const handleBeforeMount: BeforeMount = (monaco) => {
     registerBslLanguage(monaco, catalog);
@@ -43,16 +55,17 @@ export function CodeCell({ source, onChange, catalog }: CodeCellProps) {
     // Синхронный запуск, но флаг помогает если код длинный — Monaco успевает
     // обновить UI прежде чем интерпретатор заблокирует поток.
     Promise.resolve().then(() => {
-      const result = run(source);
-      const next: CodeCellOutput = result.ok
-        ? { lines: result.output, error: null }
-        : { lines: result.output, error: formatError(result.error) };
+      const result = session.eval(source);
+      const next: CodeCellOutput = result.error
+        ? { lines: result.output, error: formatError(result.error) }
+        : { lines: result.output, error: null };
       setOutput(next);
+      setRunIndex(result.runIndex);
       setRunning(false);
     });
   };
 
-  const handleClearOutput = (): void => setOutput(null);
+  const handleClearOutput = (): void => { setOutput(null); setRunIndex(null); };
 
   const lineCount = Math.max(3, Math.min(20, source.split('\n').length));
   const editorHeight = lineCount * 22 + 12; // ~22px на строку в Monaco 14pt
@@ -70,6 +83,9 @@ export function CodeCell({ source, onChange, catalog }: CodeCellProps) {
         >
           ▶
         </button>
+        <div className="nb-cell__run-index" title="Порядковый номер прогона kernel'а">
+          {runIndex !== null ? `[${runIndex}]` : '[ ]'}
+        </div>
       </div>
       <div className="nb-cell__body">
         <div className="nb-cell__editor" style={{ height: editorHeight }}>

@@ -17,6 +17,8 @@ export { KEYWORDS } from './lexer/keywords';
 export type { KeywordKind } from './lexer/keywords';
 export { BslError, LexError, ParseError, RuntimeError } from './errors';
 export { DebugSession } from './debugger/session';
+export { Session } from './session';
+export type { SessionResult } from './session';
 export { toRunError } from './run-error';
 export { parseCatalog, buildCatalog, loadCatalogFrom, methodTypeOf } from './catalog';
 export type {

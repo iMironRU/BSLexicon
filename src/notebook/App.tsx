@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Session } from '@core/index';
 import { CodeCell } from './CodeCell';
 import { MarkdownCell } from './MarkdownCell';
 import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
@@ -19,8 +20,13 @@ export function App() {
 function NotebookShell() {
   const [notebook, setNotebook] = useState<Notebook | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [sessionEpoch, setSessionEpoch] = useState(0); // bump — сбросить kernel
   const catalog = loadCatalog();
   const toast = useToast();
+  // Один Session на весь ноутбук. При «Перезапустить kernel» пересоздаём
+  // объект (bump epoch): все Code-ячейки автоматом получат свежий kernel
+  // через useMemo и очистят свои [N]-метки собственным state'ом ниже.
+  const session = useMemo(() => new Session(), [sessionEpoch]);
 
   // Одноразовая инициализация из URL или starter.
   useEffect(() => {
@@ -84,6 +90,13 @@ function NotebookShell() {
     setNotebook(starterNotebook());
   }, []);
 
+  const handleRestartKernel = useCallback((): void => {
+    // Kernel-only: ячейки и их источник остаются, но переменные и процедуры
+    // забываются; счётчик [N] у каждой ячейки очищается через sessionEpoch.
+    setSessionEpoch((e) => e + 1);
+    toast.show('Переменные и процедуры забыты', 'info');
+  }, [toast]);
+
   if (!notebook) {
     return <div className="nb-loading">Загрузка ноутбука…</div>;
   }
@@ -103,6 +116,14 @@ function NotebookShell() {
         <div className="nb-header__actions">
           <button type="button" className="nb-btn" onClick={handleShare} title="Скопировать ссылку на ноутбук">
             🔗 Поделиться
+          </button>
+          <button
+            type="button"
+            className="nb-btn nb-btn--ghost"
+            onClick={handleRestartKernel}
+            title="Забыть все переменные и процедуры; ячейки останутся"
+          >
+            ↻ Забыть переменные
           </button>
           <button type="button" className="nb-btn nb-btn--ghost" onClick={handleReset} title="Стартовый ноутбук">
             Сбросить
@@ -133,7 +154,13 @@ function NotebookShell() {
             {cell.type === 'markdown' ? (
               <MarkdownCell source={cell.source} onChange={(v) => updateCell(cell.id, v)} />
             ) : (
-              <CodeCell source={cell.source} onChange={(v) => updateCell(cell.id, v)} catalog={catalog} />
+              <CodeCell
+                source={cell.source}
+                onChange={(v) => updateCell(cell.id, v)}
+                catalog={catalog}
+                session={session}
+                sessionEpoch={sessionEpoch}
+              />
             )}
           </div>
         ))}

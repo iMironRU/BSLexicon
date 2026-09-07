@@ -74,9 +74,9 @@ const DEFAULT_STEP_LIMIT = 1_000_000;
 
 export class Interpreter {
   readonly output: string[] = [];
-  readonly globals = new Scope();
+  readonly globals: Scope;
   private readonly frames: Frame[] = [];
-  private readonly procedures = new Map<string, ProcDecl>();
+  private readonly procedures: Map<string, ProcDecl>;
   /** Стек описаний пойманных ошибок — верхушка отдаётся `ОписаниеОшибки()`. */
   private readonly errorStack: string[] = [];
   private readonly ctx: BuiltinContext = {
@@ -86,9 +86,21 @@ export class Interpreter {
   private steps = 0;
   private readonly stepLimit: number;
 
-  /** @param options.stepLimit — бюджет шагов-операторов и итераций циклов. */
-  constructor(options: { stepLimit?: number } = {}) {
+  /**
+   * @param options.stepLimit — бюджет шагов-операторов и итераций циклов.
+   * @param options.initialGlobals — persistent Scope (для Session): будет
+   *   мутироваться этим прогоном, состояние из предыдущих `run()` живёт.
+   * @param options.initialProcedures — persistent реестр процедур/функций.
+   *   Новые ProcDecl подхватываются автоматически (см. `run()`).
+   */
+  constructor(options: {
+    stepLimit?: number;
+    initialGlobals?: Scope;
+    initialProcedures?: Map<string, ProcDecl>;
+  } = {}) {
     this.stepLimit = options.stepLimit ?? DEFAULT_STEP_LIMIT;
+    this.globals = options.initialGlobals ?? new Scope();
+    this.procedures = options.initialProcedures ?? new Map();
   }
 
   /**

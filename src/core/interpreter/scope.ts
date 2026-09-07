@@ -73,4 +73,30 @@ export class Scope {
       value: this.get(key) ?? UNDEFINED,
     }));
   }
+
+  /**
+   * Снимок для транзакционного отката persistent kernel (см. Session).
+   * Сохраняет ссылки на текущие значения — mutations внутри объектов
+   * (например, `Массив.Добавить`) не откатываются: restore восстановит
+   * только rebinding имён верхнего уровня.
+   */
+  snapshot(): ScopeSnapshot {
+    return {
+      values: new Map(this.values),
+      displayNames: new Map(this.displayNames),
+    };
+  }
+
+  restore(snap: ScopeSnapshot): void {
+    this.values.clear();
+    for (const [k, v] of snap.values) this.values.set(k, v);
+    this.displayNames.clear();
+    for (const [k, v] of snap.displayNames) this.displayNames.set(k, v);
+    this.aliases.clear();
+  }
+}
+
+export interface ScopeSnapshot {
+  values: Map<string, BslValue>;
+  displayNames: Map<string, string>;
 }
