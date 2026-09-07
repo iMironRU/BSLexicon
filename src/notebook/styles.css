@@ -1,0 +1,409 @@
+/**
+ * Стили notebook-режима. Держим локально, чтобы не засорять глобальные
+ * стили тренажёра/справочника (styles.css из app/ и help/ подгружаются
+ * только за базой — тема vs-dark, фон, шрифты, оффлайн-индикатор).
+ */
+
+.nb-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.nb-loading {
+  padding: 40px;
+  text-align: center;
+  color: #808080;
+}
+
+.nb-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 20px;
+  background: #252526;
+  border-bottom: 1px solid #333;
+  flex-wrap: wrap;
+}
+
+.nb-header__brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.nb-header__logo {
+  font-weight: 700;
+  color: #4ec9b0;
+  font-size: 16px;
+}
+
+.nb-header__sub {
+  font-size: 12px;
+  color: #808080;
+}
+
+.nb-header__nav {
+  display: flex;
+  gap: 14px;
+}
+
+.nb-header__nav a {
+  color: #9cdcfe;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.nb-header__nav a:hover {
+  text-decoration: underline;
+}
+
+.nb-header__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.nb-btn {
+  background: #0e639c;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.nb-btn:hover {
+  background: #1177bb;
+}
+
+.nb-btn--ghost {
+  background: transparent;
+  border: 1px solid #444;
+  color: #d4d4d4;
+}
+
+.nb-btn--ghost:hover {
+  background: #2a2d2e;
+}
+
+.nb-btn--add {
+  background: #2a2d2e;
+  border: 1px dashed #555;
+}
+
+.nb-btn--add:hover {
+  background: #37373d;
+  border-color: #4ec9b0;
+}
+
+.nb-main {
+  flex: 1;
+  padding: 20px;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.nb-error-banner {
+  background: #5a1d1d;
+  color: #f48771;
+  padding: 10px 20px;
+  font-size: 13px;
+  border-bottom: 1px solid #7a2a2a;
+}
+
+.nb-empty {
+  padding: 40px;
+  text-align: center;
+  color: #808080;
+  border: 1px dashed #444;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.nb-add {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+/* ── ячейка ─────────────────────────────────────────────────── */
+
+.nb-cell-slot {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.nb-cell-controls {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 3;
+}
+
+.nb-cell-slot:hover .nb-cell-controls {
+  opacity: 1;
+}
+
+.nb-cell-ctl {
+  background: #37373d;
+  border: none;
+  color: #d4d4d4;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.nb-cell-ctl:hover {
+  background: #505050;
+}
+
+.nb-cell-ctl--danger:hover {
+  background: #5a1d1d;
+  color: #f48771;
+}
+
+.nb-cell {
+  display: flex;
+  gap: 8px;
+  background: #252526;
+  border: 1px solid #333;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.nb-cell__gutter {
+  flex-shrink: 0;
+  width: 40px;
+  padding: 8px 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background: #1e1e1e;
+  border-right: 1px solid #333;
+}
+
+.nb-cell__run,
+.nb-cell__md-toggle {
+  background: transparent;
+  border: 1px solid #4ec9b0;
+  color: #4ec9b0;
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+
+.nb-cell__run:hover,
+.nb-cell__md-toggle:hover {
+  background: #4ec9b0;
+  color: #1e1e1e;
+}
+
+.nb-cell__run:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+
+.nb-cell__body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── code cell ─────────────────────────────────────────────── */
+
+.nb-cell--code .nb-cell__editor {
+  min-height: 66px;
+}
+
+.nb-cell__output {
+  border-top: 1px solid #333;
+  background: #1e1e1e;
+}
+
+.nb-cell__output--error {
+  border-top-color: #7a2a2a;
+}
+
+.nb-cell__output-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #808080;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #252526;
+}
+
+.nb-cell__output-clear {
+  background: transparent;
+  border: none;
+  color: #808080;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.nb-cell__output-clear:hover {
+  color: #d4d4d4;
+}
+
+.nb-cell__output-body {
+  margin: 0;
+  padding: 8px 12px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #d4d4d4;
+  background: #1e1e1e;
+}
+
+.nb-cell__output-body--error {
+  color: #f48771;
+}
+
+.nb-cell__output-empty {
+  padding: 8px 12px;
+  color: #606060;
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* ── markdown cell ─────────────────────────────────────────── */
+
+.nb-cell--md .nb-cell__body {
+  padding: 8px 16px;
+}
+
+.nb-cell__md-view {
+  cursor: text;
+  min-height: 20px;
+}
+
+.nb-cell__md-view h1 {
+  font-size: 22px;
+  margin: 8px 0 12px;
+  color: #4ec9b0;
+}
+
+.nb-cell__md-view h2 {
+  font-size: 18px;
+  margin: 12px 0 8px;
+  color: #9cdcfe;
+}
+
+.nb-cell__md-view h3 {
+  font-size: 15px;
+  margin: 10px 0 6px;
+  color: #dcdcaa;
+}
+
+.nb-cell__md-view p {
+  margin: 6px 0;
+  line-height: 1.55;
+  color: #d4d4d4;
+}
+
+.nb-cell__md-view ul,
+.nb-cell__md-view ol {
+  margin: 6px 0;
+  padding-left: 24px;
+}
+
+.nb-cell__md-view li {
+  line-height: 1.55;
+  color: #d4d4d4;
+}
+
+.nb-cell__md-view code {
+  background: #1e1e1e;
+  color: #ce9178;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.nb-cell__md-view pre.md-code {
+  background: #1e1e1e;
+  padding: 10px 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  border-left: 3px solid #4ec9b0;
+}
+
+.nb-cell__md-view pre.md-code code {
+  background: transparent;
+  color: #d4d4d4;
+  padding: 0;
+}
+
+.nb-cell__md-view b {
+  color: #f0f0f0;
+}
+
+.nb-cell__md-empty {
+  color: #606060;
+  font-style: italic;
+}
+
+.nb-cell__md-input {
+  width: 100%;
+  min-height: 40px;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #4ec9b0;
+  border-radius: 3px;
+  padding: 8px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  box-sizing: border-box;
+  outline: none;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .nb-header {
+    padding: 8px 12px;
+    gap: 12px;
+  }
+  .nb-header__nav {
+    order: 3;
+    width: 100%;
+    justify-content: space-around;
+  }
+  .nb-header__actions {
+    margin-left: 0;
+  }
+  .nb-main {
+    padding: 12px;
+  }
+  .nb-cell__gutter {
+    width: 34px;
+  }
+  .nb-cell-controls {
+    opacity: 1; /* на мобиле нет hover — контролы всегда видны */
+  }
+}

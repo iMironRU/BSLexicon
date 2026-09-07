@@ -1,0 +1,154 @@
+import { useCallback, useEffect, useState } from 'react';
+import { CodeCell } from './CodeCell';
+import { MarkdownCell } from './MarkdownCell';
+import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
+import type { Cell, Notebook } from './types';
+import { loadCatalog } from '../app/catalog';
+import { HelpFooter } from '../help/HelpFooter';
+import { ToastHost } from '../app/toast/toast';
+import { useToast } from '../app/toast/context';
+
+export function App() {
+  return (
+    <ToastHost>
+      <NotebookShell />
+    </ToastHost>
+  );
+}
+
+function NotebookShell() {
+  const [notebook, setNotebook] = useState<Notebook | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const catalog = loadCatalog();
+  const toast = useToast();
+
+  // Одноразовая инициализация из URL или starter.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const nbParam = params.get('nb');
+    if (!nbParam) {
+      setNotebook(starterNotebook());
+      return;
+    }
+    decodeNotebook(nbParam)
+      .then((nb) => setNotebook(nb))
+      .catch((e) => {
+        setLoadError(String(e));
+        setNotebook(starterNotebook());
+      });
+  }, []);
+
+  const updateCell = useCallback((id: string, source: string): void => {
+    setNotebook((prev) => {
+      if (!prev) return prev;
+      return { cells: prev.cells.map((c) => (c.id === id ? { ...c, source } : c)) };
+    });
+  }, []);
+
+  const addCell = useCallback((type: Cell['type']): void => {
+    setNotebook((prev) => (prev ? { cells: [...prev.cells, newCell(type)] } : prev));
+  }, []);
+
+  const removeCell = useCallback((id: string): void => {
+    setNotebook((prev) => (prev ? { cells: prev.cells.filter((c) => c.id !== id) } : prev));
+  }, []);
+
+  const moveCell = useCallback((id: string, dir: -1 | 1): void => {
+    setNotebook((prev) => {
+      if (!prev) return prev;
+      const idx = prev.cells.findIndex((c) => c.id === id);
+      if (idx < 0) return prev;
+      const next = idx + dir;
+      if (next < 0 || next >= prev.cells.length) return prev;
+      const cells = prev.cells.slice();
+      const [item] = cells.splice(idx, 1);
+      cells.splice(next, 0, item);
+      return { cells };
+    });
+  }, []);
+
+  const handleShare = useCallback(async (): Promise<void> => {
+    if (!notebook) return;
+    try {
+      const encoded = await encodeNotebook(notebook);
+      const url = `${window.location.origin}${window.location.pathname}?nb=${encoded}`;
+      await navigator.clipboard.writeText(url);
+      toast.show('Ссылка скопирована');
+    } catch (e) {
+      toast.show('Не удалось скопировать ссылку', 'error');
+    }
+  }, [notebook, toast]);
+
+  const handleReset = useCallback((): void => {
+    if (!window.confirm('Сбросить ноутбук к стартовому? Твои ячейки потеряются.')) return;
+    setNotebook(starterNotebook());
+  }, []);
+
+  if (!notebook) {
+    return <div className="nb-loading">Загрузка ноутбука…</div>;
+  }
+
+  return (
+    <div className="nb-app">
+      <header className="nb-header">
+        <div className="nb-header__brand">
+          <span className="nb-header__logo">BSLexicon</span>
+          <span className="nb-header__sub">ноутбук BSL</span>
+        </div>
+        <nav className="nb-header__nav">
+          <a href="./" title="Тренажёр">Тренажёр</a>
+          <a href="./help/" title="Справочник">Справочник</a>
+          <a href="./help/judge/" title="Задачи">Задачи</a>
+        </nav>
+        <div className="nb-header__actions">
+          <button type="button" className="nb-btn" onClick={handleShare} title="Скопировать ссылку на ноутбук">
+            🔗 Поделиться
+          </button>
+          <button type="button" className="nb-btn nb-btn--ghost" onClick={handleReset} title="Стартовый ноутбук">
+            Сбросить
+          </button>
+        </div>
+      </header>
+
+      {loadError && (
+        <div className="nb-error-banner">
+          Не удалось загрузить ноутбук из ссылки — показан стартовый. ({loadError})
+        </div>
+      )}
+
+      <main className="nb-main">
+        {notebook.cells.length === 0 && (
+          <div className="nb-empty">
+            Ноутбук пуст. Добавь первую ячейку кнопками ниже.
+          </div>
+        )}
+
+        {notebook.cells.map((cell) => (
+          <div key={cell.id} className="nb-cell-slot">
+            <div className="nb-cell-controls">
+              <button type="button" className="nb-cell-ctl" onClick={() => moveCell(cell.id, -1)} title="Вверх" aria-label="Вверх">↑</button>
+              <button type="button" className="nb-cell-ctl" onClick={() => moveCell(cell.id, 1)} title="Вниз" aria-label="Вниз">↓</button>
+              <button type="button" className="nb-cell-ctl nb-cell-ctl--danger" onClick={() => removeCell(cell.id)} title="Удалить" aria-label="Удалить">✕</button>
+            </div>
+            {cell.type === 'markdown' ? (
+              <MarkdownCell source={cell.source} onChange={(v) => updateCell(cell.id, v)} />
+            ) : (
+              <CodeCell source={cell.source} onChange={(v) => updateCell(cell.id, v)} catalog={catalog} />
+            )}
+          </div>
+        ))}
+
+        <div className="nb-add">
+          <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('markdown')}>
+            + Текст
+          </button>
+          <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('code')}>
+            + Код
+          </button>
+        </div>
+      </main>
+
+      <HelpFooter hint="Клик по тексту — редактирование · ▶ — запуск ячейки" />
+    </div>
+  );
+}

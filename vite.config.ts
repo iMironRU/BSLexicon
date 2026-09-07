@@ -114,6 +114,7 @@ export default defineConfig(({ command }) => ({
         fullHelp: fileURLToPath(new URL('./help/full/index.html', import.meta.url)),
         eventsHelp: fileURLToPath(new URL('./help/events/index.html', import.meta.url)),
         judgeHelp: fileURLToPath(new URL('./help/judge/index.html', import.meta.url)),
+        notebook: fileURLToPath(new URL('./notebook/index.html', import.meta.url)),
       },
     },
   },
