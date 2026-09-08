@@ -33,7 +33,21 @@ export interface TaskCellData {
   type: 'task';
   /** Текущее решение ученика (то, что он редактирует в Monaco). */
   source: string;
+  /**
+   * Спека задачи. Если задан `ref` и spec из него подтянут — используем
+   * его, иначе — этот inline. Для offline / share-по-URL сценария
+   * (без git-контекста) `ref` показывает placeholder, а inline
+   * работает как fallback.
+   */
   task: TaskSpec;
+  /**
+   * Опциональная ссылка на `.task.yaml` в репо педагога — относительно
+   * корня репо (например, `tasks/strings-length.task.yaml`). Резолвится
+   * при открытии через `?nb-src=` (см. #30 учебной платформы). Пока
+   * такого контекста нет — task-cell помечается «нужно открыть через
+   * ссылку педагога».
+   */
+  ref?: string;
 }
 
 export type Cell = MarkdownCellData | CodeCellData | TaskCellData;

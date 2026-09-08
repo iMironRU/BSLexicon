@@ -311,6 +311,24 @@
   border-color: #7a2a2a;
 }
 
+.nb-cell--task-ref {
+  border-color: #445070;
+  background: #1b1e26;
+}
+
+.nb-cell--task-ref .nb-cell__gutter {
+  background: #12141a;
+}
+
+.nb-cell--task-ref .nb-task__statement {
+  background: #1b1e26;
+}
+
+.nb-cell--task-ref .nb-task__badge {
+  background: #445070;
+  color: #d4d4d4;
+}
+
 .nb-cell--task .nb-cell__gutter {
   background: #1a1a12;
 }

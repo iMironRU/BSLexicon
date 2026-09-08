@@ -19,6 +19,11 @@ interface SerializedTaskCell extends SerializedCellBase {
   t: 'task';
   /** Спека задачи прямо внутри ячейки — иммутабельна для ученика. */
   task: TaskSpec;
+  /**
+   * Опциональная ссылка на `.task.yaml` в репо педагога (см. #28
+   * учебной платформы). Резолвится при открытии через `?nb-src=`.
+   */
+  ref?: string;
 }
 type SerializedCell = SerializedCellBase | SerializedTaskCell;
 
@@ -107,7 +112,11 @@ export async function encodeNotebook(nb: Notebook): Promise<string> {
   const payload: SerializedNotebook = {
     v: 1,
     cells: nb.cells.map((c) => {
-      if (c.type === 'task') return { t: 'task', s: c.source, task: c.task };
+      if (c.type === 'task') {
+        const cell: SerializedTaskCell = { t: 'task', s: c.source, task: c.task };
+        if (c.ref) cell.ref = c.ref;
+        return cell;
+      }
       return { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
     }),
   };
@@ -177,7 +186,9 @@ export async function decodeNotebook(raw: string): Promise<Notebook> {
         // Осторожно: спека может быть недоделанной, если старый URL или ручная правка.
         // Fallback на DEFAULT — чтобы не крашить весь ноутбук из-за одной битой ячейки.
         const task: TaskSpec = withTask.task ?? DEFAULT_TASK;
-        return newCell('task', withTask.s, task);
+        const created = newCell('task', withTask.s, task);
+        if (withTask.ref && created.type === 'task') created.ref = withTask.ref;
+        return created;
       }
       return newCell(c.t === 'md' ? 'markdown' : 'code', c.s);
     }),

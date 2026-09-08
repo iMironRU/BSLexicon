@@ -61,6 +61,27 @@ describe('notebook task-cell serialize', () => {
     expect(decoded.cells.map((c) => c.type)).toEqual(['markdown', 'code', 'task']);
   });
 
+  it('task-ячейка с ref (#28) round-trips вместе с inline task', async () => {
+    const cell = newCell('task', 'Решение;', SIMPLE_TASK);
+    if (cell.type === 'task') cell.ref = 'tasks/strings-length.task.yaml';
+    const nb: Notebook = { cells: [cell] };
+    const decoded = await decodeNotebook(await encodeNotebook(nb));
+    const c = decoded.cells[0];
+    expect(c.type).toBe('task');
+    if (c.type === 'task') {
+      expect(c.ref).toBe('tasks/strings-length.task.yaml');
+      // inline остаётся как fallback / snapshot
+      expect(c.task.tests).toHaveLength(1);
+    }
+  });
+
+  it('task-ячейка без ref — поле остаётся undefined после round-trip', async () => {
+    const nb: Notebook = { cells: [newCell('task', 'x', SIMPLE_TASK)] };
+    const decoded = await decodeNotebook(await encodeNotebook(nb));
+    const c = decoded.cells[0];
+    if (c.type === 'task') expect(c.ref).toBeUndefined();
+  });
+
   it('старый URL без task-полей (backward-compat) — открывается', async () => {
     // Собираем старый payload v:1 c cells: [{t:'md',s:'x'}, {t:'code',s:'y'}]
     const bad = JSON.stringify({ v: 1, cells: [{ t: 'md', s: 'старая' }, { t: 'code', s: 'Х = 5;' }] });

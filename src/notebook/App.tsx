@@ -186,6 +186,7 @@ function NotebookShell() {
                 onChange={(v) => updateCell(cell.id, v)}
                 catalog={catalog}
                 task={cell.task}
+                taskRef={cell.ref}
               />
             )}
           </div>

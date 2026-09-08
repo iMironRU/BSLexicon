@@ -14,6 +14,12 @@ interface TaskCellProps {
   onChange: (next: string) => void;
   catalog: Catalog;
   task: TaskSpec;
+  /**
+   * Если задан — ячейка ссылается на внешний `.task.yaml` в репо
+   * педагога. Пока `?nb-src=` не активен (см. #30), спеку из ref мы
+   * не грузим и показываем placeholder-сообщение вместо задачи.
+   */
+  taskRef?: string;
 }
 
 /**
@@ -27,7 +33,29 @@ interface TaskCellProps {
  * Тесты и условие приходят из спеки автора (`task`), редактируется
  * только `source` — решение.
  */
-export function TaskCell({ source, onChange, catalog, task }: TaskCellProps) {
+export function TaskCell({ source, onChange, catalog, task, taskRef }: TaskCellProps) {
+  // Стадия #28: `ref` в модели есть, но резолвер (fetch YAML из git,
+  // подгрузка spec) ещё нет — это #30. Пока показываем placeholder,
+  // чтобы автор ноутбука видел что ячейка «ждёт открытия по ссылке».
+  if (taskRef) {
+    return (
+      <div className="nb-cell nb-cell--task nb-cell--task-ref">
+        <div className="nb-cell__gutter">
+          <div className="nb-cell__run-index" title="Задача из внешнего репо">🔗</div>
+        </div>
+        <div className="nb-cell__body">
+          <div className="nb-task__statement">
+            <div className="nb-task__badge">задача из репо</div>
+            <p>
+              Эта ячейка ссылается на файл <code>{taskRef}</code> в репозитории педагога.
+              Загрузка задач из репо появится в #30 — пока открывай ноутбук через
+              ссылку с параметром <code>?nb-src=…</code>.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const [result, setResult] = useState<TaskResult | null>(null);
   const [running, setRunning] = useState(false);
   const [expandedHints, setExpandedHints] = useState<Set<number>>(() => new Set());
