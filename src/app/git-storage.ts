@@ -113,6 +113,47 @@ export async function writeFile(
   return content.sha;
 }
 
+export interface DirEntry {
+  /** Имя файла или подпапки без ведущего пути. */
+  name: string;
+  /** Полный путь от корня репо. */
+  path: string;
+  /** 'file' или 'dir'. */
+  type: 'file' | 'dir';
+  /** SHA blob (для file) — понадобится при записи. */
+  sha: string;
+  /** Размер в байтах — только для файлов. */
+  size?: number;
+}
+
+/**
+ * Список записей директории через GitHub Contents API. Если директория
+ * не существует — возвращает пустой массив (не ошибка — первое сохранение).
+ */
+export async function listDirectory(
+  cfg: GitConfig,
+  dirPath: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<DirEntry[]> {
+  const url = `${API}/repos/${enc(cfg.owner)}/${enc(cfg.repo)}/contents/${encPath(dirPath)}?ref=${enc(cfg.branch)}`;
+  const r = await fetchFn(url, { headers: gitHeaders(cfg.token) });
+  if (r.status === 404) return [];
+  if (!r.ok) throw new GitApiError(r.status, `Не удалось прочитать ${dirPath || '/'}: ${await safeText(r)}`);
+  const j = (await r.json()) as unknown;
+  if (!Array.isArray(j)) {
+    throw new GitApiError(400, `${dirPath} — файл, а не директория.`);
+  }
+  return j
+    .filter((it): it is Record<string, unknown> => !!it && typeof it === 'object')
+    .map((it) => ({
+      name: String(it.name),
+      path: String(it.path),
+      type: (it.type === 'dir' ? 'dir' : 'file') as 'file' | 'dir',
+      sha: String(it.sha),
+      size: typeof it.size === 'number' ? it.size : undefined,
+    }));
+}
+
 // ── Служебные ────────────────────────────────────────────────────────
 
 function gitHeaders(token: string): Record<string, string> {

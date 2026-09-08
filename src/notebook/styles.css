@@ -580,6 +580,159 @@
   outline: none;
 }
 
+/* ── Панель ноутбуков ─────────────────────────────────────── */
+
+.nb-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 60px;
+  z-index: 100;
+}
+
+.nb-panel {
+  background: #252526;
+  border: 1px solid #444;
+  border-radius: 6px;
+  width: 90%;
+  max-width: 560px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.nb-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #1e1e1e;
+  border-bottom: 1px solid #333;
+}
+
+.nb-panel__head h2 {
+  margin: 0;
+  font-size: 15px;
+  color: #4ec9b0;
+}
+
+.nb-panel__repo {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #808080;
+  flex: 1;
+}
+
+.nb-panel__close {
+  background: transparent;
+  border: none;
+  color: #d4d4d4;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 8px;
+}
+
+.nb-panel__close:hover {
+  color: #f0f0f0;
+}
+
+.nb-panel__toolbar {
+  padding: 10px 16px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #333;
+}
+
+.nb-panel__error {
+  background: #5a1d1d;
+  color: #f48771;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.nb-panel__loading,
+.nb-panel__empty {
+  padding: 20px 16px;
+  color: #808080;
+  text-align: center;
+  font-size: 13px;
+}
+
+.nb-panel__empty code {
+  background: #1e1e1e;
+  color: #ce9178;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+}
+
+.nb-panel__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.nb-panel__item {
+  border-bottom: 1px solid #333;
+}
+
+.nb-panel__item:last-child {
+  border-bottom: none;
+}
+
+.nb-panel__item-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #d4d4d4;
+  padding: 10px 16px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.nb-panel__item-btn:hover {
+  background: #2a2d2e;
+}
+
+.nb-panel__item--current .nb-panel__item-btn {
+  background: #37373d;
+}
+
+.nb-panel__item-name {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+}
+
+.nb-panel__item-meta {
+  color: #808080;
+  font-size: 12px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.nb-panel__badge {
+  background: #4ec9b0;
+  color: #1e1e1e;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 /* Mobile */
 @media (max-width: 640px) {
   .nb-header {

@@ -3,10 +3,13 @@ import { Session } from '@core/index';
 import { CodeCell } from './CodeCell';
 import { MarkdownCell } from './MarkdownCell';
 import { TaskCell } from './TaskCell';
+import { NotebooksPanel } from './NotebooksPanel';
 import { clearDraft, loadDraft, saveDraft } from './draft';
 import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
 import type { Cell, Notebook } from './types';
 import { loadCatalog } from '../app/catalog';
+import { loadGitConfig } from '../app/git-config';
+import type { GitConfig } from '../app/git-config';
 import { HelpFooter } from '../help/HelpFooter';
 import { ToastHost } from '../app/toast/toast';
 import { useToast } from '../app/toast/context';
@@ -23,6 +26,12 @@ function NotebookShell() {
   const [notebook, setNotebook] = useState<Notebook | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sessionEpoch, setSessionEpoch] = useState(0); // bump — сбросить kernel
+  // Конфиг git — только читаем: настройки живут в тренажёре, notebook
+  // подхватывает при монтировании. Смена конфига в тренажёре потребует
+  // reload вкладки notebook — это ОК для MVP #29.
+  const gitCfg = useMemo<GitConfig | null>(() => loadGitConfig(), []);
+  const [showPanel, setShowPanel] = useState(false);
+  const [currentFile, setCurrentFile] = useState<{ name: string; sha: string } | null>(null);
   const catalog = loadCatalog();
   const toast = useToast();
   // Один Session на весь ноутбук. При «Перезапустить kernel» пересоздаём
@@ -131,6 +140,16 @@ function NotebookShell() {
           <a href={`${import.meta.env.BASE_URL}help/judge/`} title="Задачи">Задачи</a>
         </nav>
         <div className="nb-header__actions">
+          {gitCfg && (
+            <button
+              type="button"
+              className="nb-btn nb-btn--ghost"
+              onClick={() => setShowPanel(true)}
+              title={`Ноутбуки в ${gitCfg.owner}/${gitCfg.repo}`}
+            >
+              📁 Мои ноутбуки
+            </button>
+          )}
           <button type="button" className="nb-btn" onClick={handleShare} title="Скопировать ссылку на ноутбук">
             🔗 Поделиться
           </button>
@@ -206,6 +225,25 @@ function NotebookShell() {
       </main>
 
       <HelpFooter hint="Клик по тексту — редактирование · ▶ — запуск ячейки" />
+
+      {showPanel && gitCfg && (
+        <NotebooksPanel
+          cfg={gitCfg}
+          current={notebook}
+          currentFile={currentFile}
+          onOpen={(loaded) => {
+            setNotebook(loaded.notebook);
+            setCurrentFile({ name: loaded.name, sha: loaded.sha });
+            toast.show(`Открыт «${loaded.name}»`);
+          }}
+          onSaved={(name, sha) => {
+            setCurrentFile({ name, sha });
+            toast.show(`Сохранено «${name}»`);
+          }}
+          onClose={() => setShowPanel(false)}
+        />
+      )}
     </div>
   );
 }
+
