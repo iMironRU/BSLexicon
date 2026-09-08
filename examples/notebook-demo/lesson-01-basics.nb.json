@@ -1,0 +1,37 @@
+{
+  "v": 1,
+  "cells": [
+    {
+      "t": "md",
+      "s": "# Урок 1 — базы\n\nЭтот ноутбук лежит в git-репо. Ты открыл его по ссылке `?nb-src=…`, task-ячейки подтянулись из папки `tasks/` того же репо.\n\nВыше в шапке видно **источник**: `iMironRU/BSLexicon` @ SHA коммита на момент открытия."
+    },
+    {
+      "t": "code",
+      "s": "// Обычная code-ячейка — общий kernel всего ноутбука.\nПривет = \"Здравствуй\";\nСообщить(Привет);"
+    },
+    {
+      "t": "task",
+      "s": "// напиши решение здесь\n",
+      "task": {
+        "statement": "placeholder — заменится spec из tasks/print-42.task.yaml",
+        "starter": "// напиши решение здесь\n",
+        "tests": [{ "kind": "stdout", "expect": "42" }]
+      },
+      "ref": "examples/notebook-demo/tasks/print-42.task.yaml"
+    },
+    {
+      "t": "md",
+      "s": "## Функции\n\nВторая задача — про определение функций."
+    },
+    {
+      "t": "task",
+      "s": "Функция Удвоить(х)\n    // допиши тело\nКонецФункции\n",
+      "task": {
+        "statement": "placeholder",
+        "starter": "",
+        "tests": [{ "kind": "stdout", "expect": "" }]
+      },
+      "ref": "examples/notebook-demo/tasks/double.task.yaml"
+    }
+  ]
+}

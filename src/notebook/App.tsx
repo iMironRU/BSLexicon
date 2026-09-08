@@ -6,6 +6,7 @@ import { TaskCell } from './TaskCell';
 import { NotebooksPanel } from './NotebooksPanel';
 import { clearDraft, loadDraft, saveDraft } from './draft';
 import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
+import { fetchNotebookFromSrc, type NbSource } from './nb-src';
 import type { Cell, Notebook } from './types';
 import { loadCatalog } from '../app/catalog';
 import { loadGitConfig } from '../app/git-config';
@@ -32,6 +33,10 @@ function NotebookShell() {
   const gitCfg = useMemo<GitConfig | null>(() => loadGitConfig(), []);
   const [showPanel, setShowPanel] = useState(false);
   const [currentFile, setCurrentFile] = useState<{ name: string; sha: string } | null>(null);
+  // Открыт из ссылки педагога `?nb-src=`. `sha` понадобится в #31 при
+  // сохранении решения ученика (snapshot версии репо на момент открытия).
+  const [nbSource, setNbSource] = useState<{ source: NbSource; sha: string | null } | null>(null);
+  const [refWarnings, setRefWarnings] = useState<string[]>([]);
   const catalog = loadCatalog();
   const toast = useToast();
   // Один Session на весь ноутбук. При «Перезапустить kernel» пересоздаём
@@ -39,10 +44,24 @@ function NotebookShell() {
   // через useMemo и очистят свои [N]-метки собственным state'ом ниже.
   const session = useMemo(() => new Session(), [sessionEpoch]);
 
-  // Одноразовая инициализация: URL > localStorage draft > starter.
+  // Одноразовая инициализация: nb-src > nb > localStorage draft > starter.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const nbSrcParam = params.get('nb-src');
     const nbParam = params.get('nb');
+    if (nbSrcParam) {
+      fetchNotebookFromSrc(nbSrcParam)
+        .then((r) => {
+          setNotebook(r.notebook);
+          setNbSource({ source: r.source, sha: r.sha });
+          setRefWarnings(r.refWarnings);
+        })
+        .catch((e) => {
+          setLoadError(`Загрузка из репо: ${e instanceof Error ? e.message : String(e)}`);
+          setNotebook(loadDraft() ?? starterNotebook());
+        });
+      return;
+    }
     if (nbParam) {
       decodeNotebook(nbParam)
         .then((nb) => setNotebook(nb))
@@ -170,6 +189,32 @@ function NotebookShell() {
       {loadError && (
         <div className="nb-error-banner">
           Не удалось загрузить ноутбук из ссылки — показан стартовый. ({loadError})
+        </div>
+      )}
+
+      {nbSource && (
+        <div className="nb-source-banner">
+          📚 Из репо педагога:{' '}
+          <a
+            href={`https://github.com/${nbSource.source.owner}/${nbSource.source.repo}/blob/${nbSource.source.branch}/${nbSource.source.path}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {nbSource.source.owner}/{nbSource.source.repo}
+          </a>
+          {nbSource.sha && (
+            <span className="nb-source-banner__sha" title="SHA коммита ветки на момент открытия">
+              @ {nbSource.sha.slice(0, 7)}
+            </span>
+          )}
+          {refWarnings.length > 0 && (
+            <details className="nb-source-banner__warnings">
+              <summary>⚠ Задачи с проблемами: {refWarnings.length}</summary>
+              <ul>
+                {refWarnings.map((w, i) => <li key={i}>{w}</li>)}
+              </ul>
+            </details>
+          )}
         </div>
       )}
 
