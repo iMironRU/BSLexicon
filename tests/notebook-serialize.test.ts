@@ -49,11 +49,15 @@ describe('notebook serialize', () => {
     expect(encoded.length).toBeLessThan(rawSize / 2);
   });
 
-  it('старт-notebook имеет markdown и code ячейки', () => {
+  it('старт-notebook — демо-урок со всеми тремя типами (#26)', () => {
     const nb = starterNotebook();
-    expect(nb.cells.length).toBeGreaterThanOrEqual(2);
+    expect(nb.cells.length).toBeGreaterThanOrEqual(5);
+    const types = new Set(nb.cells.map((c) => c.type));
+    expect(types.has('markdown')).toBe(true);
+    expect(types.has('code')).toBe(true);
+    expect(types.has('task')).toBe(true);
+    // Первая ячейка — заголовок, задаёт контекст урока.
     expect(nb.cells[0].type).toBe('markdown');
-    expect(nb.cells.some((c) => c.type === 'code')).toBe(true);
   });
 
   it('битый base64 → decode бросает', async () => {

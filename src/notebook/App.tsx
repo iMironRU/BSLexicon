@@ -3,6 +3,7 @@ import { Session } from '@core/index';
 import { CodeCell } from './CodeCell';
 import { MarkdownCell } from './MarkdownCell';
 import { TaskCell } from './TaskCell';
+import { clearDraft, loadDraft, saveDraft } from './draft';
 import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
 import type { Cell, Notebook } from './types';
 import { loadCatalog } from '../app/catalog';
@@ -29,21 +30,29 @@ function NotebookShell() {
   // через useMemo и очистят свои [N]-метки собственным state'ом ниже.
   const session = useMemo(() => new Session(), [sessionEpoch]);
 
-  // Одноразовая инициализация из URL или starter.
+  // Одноразовая инициализация: URL > localStorage draft > starter.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const nbParam = params.get('nb');
-    if (!nbParam) {
-      setNotebook(starterNotebook());
+    if (nbParam) {
+      decodeNotebook(nbParam)
+        .then((nb) => setNotebook(nb))
+        .catch((e) => {
+          setLoadError(String(e));
+          setNotebook(loadDraft() ?? starterNotebook());
+        });
       return;
     }
-    decodeNotebook(nbParam)
-      .then((nb) => setNotebook(nb))
-      .catch((e) => {
-        setLoadError(String(e));
-        setNotebook(starterNotebook());
-      });
+    setNotebook(loadDraft() ?? starterNotebook());
   }, []);
+
+  // Автосохранение с дебаунсом 500 мс. Первый рендер (notebook null) —
+  // не пишем; когда grid установился — начинаем следить за изменениями.
+  useEffect(() => {
+    if (!notebook) return;
+    const id = window.setTimeout(() => saveDraft(notebook), 500);
+    return () => window.clearTimeout(id);
+  }, [notebook]);
 
   const updateCell = useCallback((id: string, source: string): void => {
     setNotebook((prev) => {
@@ -94,6 +103,7 @@ function NotebookShell() {
 
   const handleReset = useCallback((): void => {
     if (!window.confirm('Сбросить ноутбук к стартовому? Твои ячейки потеряются.')) return;
+    clearDraft();
     setNotebook(starterNotebook());
   }, []);
 
