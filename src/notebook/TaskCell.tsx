@@ -21,6 +21,12 @@ interface TaskCellProps {
    */
   taskRef?: string;
   showRefPlaceholder?: boolean;
+  /**
+   * Просмотр решения педагогом (#32): Monaco в read-only, редактирование
+   * запрещено. Проверка тестов остаётся — педагог сам может её прогнать
+   * против snapshot.
+   */
+  readOnly?: boolean;
 }
 
 /**
@@ -34,7 +40,7 @@ interface TaskCellProps {
  * Тесты и условие приходят из спеки автора (`task`), редактируется
  * только `source` — решение.
  */
-export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlaceholder }: TaskCellProps) {
+export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlaceholder, readOnly }: TaskCellProps) {
   // Placeholder показываем только если это ref-ячейка и spec ещё не
   // подтянут через `?nb-src=` (#30 резолвит spec и передаёт
   // showRefPlaceholder=false — рендерим обычную задачу).
@@ -145,17 +151,20 @@ export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlac
               renderWhitespace: 'selection',
               automaticLayout: true,
               scrollbar: { alwaysConsumeMouseWheel: false },
+              readOnly: !!readOnly,
             }}
           />
         </div>
 
         <div className="nb-task__actions">
           <button type="button" className="nb-btn nb-btn--check" onClick={handleCheck} disabled={running}>
-            {running ? 'Проверка…' : '▶ Проверить'}
+            {running ? 'Проверка…' : readOnly ? '▶ Прогнать против snapshot' : '▶ Проверить'}
           </button>
-          <button type="button" className="nb-btn nb-btn--ghost" onClick={handleReset}>
-            Сбросить решение
-          </button>
+          {!readOnly && (
+            <button type="button" className="nb-btn nb-btn--ghost" onClick={handleReset}>
+              Сбросить решение
+            </button>
+          )}
         </div>
 
         {result && (

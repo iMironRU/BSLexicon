@@ -16,6 +16,8 @@ interface CodeCellProps {
   session: Session;
   /** Инкрементируется при «Перезапустить kernel»: чистим локальный [N]. */
   sessionEpoch: number;
+  /** Просмотр решения педагогом (#32): Monaco read-only. */
+  readOnly?: boolean;
 }
 
 /**
@@ -28,7 +30,7 @@ interface CodeCellProps {
  * Высота редактора динамическая по числу строк (min 3 строки, max 20).
  * Пользователь не должен возиться с ресайзом внутри статьи-notebook'а.
  */
-export function CodeCell({ source, onChange, catalog, session, sessionEpoch }: CodeCellProps) {
+export function CodeCell({ source, onChange, catalog, session, sessionEpoch, readOnly }: CodeCellProps) {
   const [output, setOutput] = useState<CodeCellOutput | null>(null);
   const [runIndex, setRunIndex] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
@@ -110,6 +112,7 @@ export function CodeCell({ source, onChange, catalog, session, sessionEpoch }: C
               renderWhitespace: 'selection',
               automaticLayout: true,
               scrollbar: { alwaysConsumeMouseWheel: false },
+              readOnly: !!readOnly,
             }}
           />
         </div>

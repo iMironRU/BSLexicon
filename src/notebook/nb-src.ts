@@ -16,7 +16,7 @@
 
 import type { Notebook, Cell } from './types';
 import { parseTaskYaml } from './task-loader';
-import { parseStoredNotebook } from './git-notebooks';
+import { parseAnyFile, type SolutionMeta } from './git-notebooks';
 
 const RAW_HOST = 'https://raw.githubusercontent.com';
 const API_HOST = 'https://api.github.com';
@@ -30,6 +30,8 @@ export interface NbSource {
 }
 
 export interface NbLoadResult {
+  /** 'lesson' — обычный урок, 'solution' — файл-решение ученика (#31/#32). */
+  kind: 'lesson' | 'solution';
   notebook: Notebook;
   source: NbSource;
   /**
@@ -44,6 +46,8 @@ export interface NbLoadResult {
    * проблемные task-cell'ы работают на inline-fallback (см. #28).
    */
   refWarnings: string[];
+  /** Только для kind='solution' — метаданные исходного урока педагога. */
+  solutionMeta?: SolutionMeta;
 }
 
 /**
@@ -112,11 +116,26 @@ export async function fetchNotebookFromSrc(
   if (r.status === 404) throw new Error(`Файл не найден: ${source.path}`);
   if (!r.ok) throw new Error(`Не удалось загрузить ноутбук: HTTP ${r.status}`);
   const text = await r.text();
-  let notebook: Notebook;
+  let parsed: ReturnType<typeof parseAnyFile>;
   try {
-    notebook = parseStoredNotebook(text);
+    parsed = parseAnyFile(text);
   } catch (e) {
     throw new Error(`Битый .nb.json: ${(e as Error).message}`);
+  }
+  const notebook: Notebook = parsed.notebook;
+
+  // Для файла-решения ref НЕ резолвим — spec уже зашит в task_snapshot,
+  // это же snapshot (см. §4.3). Педагог видит РЕАЛЬНО ТУ версию задачи
+  // с которой ученик работал, а не свежий HEAD своего `tasks/`.
+  if (parsed.kind === 'solution') {
+    return {
+      kind: 'solution',
+      notebook,
+      source,
+      sha: null,
+      refWarnings: [],
+      solutionMeta: parsed.solutionMeta,
+    };
   }
 
   // 2. Резолвим ref в task-ячейках параллельно.
@@ -170,5 +189,5 @@ export async function fetchNotebookFromSrc(
     /* сеть/API — не критично, SHA останется null */
   }
 
-  return { notebook: { cells }, source, sha, refWarnings };
+  return { kind: 'lesson', notebook: { cells }, source, sha, refWarnings };
 }

@@ -146,6 +146,32 @@
   margin-left: auto;
 }
 
+.nb-source-banner--solution {
+  background: #2a2214;
+  color: #f0e0a0;
+  border-bottom: 1px solid #4a3a1c;
+}
+
+.nb-source-banner--solution a {
+  color: #f0e0a0;
+}
+
+.nb-source-banner__hint {
+  color: #c0a870;
+  font-size: 12px;
+  margin-left: auto;
+  font-style: italic;
+}
+
+.nb-header__mode {
+  padding: 6px 12px;
+  background: #2a2214;
+  color: #f0e0a0;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .nb-source-banner__warnings summary {
   cursor: pointer;
   font-size: 12px;

@@ -44,9 +44,19 @@ interface StoredCell {
   s: string;
   task?: TaskSpec;
   ref?: string;
+  /** Только для файла-решения (#31): spec на момент открытия. */
+  task_snapshot?: TaskSpec;
 }
 interface StoredNotebook {
   v: 1;
+  /** Для файлов-решений — 'solution'. Отсутствует у обычных уроков. */
+  role?: 'solution';
+  source?: {
+    repo: string;
+    sha: string | null;
+    nb_path: string;
+    branch: string;
+  };
   cells: StoredCell[];
 }
 
@@ -139,31 +149,62 @@ function nextId(): string {
   return `g${idCounter}`;
 }
 
+export interface SolutionMeta {
+  /** owner/repo педагога. */
+  repo: string;
+  sha: string | null;
+  nb_path: string;
+  branch: string;
+}
+
+export type ParsedFile =
+  | { kind: 'lesson'; notebook: Notebook }
+  | { kind: 'solution'; notebook: Notebook; solutionMeta: SolutionMeta };
+
 /**
- * Разобрать текст `.nb.json` из репо в Notebook. Кидает при битом JSON /
- * неверной схеме — вызывающий должен показать пользователю причину
- * (например, «файл повреждён, откати коммит в git»).
+ * Универсальный парсер `.nb.json` — определяет вид файла (урок vs решение
+ * ученика). Решение имеет `role: 'solution'` и корневой `source`; в
+ * task-cell вместо `task` там `task_snapshot`. См. `docs/education/README.md`
+ * §4.3 и #31.
+ *
+ * Кидает при битом JSON / неверной схеме.
  */
-export function parseStoredNotebook(text: string): Notebook {
+export function parseAnyFile(text: string): ParsedFile {
   const parsed = JSON.parse(text) as StoredNotebook;
   if (parsed.v !== 1 || !Array.isArray(parsed.cells)) {
     throw new Error('Не поддерживаемая схема ноутбука (не v: 1)');
   }
+  const isSolution = parsed.role === 'solution';
   const cells: Cell[] = parsed.cells.map((c) => {
     if (c.t === 'task') {
-      const task: TaskSpec = c.task ?? {
+      // Для решения источник spec — task_snapshot; для урока — task или fallback.
+      const spec: TaskSpec = c.task_snapshot ?? c.task ?? {
         statement: '## Задача',
         starter: '',
         tests: [{ kind: 'stdout', expect: '' }],
       };
-      const cell: Cell = { id: nextId(), type: 'task', source: c.s, task };
+      const cell: Cell = { id: nextId(), type: 'task', source: c.s, task: spec };
       if (c.ref && cell.type === 'task') cell.ref = c.ref;
       return cell;
     }
     if (c.t === 'md') return { id: nextId(), type: 'markdown', source: c.s };
     return { id: nextId(), type: 'code', source: c.s };
   });
-  return { cells };
+  const notebook: Notebook = { cells };
+  if (isSolution && parsed.source) {
+    return { kind: 'solution', notebook, solutionMeta: parsed.source };
+  }
+  return { kind: 'lesson', notebook };
+}
+
+/**
+ * Старый тонкий парсер только для уроков — оставлен ради тестов и
+ * loadNotebook (педагог открывает свой собственный ноутбук из панели
+ * «Мои ноутбуки», не решение).
+ */
+export function parseStoredNotebook(text: string): Notebook {
+  const parsed = parseAnyFile(text);
+  return parsed.notebook;
 }
 
 /**

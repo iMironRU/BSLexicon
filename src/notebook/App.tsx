@@ -7,6 +7,7 @@ import { NotebooksPanel } from './NotebooksPanel';
 import { clearDraft, loadDraft, saveDraft } from './draft';
 import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
 import { fetchNotebookFromSrc, type NbSource } from './nb-src';
+import type { SolutionMeta } from './git-notebooks';
 import { pushSolution, suggestSolutionName } from './git-solutions';
 import { GitApiError } from '../app/git-storage';
 import type { Cell, Notebook } from './types';
@@ -39,6 +40,10 @@ function NotebookShell() {
   // сохранении решения ученика (snapshot версии репо на момент открытия).
   const [nbSource, setNbSource] = useState<{ source: NbSource; sha: string | null } | null>(null);
   const [refWarnings, setRefWarnings] = useState<string[]>([]);
+  // Педагог смотрит файл-решение ученика (#32): весь UI в readOnly,
+  // banner подсвечивает откуда пришёл исходный урок.
+  const [viewingSolution, setViewingSolution] = useState<SolutionMeta | null>(null);
+  const readOnly = viewingSolution !== null;
   const catalog = loadCatalog();
   const toast = useToast();
   // Один Session на весь ноутбук. При «Перезапустить kernel» пересоздаём
@@ -57,6 +62,9 @@ function NotebookShell() {
           setNotebook(r.notebook);
           setNbSource({ source: r.source, sha: r.sha });
           setRefWarnings(r.refWarnings);
+          if (r.kind === 'solution' && r.solutionMeta) {
+            setViewingSolution(r.solutionMeta);
+          }
         })
         .catch((e) => {
           setLoadError(`Загрузка из репо: ${e instanceof Error ? e.message : String(e)}`);
@@ -78,11 +86,13 @@ function NotebookShell() {
 
   // Автосохранение с дебаунсом 500 мс. Первый рендер (notebook null) —
   // не пишем; когда grid установился — начинаем следить за изменениями.
+  // При просмотре решения (readOnly) draft НЕ трогаем — это не наш
+  // черновик, а чужой файл, не хотим перезаписать свой draft.
   useEffect(() => {
-    if (!notebook) return;
+    if (!notebook || readOnly) return;
     const id = window.setTimeout(() => saveDraft(notebook), 500);
     return () => window.clearTimeout(id);
-  }, [notebook]);
+  }, [notebook, readOnly]);
 
   const updateCell = useCallback((id: string, source: string): void => {
     setNotebook((prev) => {
@@ -186,7 +196,10 @@ function NotebookShell() {
           <a href={`${import.meta.env.BASE_URL}help/judge/`} title="Задачи">Задачи</a>
         </nav>
         <div className="nb-header__actions">
-          {gitCfg && (
+          {readOnly && (
+            <span className="nb-header__mode">🔍 Просмотр решения</span>
+          )}
+          {gitCfg && !readOnly && (
             <button
               type="button"
               className="nb-btn nb-btn--ghost"
@@ -196,7 +209,7 @@ function NotebookShell() {
               📁 Мои ноутбуки
             </button>
           )}
-          {nbSource && (
+          {nbSource && !readOnly && (
             <button
               type="button"
               className="nb-btn"
@@ -206,20 +219,24 @@ function NotebookShell() {
               📤 Отправить педагогу
             </button>
           )}
-          <button type="button" className="nb-btn" onClick={handleShare} title="Скопировать ссылку на ноутбук">
-            🔗 Поделиться
-          </button>
-          <button
-            type="button"
-            className="nb-btn nb-btn--ghost"
-            onClick={handleRestartKernel}
-            title="Забыть все переменные и процедуры; ячейки останутся"
-          >
-            ↻ Забыть переменные
-          </button>
-          <button type="button" className="nb-btn nb-btn--ghost" onClick={handleReset} title="Стартовый ноутбук">
-            Сбросить
-          </button>
+          {!readOnly && (
+            <>
+              <button type="button" className="nb-btn" onClick={handleShare} title="Скопировать ссылку на ноутбук">
+                🔗 Поделиться
+              </button>
+              <button
+                type="button"
+                className="nb-btn nb-btn--ghost"
+                onClick={handleRestartKernel}
+                title="Забыть все переменные и процедуры; ячейки останутся"
+              >
+                ↻ Забыть переменные
+              </button>
+              <button type="button" className="nb-btn nb-btn--ghost" onClick={handleReset} title="Стартовый ноутбук">
+                Сбросить
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -229,7 +246,7 @@ function NotebookShell() {
         </div>
       )}
 
-      {nbSource && (
+      {nbSource && !viewingSolution && (
         <div className="nb-source-banner">
           📚 Из репо педагога:{' '}
           <a
@@ -255,6 +272,27 @@ function NotebookShell() {
         </div>
       )}
 
+      {viewingSolution && (
+        <div className="nb-source-banner nb-source-banner--solution">
+          🎓 Решение ученика · исходный урок:{' '}
+          <a
+            href={`https://github.com/${viewingSolution.repo}/blob/${viewingSolution.branch}/${viewingSolution.nb_path}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {viewingSolution.repo}/{viewingSolution.nb_path}
+          </a>
+          {viewingSolution.sha && (
+            <span className="nb-source-banner__sha" title="SHA ветки педагога на момент когда ученик открыл">
+              @ {viewingSolution.sha.slice(0, 7)}
+            </span>
+          )}
+          <span className="nb-source-banner__hint">
+            Тесты идут против snapshot'а, а не свежего HEAD.
+          </span>
+        </div>
+      )}
+
       <main className="nb-main">
         {notebook.cells.length === 0 && (
           <div className="nb-empty">
@@ -264,11 +302,13 @@ function NotebookShell() {
 
         {notebook.cells.map((cell) => (
           <div key={cell.id} className="nb-cell-slot">
-            <div className="nb-cell-controls">
-              <button type="button" className="nb-cell-ctl" onClick={() => moveCell(cell.id, -1)} title="Вверх" aria-label="Вверх">↑</button>
-              <button type="button" className="nb-cell-ctl" onClick={() => moveCell(cell.id, 1)} title="Вниз" aria-label="Вниз">↓</button>
-              <button type="button" className="nb-cell-ctl nb-cell-ctl--danger" onClick={() => removeCell(cell.id)} title="Удалить" aria-label="Удалить">✕</button>
-            </div>
+            {!readOnly && (
+              <div className="nb-cell-controls">
+                <button type="button" className="nb-cell-ctl" onClick={() => moveCell(cell.id, -1)} title="Вверх" aria-label="Вверх">↑</button>
+                <button type="button" className="nb-cell-ctl" onClick={() => moveCell(cell.id, 1)} title="Вниз" aria-label="Вниз">↓</button>
+                <button type="button" className="nb-cell-ctl nb-cell-ctl--danger" onClick={() => removeCell(cell.id)} title="Удалить" aria-label="Удалить">✕</button>
+              </div>
+            )}
             {cell.type === 'markdown' && (
               <MarkdownCell source={cell.source} onChange={(v) => updateCell(cell.id, v)} />
             )}
@@ -279,6 +319,7 @@ function NotebookShell() {
                 catalog={catalog}
                 session={session}
                 sessionEpoch={sessionEpoch}
+                readOnly={readOnly}
               />
             )}
             {cell.type === 'task' && (
@@ -289,22 +330,25 @@ function NotebookShell() {
                 task={cell.task}
                 taskRef={cell.ref}
                 showRefPlaceholder={!!cell.ref && !nbSource}
+                readOnly={readOnly}
               />
             )}
           </div>
         ))}
 
-        <div className="nb-add">
-          <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('markdown')}>
-            + Текст
-          </button>
-          <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('code')}>
-            + Код
-          </button>
-          <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('task')}>
-            + Задача
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="nb-add">
+            <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('markdown')}>
+              + Текст
+            </button>
+            <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('code')}>
+              + Код
+            </button>
+            <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('task')}>
+              + Задача
+            </button>
+          </div>
+        )}
       </main>
 
       <HelpFooter hint="Клик по тексту — редактирование · ▶ — запуск ячейки" />
