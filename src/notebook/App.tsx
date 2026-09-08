@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Session } from '@core/index';
 import { CodeCell } from './CodeCell';
 import { MarkdownCell } from './MarkdownCell';
+import { TaskCell } from './TaskCell';
 import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
 import type { Cell, Notebook } from './types';
 import { loadCatalog } from '../app/catalog';
@@ -52,7 +53,13 @@ function NotebookShell() {
   }, []);
 
   const addCell = useCallback((type: Cell['type']): void => {
-    setNotebook((prev) => (prev ? { cells: [...prev.cells, newCell(type)] } : prev));
+    setNotebook((prev) => {
+      if (!prev) return prev;
+      // Overload по литеральному типу — TS не резолвит union, поэтому
+      // диспатчим руками.
+      const created = type === 'task' ? newCell('task') : newCell(type);
+      return { cells: [...prev.cells, created] };
+    });
   }, []);
 
   const removeCell = useCallback((id: string): void => {
@@ -151,15 +158,24 @@ function NotebookShell() {
               <button type="button" className="nb-cell-ctl" onClick={() => moveCell(cell.id, 1)} title="Вниз" aria-label="Вниз">↓</button>
               <button type="button" className="nb-cell-ctl nb-cell-ctl--danger" onClick={() => removeCell(cell.id)} title="Удалить" aria-label="Удалить">✕</button>
             </div>
-            {cell.type === 'markdown' ? (
+            {cell.type === 'markdown' && (
               <MarkdownCell source={cell.source} onChange={(v) => updateCell(cell.id, v)} />
-            ) : (
+            )}
+            {cell.type === 'code' && (
               <CodeCell
                 source={cell.source}
                 onChange={(v) => updateCell(cell.id, v)}
                 catalog={catalog}
                 session={session}
                 sessionEpoch={sessionEpoch}
+              />
+            )}
+            {cell.type === 'task' && (
+              <TaskCell
+                source={cell.source}
+                onChange={(v) => updateCell(cell.id, v)}
+                catalog={catalog}
+                task={cell.task}
               />
             )}
           </div>
@@ -171,6 +187,9 @@ function NotebookShell() {
           </button>
           <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('code')}>
             + Код
+          </button>
+          <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('task')}>
+            + Задача
           </button>
         </div>
       </main>

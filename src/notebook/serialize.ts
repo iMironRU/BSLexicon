@@ -9,12 +9,18 @@
  * `id` ячейки — чисто клиентский (для React key), в сериализацию не
  * попадает: генерируем свежий при decode.
  */
-import type { Cell, Notebook } from './types';
+import type { Cell, Notebook, TaskSpec } from './types';
 
-interface SerializedCell {
-  t: 'md' | 'code';
+interface SerializedCellBase {
+  t: 'md' | 'code' | 'task';
   s: string;
 }
+interface SerializedTaskCell extends SerializedCellBase {
+  t: 'task';
+  /** Спека задачи прямо внутри ячейки — иммутабельна для ученика. */
+  task: TaskSpec;
+}
+type SerializedCell = SerializedCellBase | SerializedTaskCell;
 
 interface SerializedNotebook {
   v: 1;
@@ -27,8 +33,23 @@ function nextId(): string {
   return `c${idCounter}`;
 }
 
-export function newCell(type: Cell['type'], source = ''): Cell {
-  return { id: nextId(), type, source };
+const DEFAULT_TASK: TaskSpec = {
+  statement: '## Задача\n\nНапиши код, который выводит `Сообщить("привет")`.',
+  starter: '// напиши решение здесь\n',
+  tests: [{ kind: 'stdout', expect: 'привет' }],
+};
+
+/** Создаёт пустую ячейку нужного типа. Task — из шаблона по умолчанию. */
+export function newCell(type: 'markdown' | 'code'): Cell;
+export function newCell(type: 'markdown' | 'code', source: string): Cell;
+export function newCell(type: 'task'): Cell;
+export function newCell(type: 'task', source: string, task: TaskSpec): Cell;
+export function newCell(type: Cell['type'], source = '', task?: TaskSpec): Cell {
+  if (type === 'task') {
+    const t = task ?? DEFAULT_TASK;
+    return { id: nextId(), type: 'task', source: source || t.starter, task: t };
+  }
+  return { id: nextId(), type, source } as Cell;
 }
 
 /** Стартовый notebook при открытии `/notebook/` без параметров. */
@@ -53,7 +74,10 @@ export function starterNotebook(): Notebook {
 export async function encodeNotebook(nb: Notebook): Promise<string> {
   const payload: SerializedNotebook = {
     v: 1,
-    cells: nb.cells.map((c) => ({ t: c.type === 'markdown' ? 'md' : 'code', s: c.source })),
+    cells: nb.cells.map((c) => {
+      if (c.type === 'task') return { t: 'task', s: c.source, task: c.task };
+      return { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
+    }),
   };
   const json = JSON.stringify(payload);
   const bytes = new TextEncoder().encode(json);
@@ -115,6 +139,15 @@ export async function decodeNotebook(raw: string): Promise<Notebook> {
     throw new Error('Unsupported notebook schema');
   }
   return {
-    cells: payload.cells.map((c) => newCell(c.t === 'md' ? 'markdown' : 'code', c.s)),
+    cells: payload.cells.map((c) => {
+      if (c.t === 'task') {
+        const withTask = c as SerializedTaskCell;
+        // Осторожно: спека может быть недоделанной, если старый URL или ручная правка.
+        // Fallback на DEFAULT — чтобы не крашить весь ноутбук из-за одной битой ячейки.
+        const task: TaskSpec = withTask.task ?? DEFAULT_TASK;
+        return newCell('task', withTask.s, task);
+      }
+      return newCell(c.t === 'md' ? 'markdown' : 'code', c.s);
+    }),
   };
 }

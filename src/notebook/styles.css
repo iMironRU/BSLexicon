@@ -297,6 +297,177 @@
   font-size: 13px;
 }
 
+/* ── task cell ─────────────────────────────────────────────── */
+
+.nb-cell--task {
+  border-color: #4a4a1c;
+}
+
+.nb-cell--task-passed {
+  border-color: #3d5a3d;
+}
+
+.nb-cell--task-failed {
+  border-color: #7a2a2a;
+}
+
+.nb-cell--task .nb-cell__gutter {
+  background: #1a1a12;
+}
+
+.nb-cell--task-passed .nb-cell__gutter {
+  background: #142014;
+}
+
+.nb-task__statement {
+  padding: 10px 16px;
+  background: #22221a;
+  border-bottom: 1px solid #333;
+  color: #d4d4d4;
+}
+
+.nb-cell--task-passed .nb-task__statement {
+  background: #172217;
+}
+
+.nb-task__statement h1,
+.nb-task__statement h2 {
+  margin-top: 0;
+}
+
+.nb-task__statement h1 { color: #dcdcaa; font-size: 18px; }
+.nb-task__statement h2 { color: #dcdcaa; font-size: 16px; }
+.nb-task__statement p { margin: 6px 0; line-height: 1.5; }
+.nb-task__statement code {
+  background: #1e1e1e;
+  color: #ce9178;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.nb-task__badge {
+  display: inline-block;
+  background: #dcdcaa;
+  color: #22221a;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.nb-task__actions {
+  padding: 8px 12px;
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid #333;
+  background: #1e1e1e;
+}
+
+.nb-btn--check {
+  background: #dcdcaa;
+  color: #22221a;
+  font-weight: 600;
+}
+.nb-btn--check:hover {
+  background: #f0e88f;
+}
+
+.nb-task__results {
+  padding: 8px 12px;
+  border-top: 1px solid #333;
+  background: #1e1e1e;
+}
+
+.nb-task__overall {
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 13px;
+  margin-bottom: 8px;
+  display: inline-block;
+}
+
+.nb-task__overall--pass { background: #1e3a1e; color: #7ec97e; }
+.nb-task__overall--fail { background: #3a1e1e; color: #e07a7a; }
+.nb-task__overall--error { background: #3a2a1e; color: #dcb27a; }
+
+.nb-task__tests {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nb-task__test {
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.nb-task__test-mark {
+  display: inline-block;
+  width: 20px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.nb-task__test--pass .nb-task__test-mark { color: #7ec97e; }
+.nb-task__test--fail .nb-task__test-mark { color: #e07a7a; }
+.nb-task__test--error .nb-task__test-mark { color: #dcb27a; }
+
+.nb-task__test-name {
+  color: #d4d4d4;
+}
+
+.nb-task__test-detail {
+  padding: 4px 0 4px 24px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #a0a0a0;
+}
+
+.nb-task__test-detail code {
+  background: #252526;
+  padding: 1px 4px;
+  border-radius: 2px;
+  color: #ce9178;
+}
+
+.nb-task__test-detail--err {
+  color: #e07a7a;
+}
+
+.nb-task__hints {
+  padding: 8px 12px;
+  border-top: 1px solid #333;
+  background: #1e1e1e;
+}
+
+.nb-task__hint {
+  margin: 4px 0;
+}
+
+.nb-task__hint-toggle {
+  background: transparent;
+  border: none;
+  color: #9cdcfe;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 0;
+}
+
+.nb-task__hint-toggle:hover {
+  text-decoration: underline;
+}
+
+.nb-task__hint-body {
+  padding: 4px 0 4px 20px;
+  color: #b0b0b0;
+  font-size: 13px;
+}
+
 /* ── markdown cell ─────────────────────────────────────────── */
 
 .nb-cell--md .nb-cell__body {
