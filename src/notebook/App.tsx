@@ -7,6 +7,8 @@ import { NotebooksPanel } from './NotebooksPanel';
 import { clearDraft, loadDraft, saveDraft } from './draft';
 import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
 import { fetchNotebookFromSrc, type NbSource } from './nb-src';
+import { pushSolution, suggestSolutionName } from './git-solutions';
+import { GitApiError } from '../app/git-storage';
 import type { Cell, Notebook } from './types';
 import { loadCatalog } from '../app/catalog';
 import { loadGitConfig } from '../app/git-config';
@@ -135,6 +137,31 @@ function NotebookShell() {
     setNotebook(starterNotebook());
   }, []);
 
+  const handleSendToTeacher = useCallback(async (): Promise<void> => {
+    if (!notebook || !nbSource) return;
+    if (!gitCfg) {
+      toast.show('Подключи свой git-репо в тренажёре (кнопка Git)', 'error');
+      return;
+    }
+    const suggested = suggestSolutionName(nbSource.source.path);
+    const name = window.prompt(
+      'Имя файла решения (без .nb.json). Файл ляжет в solutions/ твоего репо.',
+      suggested,
+    );
+    if (!name) return;
+    try {
+      const r = await pushSolution(gitCfg, name, notebook, nbSource.source, nbSource.sha, null);
+      await navigator.clipboard.writeText(r.rawUrl);
+      toast.show(`Решение отправлено. Ссылка в буфере — отдай педагогу.`);
+    } catch (e) {
+      if (e instanceof GitApiError) {
+        toast.show(`GitHub ${e.status}: ${e.message}`, 'error');
+      } else {
+        toast.show(`Не удалось сохранить: ${e instanceof Error ? e.message : String(e)}`, 'error');
+      }
+    }
+  }, [notebook, nbSource, gitCfg, toast]);
+
   const handleRestartKernel = useCallback((): void => {
     // Kernel-only: ячейки и их источник остаются, но переменные и процедуры
     // забываются; счётчик [N] у каждой ячейки очищается через sessionEpoch.
@@ -167,6 +194,16 @@ function NotebookShell() {
               title={`Ноутбуки в ${gitCfg.owner}/${gitCfg.repo}`}
             >
               📁 Мои ноутбуки
+            </button>
+          )}
+          {nbSource && (
+            <button
+              type="button"
+              className="nb-btn"
+              onClick={handleSendToTeacher}
+              title="Сохранить в свой репо и отдать педагогу ссылку"
+            >
+              📤 Отправить педагогу
             </button>
           )}
           <button type="button" className="nb-btn" onClick={handleShare} title="Скопировать ссылку на ноутбук">
@@ -251,6 +288,7 @@ function NotebookShell() {
                 catalog={catalog}
                 task={cell.task}
                 taskRef={cell.ref}
+                showRefPlaceholder={!!cell.ref && !nbSource}
               />
             )}
           </div>

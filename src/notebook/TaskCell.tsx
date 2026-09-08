@@ -15,11 +15,12 @@ interface TaskCellProps {
   catalog: Catalog;
   task: TaskSpec;
   /**
-   * Если задан — ячейка ссылается на внешний `.task.yaml` в репо
-   * педагога. Пока `?nb-src=` не активен (см. #30), спеку из ref мы
-   * не грузим и показываем placeholder-сообщение вместо задачи.
+   * `ref` из ячейки (сохраняется для сдачи решения #31). При `showRefPlaceholder`
+   * = true рендерим сообщение «задача из репо», а spec игнорируем — это
+   * ситуация «notebook открыт БЕЗ `?nb-src=`, spec из YAML не подтянут».
    */
   taskRef?: string;
+  showRefPlaceholder?: boolean;
 }
 
 /**
@@ -33,11 +34,11 @@ interface TaskCellProps {
  * Тесты и условие приходят из спеки автора (`task`), редактируется
  * только `source` — решение.
  */
-export function TaskCell({ source, onChange, catalog, task, taskRef }: TaskCellProps) {
-  // Стадия #28: `ref` в модели есть, но резолвер (fetch YAML из git,
-  // подгрузка spec) ещё нет — это #30. Пока показываем placeholder,
-  // чтобы автор ноутбука видел что ячейка «ждёт открытия по ссылке».
-  if (taskRef) {
+export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlaceholder }: TaskCellProps) {
+  // Placeholder показываем только если это ref-ячейка и spec ещё не
+  // подтянут через `?nb-src=` (#30 резолвит spec и передаёт
+  // showRefPlaceholder=false — рендерим обычную задачу).
+  if (taskRef && showRefPlaceholder) {
     return (
       <div className="nb-cell nb-cell--task nb-cell--task-ref">
         <div className="nb-cell__gutter">

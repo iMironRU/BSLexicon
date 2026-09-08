@@ -145,9 +145,13 @@ export async function fetchNotebookFromSrc(
   for (const { idx, spec } of resolved) {
     const cell = cells[idx];
     if (cell.type !== 'task' || !spec) continue;
-    // Подменяем task inline, ref удаляем — cell дальше рендерится
-    // обычной TaskCell как inline-задача из #24.
-    cells[idx] = { ...cell, task: spec, ref: undefined } as Cell;
+    // Подменяем task на подгруженный spec — рендерится обычной TaskCell
+    // как inline-задача. `ref` СОХРАНЯЕМ: он нужен при отправке решения
+    // (#31) чтобы в файле-снапшоте было и «что за задача» (task_snapshot),
+    // и «откуда пришла» (ref). Для TaskCell приоритет: если spec подтянут
+    // (task заполнен) — рендерим как inline; placeholder про ref больше
+    // не показываем (спрятан ниже в App при наличии подтянутого spec).
+    cells[idx] = { ...cell, task: spec } as Cell;
   }
 
   // 3. SHA ветки (best-effort, без токена). Rate-limit публичного API

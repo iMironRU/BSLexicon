@@ -119,8 +119,8 @@ tests:
     const task = r.notebook.cells[1];
     expect(task.type).toBe('task');
     if (task.type === 'task') {
-      // ref удалён после резолва, task заменён на подгруженный spec
-      expect(task.ref).toBeUndefined();
+      // ref СОХРАНЁН (нужен при отправке решения #31), spec — из подгруженного YAML
+      expect(task.ref).toBe('tasks/x.task.yaml');
       expect(task.task.tests[0]).toMatchObject({ kind: 'stdout', expect: '42' });
     }
   });
