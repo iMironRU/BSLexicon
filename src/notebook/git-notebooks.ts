@@ -46,6 +46,8 @@ interface StoredCell {
   ref?: string;
   /** Только для файла-решения (#31): spec на момент открытия. */
   task_snapshot?: TaskSpec;
+  /** Объяснение решения ученика (#33). */
+  explanation?: string;
 }
 interface StoredNotebook {
   v: 1;
@@ -135,6 +137,7 @@ export function serializeNotebook(nb: Notebook): string {
       if (c.type === 'task') {
         const cell: StoredCell = { t: 'task', s: c.source, task: c.task };
         if (c.ref) cell.ref = c.ref;
+        if (c.explanation) cell.explanation = c.explanation;
         return cell;
       }
       return { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
@@ -185,6 +188,7 @@ export function parseAnyFile(text: string): ParsedFile {
       };
       const cell: Cell = { id: nextId(), type: 'task', source: c.s, task: spec };
       if (c.ref && cell.type === 'task') cell.ref = c.ref;
+      if (c.explanation && cell.type === 'task') cell.explanation = c.explanation;
       return cell;
     }
     if (c.t === 'md') return { id: nextId(), type: 'markdown', source: c.s };

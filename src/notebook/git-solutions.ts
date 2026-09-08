@@ -40,6 +40,8 @@ interface StoredSolutionCell {
   ref?: string;
   /** Snapshot spec на момент открытия — источник истины для прогонки. */
   task_snapshot?: TaskSpec;
+  /** Объяснение решения ученика своими словами (#33). */
+  explanation?: string;
 }
 
 interface StoredSolution {
@@ -62,6 +64,7 @@ export function serializeSolution(nb: Notebook, source: SolutionSource): string 
           t: 'task',
           s: c.source,
           ...(c.ref ? { ref: c.ref } : {}),
+          ...(c.explanation ? { explanation: c.explanation } : {}),
           task_snapshot: c.task,
         };
       }

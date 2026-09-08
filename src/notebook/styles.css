@@ -552,6 +552,44 @@
   font-size: 13px;
 }
 
+.nb-task__explain {
+  padding: 8px 12px;
+  border-top: 1px solid #333;
+  background: #1e1e1e;
+}
+
+.nb-task__explain-body {
+  padding: 6px 0 4px 20px;
+  color: #d4d4d4;
+  font-size: 13px;
+}
+
+.nb-task__explain-body textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 60px;
+  padding: 8px;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #4ec9b0;
+  border-radius: 3px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+
+.nb-task__explain-body p {
+  margin: 4px 0;
+  line-height: 1.55;
+}
+
+.nb-task__explain-empty {
+  color: #606060;
+  font-style: italic;
+}
+
 /* ── markdown cell ─────────────────────────────────────────── */
 
 .nb-cell--md .nb-cell__body {

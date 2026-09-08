@@ -48,6 +48,12 @@ export interface TaskCellData {
    * ссылку педагога».
    */
   ref?: string;
+  /**
+   * «Объясни своё решение своими словами» (#33). Feynman method: ученик
+   * пишет короткое markdown-объяснение почему решил именно так. Педагог
+   * видит и код, и объяснение — знает угадал или понял.
+   */
+  explanation?: string;
 }
 
 export type Cell = MarkdownCellData | CodeCellData | TaskCellData;

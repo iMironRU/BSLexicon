@@ -75,6 +75,17 @@ describe('notebook task-cell serialize', () => {
     }
   });
 
+  it('task-ячейка с explanation (#33) round-trips в ?nb=', async () => {
+    const cell = newCell('task', 'Решение;', SIMPLE_TASK);
+    if (cell.type === 'task') cell.explanation = 'Я думал так: перебираю каждый элемент.';
+    const nb: Notebook = { cells: [cell] };
+    const decoded = await decodeNotebook(await encodeNotebook(nb));
+    const c = decoded.cells[0];
+    if (c.type === 'task') {
+      expect(c.explanation).toBe('Я думал так: перебираю каждый элемент.');
+    }
+  });
+
   it('task-ячейка без ref — поле остаётся undefined после round-trip', async () => {
     const nb: Notebook = { cells: [newCell('task', 'x', SIMPLE_TASK)] };
     const decoded = await decodeNotebook(await encodeNotebook(nb));

@@ -101,6 +101,17 @@ function NotebookShell() {
     });
   }, []);
 
+  const updateExplanation = useCallback((id: string, explanation: string): void => {
+    setNotebook((prev) => {
+      if (!prev) return prev;
+      return {
+        cells: prev.cells.map((c) =>
+          c.id === id && c.type === 'task' ? { ...c, explanation } : c,
+        ),
+      };
+    });
+  }, []);
+
   const addCell = useCallback((type: Cell['type']): void => {
     setNotebook((prev) => {
       if (!prev) return prev;
@@ -331,6 +342,8 @@ function NotebookShell() {
                 taskRef={cell.ref}
                 showRefPlaceholder={!!cell.ref && !nbSource}
                 readOnly={readOnly}
+                explanation={cell.explanation}
+                onExplanationChange={(v) => updateExplanation(cell.id, v)}
               />
             )}
           </div>

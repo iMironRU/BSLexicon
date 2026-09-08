@@ -24,6 +24,8 @@ interface SerializedTaskCell extends SerializedCellBase {
    * учебной платформы). Резолвится при открытии через `?nb-src=`.
    */
   ref?: string;
+  /** «Объясни своё решение своими словами» (#33). */
+  explanation?: string;
 }
 type SerializedCell = SerializedCellBase | SerializedTaskCell;
 
@@ -115,6 +117,7 @@ export async function encodeNotebook(nb: Notebook): Promise<string> {
       if (c.type === 'task') {
         const cell: SerializedTaskCell = { t: 'task', s: c.source, task: c.task };
         if (c.ref) cell.ref = c.ref;
+        if (c.explanation) cell.explanation = c.explanation;
         return cell;
       }
       return { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
@@ -188,6 +191,7 @@ export async function decodeNotebook(raw: string): Promise<Notebook> {
         const task: TaskSpec = withTask.task ?? DEFAULT_TASK;
         const created = newCell('task', withTask.s, task);
         if (withTask.ref && created.type === 'task') created.ref = withTask.ref;
+        if (withTask.explanation && created.type === 'task') created.explanation = withTask.explanation;
         return created;
       }
       return newCell(c.t === 'md' ? 'markdown' : 'code', c.s);

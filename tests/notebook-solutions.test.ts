@@ -58,6 +58,18 @@ describe('serializeSolution', () => {
     expect(task.task_snapshot.tests[0]).toEqual({ kind: 'stdout', expect: '42' });
   });
 
+  it('explanation ученика (#33) попадает в решение', () => {
+    const nb: Notebook = {
+      cells: [{
+        id: 'x', type: 'task', source: 'Сообщить(42);',
+        task: { statement: 'y', starter: '', tests: [{ kind: 'stdout', expect: '42' }] },
+        explanation: 'Я решил через прямой вывод 42.',
+      }],
+    };
+    const parsed = JSON.parse(serializeSolution(nb, { repo: 'r', sha: null, nb_path: 'p', branch: 'main' }));
+    expect(parsed.cells[0].explanation).toBe('Я решил через прямой вывод 42.');
+  });
+
   it('sha=null остаётся null в JSON', () => {
     const text = serializeSolution({ cells: [] }, { repo: 'r', sha: null, nb_path: 'p', branch: 'main' });
     expect(JSON.parse(text).source.sha).toBeNull();

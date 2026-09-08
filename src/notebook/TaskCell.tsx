@@ -27,6 +27,9 @@ interface TaskCellProps {
    * против snapshot.
    */
   readOnly?: boolean;
+  /** Объяснение ученика своими словами (#33). */
+  explanation?: string;
+  onExplanationChange?: (next: string) => void;
 }
 
 /**
@@ -40,7 +43,12 @@ interface TaskCellProps {
  * Тесты и условие приходят из спеки автора (`task`), редактируется
  * только `source` — решение.
  */
-export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlaceholder, readOnly }: TaskCellProps) {
+export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlaceholder, readOnly, explanation, onExplanationChange }: TaskCellProps) {
+  const [showExplanation, setShowExplanation] = useState<boolean>(
+    // В readOnly — раскрываем автоматически если есть текст (педагог сразу видит).
+    // В обычном режиме — свернуто по умолчанию, ученик сам решает раскрыть.
+    !!(readOnly && explanation),
+  );
   // Placeholder показываем только если это ref-ячейка и spec ещё не
   // подтянут через `?nb-src=` (#30 резолвит spec и передаёт
   // showRefPlaceholder=false — рендерим обычную задачу).
@@ -225,6 +233,38 @@ export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlac
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Feynman-объяснение (#33). В readOnly-режиме рендерим как markdown,
+            если объяснение задано; в обычном — свернутая textarea. */}
+        {(!readOnly || explanation) && (
+          <div className="nb-task__explain">
+            <button
+              type="button"
+              className="nb-task__hint-toggle"
+              onClick={() => setShowExplanation((v) => !v)}
+            >
+              {showExplanation ? '▾' : '▸'} ✍ {readOnly ? 'Объяснение ученика' : 'Объясни своё решение своими словами'}
+            </button>
+            {showExplanation && (
+              <div className="nb-task__explain-body">
+                {readOnly ? (
+                  explanation
+                    ? renderMarkdown(explanation)
+                    : <p className="nb-task__explain-empty">— ученик ничего не написал —</p>
+                ) : (
+                  <textarea
+                    className="nb-cell__md-input"
+                    value={explanation ?? ''}
+                    onChange={(e) => onExplanationChange?.(e.target.value)}
+                    placeholder="Почему ты решил именно так? Что было ключевой идеей?"
+                    rows={4}
+                    spellCheck={false}
+                  />
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
