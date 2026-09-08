@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import type { BeforeMount, OnMount } from '@monaco-editor/react';
 import type { Catalog } from '@core/index';
@@ -7,7 +7,28 @@ import { BSL_LANGUAGE_ID, BSL_THEME, registerBslLanguage } from '../app/monaco/l
 import { runTask } from '../judge/runner';
 import type { Task, TaskResult } from '../judge/types';
 import { renderMarkdown } from './markdown';
+import { parseEditableRegions, isSelectionEditable } from './blanks';
 import type { TaskSpec } from './types';
+
+type CodeEditor = Parameters<OnMount>[0];
+
+/** Прожатие клавиши, приводящее к правке текста. */
+function isEditingKey(e: KeyboardEvent): boolean {
+  // Стрелки / Home / End / PageUp/Down / Escape / модификаторы / F-клавиши — навигация, не правка.
+  const NAV = new Set([
+    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+    'Home', 'End', 'PageUp', 'PageDown',
+    'Escape', 'Shift', 'Control', 'Alt', 'Meta',
+    'CapsLock', 'Tab', // Tab часто нужен для навигации между полями
+  ]);
+  if (NAV.has(e.key)) return false;
+  // Копирование (Ctrl+C/Cmd+C) — не правка. Undo/Redo (Ctrl+Z/Y) — тоже разрешаем
+  // (даст возможность откатить если ошибся в editable-области).
+  if ((e.ctrlKey || e.metaKey) && ['c', 'C', 'z', 'Z', 'y', 'Y'].includes(e.key)) return false;
+  // Всё остальное считаем потенциально изменяющим: печать, Backspace, Delete,
+  // Enter, вставка (Ctrl+V) и т.д.
+  return true;
+}
 
 interface TaskCellProps {
   source: string;
@@ -44,11 +65,25 @@ interface TaskCellProps {
  * только `source` — решение.
  */
 export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlaceholder, readOnly, explanation, onExplanationChange }: TaskCellProps) {
+  // Все хуки объявляем ДО ранних return — правило React rules-of-hooks.
   const [showExplanation, setShowExplanation] = useState<boolean>(
     // В readOnly — раскрываем автоматически если есть текст (педагог сразу видит).
     // В обычном режиме — свернуто по умолчанию, ученик сам решает раскрыть.
     !!(readOnly && explanation),
   );
+  const [result, setResult] = useState<TaskResult | null>(null);
+  const [running, setRunning] = useState(false);
+  const [expandedHints, setExpandedHints] = useState<Set<number>>(() => new Set());
+  const [editorReady, setEditorReady] = useState(false);
+  const editorRef = useRef<CodeEditor | null>(null);
+  const decorationsRef = useRef<string[]>([]);
+
+  // Регионы редактирования из fill-in-the-blank маркеров (#34).
+  // Пересчитываем каждый рендер (source меняется — маркеры двигаются).
+  const editableRegions = useMemo(() => parseEditableRegions(source), [source]);
+  const regionsRef = useRef(editableRegions);
+  regionsRef.current = editableRegions;
+
   // Placeholder показываем только если это ref-ячейка и spec ещё не
   // подтянут через `?nb-src=` (#30 резолвит spec и передаёт
   // showRefPlaceholder=false — рендерим обычную задачу).
@@ -71,16 +106,61 @@ export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlac
       </div>
     );
   }
-  const [result, setResult] = useState<TaskResult | null>(null);
-  const [running, setRunning] = useState(false);
-  const [expandedHints, setExpandedHints] = useState<Set<number>>(() => new Set());
 
   const handleBeforeMount: BeforeMount = (monaco) => {
     registerBslLanguage(monaco, catalog);
   };
-  const handleMount: OnMount = (_editor, monaco) => {
+  const handleMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
     registerCatalogProviders(monaco, catalog);
+    // Fill-in-the-blank: блокируем правки вне editable-регионов через
+    // перехват keydown. Правки через paste/undo дополнительно откатываются
+    // через onDidChangeModelContent (недорогой safeguard).
+    editor.onKeyDown((e) => {
+      const regs = regionsRef.current;
+      if (regs.length === 0) return; // задача без blanks — не мешаем
+      const sel = editor.getSelection();
+      if (!sel) return;
+      if (isSelectionEditable(sel.startLineNumber, sel.endLineNumber, regs)) return;
+      if (isEditingKey(e.browserEvent)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+    setEditorReady(true);
   };
+
+  // Fill-in-the-blank: подсвечиваем нередактируемые строки декорациями
+  // (немного темнее фон + полоска слева). Пересобираем при смене регионов
+  // или source.
+  useEffect(() => {
+    if (!editorReady) return;
+    const ed = editorRef.current;
+    if (!ed) return;
+    if (editableRegions.length === 0) {
+      // регионов нет → нет декораций
+      if (decorationsRef.current.length > 0) {
+        decorationsRef.current = ed.deltaDecorations(decorationsRef.current, []);
+      }
+      return;
+    }
+    const model = ed.getModel();
+    if (!model) return;
+    const total = model.getLineCount();
+    const editableSet = new Set<number>();
+    for (const r of editableRegions) {
+      for (let l = r.startLine; l <= r.endLine; l += 1) editableSet.add(l);
+    }
+    const decor = [];
+    for (let l = 1; l <= total; l += 1) {
+      if (editableSet.has(l)) continue;
+      decor.push({
+        range: { startLineNumber: l, startColumn: 1, endLineNumber: l, endColumn: 1 },
+        options: { isWholeLine: true, className: 'nb-blank-readonly' },
+      });
+    }
+    decorationsRef.current = ed.deltaDecorations(decorationsRef.current, decor as never[]);
+  }, [editableRegions, source, editorReady]);
 
   const handleCheck = (): void => {
     setRunning(true);

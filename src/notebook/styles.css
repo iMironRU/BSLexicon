@@ -590,6 +590,14 @@
   font-style: italic;
 }
 
+/* Fill-in-the-blank (#34): нередактируемые строки в task-cell. Monaco рисует
+   className на всю строку; фон чуть темнее + полоска слева. Отметим достаточно
+   заметно, чтобы ученик сразу видел где ему трогать. */
+.monaco-editor .nb-blank-readonly {
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 3px 0 0 #555;
+}
+
 /* ── markdown cell ─────────────────────────────────────────── */
 
 .nb-cell--md .nb-cell__body {
