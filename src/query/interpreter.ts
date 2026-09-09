@@ -51,7 +51,7 @@ export interface RunError {
 }
 
 export type RunResult =
-  | { ok: true; rowset: Rowset }
+  | { ok: true; rowset: Rowset; warnings: string[] }
   | { ok: false; errors: RunError[] };
 
 export class QueryRuntimeError extends Error {
@@ -67,8 +67,8 @@ export function runQuery(source: string, fx: Fixture): RunResult {
     return { ok: false, errors: parsed.errors.map((e) => ({ stage: 'parser', message: e.message, line: e.line, column: e.column })) };
   }
   try {
-    const rowset = execPackage(parsed.tree as QueryPackageContext, fx);
-    return { ok: true, rowset };
+    const { rowset, warnings } = execPackage(parsed.tree as QueryPackageContext, fx);
+    return { ok: true, rowset, warnings };
   } catch (e) {
     if (e instanceof QueryRuntimeError) return { ok: false, errors: [{ stage: 'runtime', message: e.message }] };
     return { ok: false, errors: [{ stage: 'runtime', message: (e as Error).message ?? String(e) }] };
@@ -77,7 +77,9 @@ export function runQuery(source: string, fx: Fixture): RunResult {
 
 // ── Дерево ──────────────────────────────────────────────────────────
 
-function execPackage(pkg: QueryPackageContext, fx: Fixture): Rowset {
+interface ExecResult { rowset: Rowset; warnings: string[]; }
+
+function execPackage(pkg: QueryPackageContext, fx: Fixture): ExecResult {
   const queries = pkg.queries();
   if (queries.length === 0) throw new QueryRuntimeError('Пустой пакет запросов');
   if (queries.length > 1) throw new QueryRuntimeError('Пакеты запросов пока не поддерживаются (см. #46)');
@@ -88,7 +90,7 @@ function execPackage(pkg: QueryPackageContext, fx: Fixture): Rowset {
   return execSelectQuery(sel, fx);
 }
 
-function execSelectQuery(node: SelectQueryContext, fx: Fixture): Rowset {
+function execSelectQuery(node: SelectQueryContext, fx: Fixture): ExecResult {
   const sub = node.subquery() as SubqueryContext | null;
   if (!sub) throw new QueryRuntimeError('Пустой SELECT');
   if (sub._unions && sub._unions.length > 0) throw new QueryRuntimeError('ОБЪЕДИНИТЬ пока не поддерживается (следующий шаг)');
@@ -96,7 +98,7 @@ function execSelectQuery(node: SelectQueryContext, fx: Fixture): Rowset {
   if (!main) throw new QueryRuntimeError('Отсутствует основная часть SELECT');
   if (main.temporaryTableIdentifier?.()) throw new QueryRuntimeError('ПОМЕСТИТЬ пока не поддерживается (#46)');
 
-  const rowset = execQuery(main, fx);
+  const { rowset, warnings } = execQuery(main, fx);
 
   // ORDER BY может быть либо в subquery (стандартное место), либо на
   // уровне selectQuery (после ИТОГИ / АВТОУПОРЯДОЧИВАНИЕ).
@@ -104,20 +106,22 @@ function execSelectQuery(node: SelectQueryContext, fx: Fixture): Rowset {
   if (orderBy) applyOrderBy(rowset, orderBy);
   if (node._totals) throw new QueryRuntimeError('ИТОГИ ПО пока не реализованы (#45)');
 
-  return rowset;
+  return { rowset, warnings };
 }
 
 interface QueryCtx {
   fx: Fixture;
   /** алиас источника → полное имя таблицы. */
   sources: Map<string, string>;
+  /** Собранные warning'и: неизвестные поля, битые ссылки. */
+  warnings: Set<string>;
 }
 
 /** Одна «строка-снимок»: алиас → Row исходной таблицы. */
 type Snap = Map<string, Row>;
 
-function execQuery(q: QueryContext, fx: Fixture): Rowset {
-  const ctx: QueryCtx = { fx, sources: new Map() };
+function execQuery(q: QueryContext, fx: Fixture): ExecResult {
+  const ctx: QueryCtx = { fx, sources: new Map(), warnings: new Set() };
 
   // FROM
   const snaps: Snap[] = q._from_ ? collectDataSources(q._from_.dataSource(), ctx) : [new Map()];
@@ -149,11 +153,11 @@ function execQuery(q: QueryContext, fx: Fixture): Rowset {
       if (q._having && !isTruthy(evalNode(q._having, bucket[0] ?? new Map(), ctx, bucket))) continue;
       rows.push(columnSpecs.map((c) => evalNode(c.expr, bucket[0] ?? new Map(), ctx, bucket)));
     }
-    return { columns: columnSpecs.map((c) => c.name), rows };
+    return { rowset: { columns: columnSpecs.map((c) => c.name), rows }, warnings: [...ctx.warnings] };
   }
 
   const rows: BslValue[][] = filtered.map((s) => columnSpecs.map((c) => evalNode(c.expr, s, ctx, null)));
-  return { columns: columnSpecs.map((c) => c.name), rows };
+  return { rowset: { columns: columnSpecs.map((c) => c.name), rows }, warnings: [...ctx.warnings] };
 }
 
 // ── Источники ─────────────────────────────────────────────────────
@@ -469,21 +473,31 @@ function evalColumn(node: ColumnContext, snap: Snap, ctx: QueryCtx): BslValue {
     for (const row of snap.values()) {
       if (names[0] in (row as Row)) return (row as Row)[names[0]] as BslValue;
     }
+    // Не нашли ни в одном — предупреждаем педагога, что скорее всего опечатка
+    if (snap.size > 0) ctx.warnings.add(`Поле «${names[0]}» не найдено ни в одном источнике`);
     return UNDEFINED;
   }
   // Первый — алиас источника, остальные — путь
   const [alias, ...path] = names;
   let cur: Row | null = snap.get(alias) as Row | null;
+  if (!cur) {
+    ctx.warnings.add(`Алиас источника «${alias}» не найден`);
+    return UNDEFINED;
+  }
   let tableRef = ctx.sources.get(alias);
   for (let i = 0; i < path.length; i += 1) {
     if (!cur) return UNDEFINED;
-    const val = cur[path[i]];
+    if (!(path[i] in (cur as Row))) {
+      ctx.warnings.add(`Поле «${path[i]}» не найдено в «${tableRef ?? alias}»`);
+      return UNDEFINED;
+    }
+    const val: BslValue | Row[] = (cur as Row)[path[i]];
     if (i === path.length - 1) return val as BslValue;
     // Промежуточное поле — надо разыменовать ссылку
     if (typeof val === 'string' && tableRef) {
       const targetTable = findRefsField(ctx.fx, tableRef, path[i]);
       if (!targetTable) return UNDEFINED;
-      const nextRow = ctx.fx.tables.get(targetTable)?.byRef.get(val) ?? null;
+      const nextRow: Row | null = ctx.fx.tables.get(targetTable)?.byRef.get(val) ?? null;
       cur = nextRow;
       tableRef = targetTable;
     } else {

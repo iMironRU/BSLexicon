@@ -21,6 +21,7 @@ export function App() {
   const [source, setSource] = useState<string>(() => initialSource());
   const [rowset, setRowset] = useState<Rowset | null>(null);
   const [errors, setErrors] = useState<RunError[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
   const editorRef = useRef<CodeEditor | null>(null);
 
@@ -31,9 +32,11 @@ export function App() {
       if (r.ok) {
         setRowset(r.rowset);
         setErrors([]);
+        setWarnings(r.warnings);
       } else {
         setRowset(null);
         setErrors(r.errors);
+        setWarnings([]);
       }
       setRunning(false);
     });
@@ -120,7 +123,7 @@ export function App() {
             />
           </div>
           <div className="qs-result-pane">
-            <ResultTable rowset={rowset} errors={errors} />
+            <ResultTable rowset={rowset} errors={errors} warnings={warnings} />
           </div>
         </section>
       </main>

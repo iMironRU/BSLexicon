@@ -10,9 +10,10 @@ import { displayValue } from '@core/interpreter/values';
 interface ResultTableProps {
   rowset: Rowset | null;
   errors: RunError[];
+  warnings?: string[];
 }
 
-export function ResultTable({ rowset, errors }: ResultTableProps) {
+export function ResultTable({ rowset, errors, warnings = [] }: ResultTableProps) {
   if (errors.length > 0) {
     return (
       <div className="qs-result qs-result--error">
@@ -35,6 +36,14 @@ export function ResultTable({ rowset, errors }: ResultTableProps) {
   }
   return (
     <div className="qs-result">
+      {warnings.length > 0 && (
+        <div className="qs-result__warnings">
+          <div className="qs-result__label qs-result__label--warn">⚠ Предупреждения:</div>
+          <ul>
+            {warnings.map((w, i) => <li key={i}>{w}</li>)}
+          </ul>
+        </div>
+      )}
       <div className="qs-result__label">
         {rowset.rows.length} {plural(rowset.rows.length, 'строка', 'строки', 'строк')}
       </div>
