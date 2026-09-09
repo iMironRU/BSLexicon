@@ -17,7 +17,6 @@ import { compareValues, isTruthy, toBslString, toNumber, valuesEqual } from '@co
 import type { ParserRuleContext, TerminalNode } from 'antlr4ng';
 import { parseQuery } from './parser/parse';
 import type { Fixture, Row } from './fixture';
-import { rowsOf } from './fixture';
 import {
   AliasContext,
   ColumnContext,
@@ -30,6 +29,7 @@ import {
   MultiStringContext,
   OrderByContext,
   ParameterContext,
+  PredicateContext,
   QueryContext,
   QueryPackageContext,
   SelectQueryContext,
@@ -213,10 +213,61 @@ function readTable(table: TableContext, ctx: QueryCtx, aliasOverride?: string | 
   if (!mdo) throw new QueryRuntimeError('Источник не является объектом метаданных');
 
   const ref = mdoRef(mdo);
-  const rows = rowsOf(ctx.fx, ref);
-  if (rows === null) throw new QueryRuntimeError(`Таблица «${ref}» не найдена в схеме`);
+  const tf = ctx.fx.tables.get(ref);
+  if (!tf) throw new QueryRuntimeError(`Таблица «${ref}» не найдена в схеме`);
+
+  // «Документ.РасходнаяНакладная.Товары» — источником становится табличная
+  // часть, а не сам документ (issue #49). `objectTableName` в грамматике —
+  // третий сегмент после MDO.
+  const objTableName = table._objectTableName?.getText();
+  if (objTableName) {
+    return readTabularSection(ref, tf.table, objTableName, ctx, aliasOverride ?? readAlias(table));
+  }
+
+  const rows = tf.rows;
   const alias = aliasOverride ?? readAlias(table) ?? ref;
   ctx.sources.set(alias, ref);
+  return rows.map((r) => new Map([[alias, r]]) as Snap);
+}
+
+/**
+ * Раскрывает табличную часть документа/справочника в самостоятельный источник
+ * запроса. Каждая строка ТЧ получает синтетическое поле `Ссылка`, указывающее
+ * на владельца — так работает `Т.Ссылка.Реквизит` (разыменование шапки).
+ */
+function readTabularSection(
+  ownerRef: string,
+  ownerTable: import('./types').Table,
+  tsName: string,
+  ctx: QueryCtx,
+  aliasOverride?: string | null,
+): Snap[] {
+  if (ownerTable.kind !== 'Справочник' && ownerTable.kind !== 'Документ') {
+    throw new QueryRuntimeError(`Табличные части есть только у справочников и документов; «${ownerRef}» — ${ownerTable.kind}.`);
+  }
+  const ts = ownerTable.tabular?.find((t) => t.name === tsName);
+  if (!ts) throw new QueryRuntimeError(`Табличная часть «${tsName}» не найдена у «${ownerRef}».`);
+
+  const parent = ctx.fx.tables.get(ownerRef)!;
+  const rows: Row[] = [];
+  for (const parentRow of parent.rows) {
+    const inner = parentRow[ts.name];
+    if (!Array.isArray(inner)) continue;
+    const ownerKey = parentRow['Ссылка'] as BslValue;
+    for (const r of inner) {
+      rows.push({ ...r, Ссылка: ownerKey });
+    }
+  }
+  const alias = aliasOverride ?? `${ownerRef}.${tsName}`;
+  // sources → на владельца, чтобы разыменование Ссылка → шапка работало из
+  // коробки через findRefsField.
+  ctx.sources.set(alias, ownerRef);
+  // Регистрируем список полей источника: реальные поля ТЧ + синтетическая
+  // Ссылка на владельца. `expandAsterisk` использует эти поля для `Т.*`.
+  ctx.virtualFields.set(alias, [
+    { name: 'Ссылка', type: { kind: 'Ссылка', refs: ownerRef } },
+    ...ts.fields,
+  ]);
   return rows.map((r) => new Map([[alias, r]]) as Snap);
 }
 
@@ -229,11 +280,17 @@ function readVirtualTable(vt: VirtualTableContext, ctx: QueryCtx, aliasOverride?
   if (tf.table.kind !== 'РегистрНакопления') {
     throw new QueryRuntimeError(`Виртуальные таблицы поддержаны только для регистров накопления (сведений — см. #47). «${ref}» — ${tf.table.kind}.`);
   }
-  if (tf.table.view !== 'Остатки') {
-    throw new QueryRuntimeError(`Регистр «${ref}» имеет view: '${tf.table.view}' — виртуальные Остатки/Обороты доступны только для view: 'Остатки'`);
-  }
 
   const method = virtualMethod(vt);
+  // .Остатки и .ОстаткиИОбороты живут только у регистра остатков (в справке
+  // 1С прямо: «Таблица существует только для регистров остатков»). .Обороты —
+  // у обоих видов (см. #51).
+  if ((method === 'Остатки' || method === 'ОстаткиИОбороты') && tf.table.view !== 'Остатки') {
+    throw new QueryRuntimeError(
+      `Регистр «${ref}» — оборотный (view: 'Обороты'). ` +
+      `Виртуальная ${method} доступна только для регистров остатков; используй .Обороты.`,
+    );
+  }
   const params = collectVirtualParams(vt, ctx);
   const materialized = materializeVirtual(ctx.fx, { ref, method, params });
 
@@ -459,6 +516,11 @@ function evalNode(node: ParserRuleContext | TerminalNode, snap: Snap, ctx: Query
   if (node instanceof MultiStringContext) return unquoteString(node.getText());
   if (node instanceof ParameterContext) return NULL; // параметры &Имя — пусты (для MVP)
 
+  // Predicate с префиксными НЕ — грамматика: `predicate: NOT* (…)`.
+  // Отдельно от общего binary-fallback: там `НЕ` без пары ошибочно
+  // роняло всё в UNDEFINED (issue #52).
+  if (node instanceof PredicateContext) return evalPredicate(node, snap, ctx, bucket);
+
   // Функция (агрегат / скалярная)
   const funcResult = maybeEvalFunction(node, snap, ctx, bucket);
   if (funcResult !== NOT_A_FUNC) return funcResult;
@@ -509,6 +571,26 @@ function evalNode(node: ParserRuleContext | TerminalNode, snap: Snap, ctx: Query
   }
 
   return UNDEFINED;
+}
+
+/**
+ * Predicate := NOT* (booleanPredicate | likePredicate | comparePredicate | …).
+ * Считаем внутренний предикат, потом применяем чётное/нечётное число НЕ.
+ */
+function evalPredicate(node: PredicateContext, snap: Snap, ctx: QueryCtx, bucket: Snap[] | null): BslValue {
+  const notCount = node.NOT().length;
+  const inner =
+    node._booleanPredicate
+    ?? node.comparePredicate()
+    ?? node.isNullPredicate()
+    ?? node.likePredicate()
+    ?? node.betweenPredicate()
+    ?? node.inPredicate()
+    ?? node.refsPredicate()
+    ?? node.logicalExpression(); // (LPAREN logicalExpression RPAREN)
+  const v = inner ? evalNode(inner, snap, ctx, bucket) : UNDEFINED;
+  if (notCount % 2 === 1) return !isTruthy(v);
+  return v;
 }
 
 const NOT_A_FUNC = Symbol('not-a-func');
@@ -629,6 +711,9 @@ function evalColumn(node: ColumnContext, snap: Snap, ctx: QueryCtx): BslValue {
     return UNDEFINED;
   }
   let tableRef = ctx.sources.get(alias);
+  // Первый шаг может опираться на override для виртуальных / табличных
+  // источников (напр. синтетическая Ссылка табличной части — issue #49).
+  let firstStep = true;
   for (let i = 0; i < path.length; i += 1) {
     if (!cur) return UNDEFINED;
     if (!(path[i] in (cur as Row))) {
@@ -639,7 +724,8 @@ function evalColumn(node: ColumnContext, snap: Snap, ctx: QueryCtx): BslValue {
     if (i === path.length - 1) return val as BslValue;
     // Промежуточное поле — надо разыменовать ссылку
     if (typeof val === 'string' && tableRef) {
-      const targetTable = findRefsField(ctx.fx, tableRef, path[i]);
+      const overrideRefs = firstStep ? findRefsInVirtualFields(ctx, alias, path[i]) : null;
+      const targetTable = overrideRefs ?? findRefsField(ctx.fx, tableRef, path[i]);
       if (!targetTable) return UNDEFINED;
       const nextRow: Row | null = ctx.fx.tables.get(targetTable)?.byRef.get(val) ?? null;
       cur = nextRow;
@@ -647,8 +733,18 @@ function evalColumn(node: ColumnContext, snap: Snap, ctx: QueryCtx): BslValue {
     } else {
       return UNDEFINED;
     }
+    firstStep = false;
   }
   return UNDEFINED;
+}
+
+/** Ищет тип-ссылку в переопределённых полях источника (табличная часть, виртуальная таблица). */
+function findRefsInVirtualFields(ctx: QueryCtx, alias: string, fieldName: string): string | null {
+  const fields = ctx.virtualFields.get(alias);
+  if (!fields) return null;
+  const f = fields.find((f) => f.name === fieldName);
+  if (f && f.type.kind === 'Ссылка') return f.type.refs;
+  return null;
 }
 
 /** Возвращает `refs` для поля таблицы (`Справочник.Номенклатура`). */
