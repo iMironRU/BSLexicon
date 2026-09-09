@@ -115,6 +115,7 @@ export default defineConfig(({ command }) => ({
         eventsHelp: fileURLToPath(new URL('./help/events/index.html', import.meta.url)),
         judgeHelp: fileURLToPath(new URL('./help/judge/index.html', import.meta.url)),
         notebook: fileURLToPath(new URL('./notebook/index.html', import.meta.url)),
+        query: fileURLToPath(new URL('./query/index.html', import.meta.url)),
       },
     },
   },
