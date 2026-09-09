@@ -8,6 +8,8 @@ import type { Field, Schema, Table } from '../query/types';
 interface SchemaPanelProps {
   schema: Schema;
   onInsertText: (text: string) => void;
+  /** Клик по строке-таблице — заменить содержимое редактора на `ВЫБРАТЬ * ИЗ Kind.Name`. */
+  onShowTable: (ref: string) => void;
 }
 
 const KIND_LABEL: { [k in Table['kind']]: string } = {
@@ -19,7 +21,7 @@ const KIND_LABEL: { [k in Table['kind']]: string } = {
 
 const KIND_ORDER: Table['kind'][] = ['Справочник', 'Документ', 'РегистрНакопления', 'РегистрСведений'];
 
-export function SchemaPanel({ schema, onInsertText }: SchemaPanelProps) {
+export function SchemaPanel({ schema, onInsertText, onShowTable }: SchemaPanelProps) {
   const groups = useMemo(() => {
     const map = new Map<Table['kind'], Table[]>();
     for (const t of schema.tables) {
@@ -41,7 +43,7 @@ export function SchemaPanel({ schema, onInsertText }: SchemaPanelProps) {
             <summary>{KIND_LABEL[kind]}</summary>
             <ul className="qs-schema__list">
               {items.map((t) => (
-                <TableItem key={t.name} table={t} onInsertText={onInsertText} />
+                <TableItem key={t.name} table={t} onInsertText={onInsertText} onShowTable={onShowTable} />
               ))}
             </ul>
           </details>
@@ -51,7 +53,7 @@ export function SchemaPanel({ schema, onInsertText }: SchemaPanelProps) {
   );
 }
 
-function TableItem({ table, onInsertText }: { table: Table; onInsertText: (t: string) => void }) {
+function TableItem({ table, onInsertText, onShowTable }: { table: Table; onInsertText: (t: string) => void; onShowTable: (ref: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = `${table.kind}.${table.name}`;
   const fields = fieldsOf(table);
@@ -73,6 +75,15 @@ function TableItem({ table, onInsertText }: { table: Table; onInsertText: (t: st
           title={`Вставить: ${ref}`}
         >
           {table.name}
+        </button>
+        <button
+          type="button"
+          className="qs-schema__view"
+          onClick={() => onShowTable(ref)}
+          title="Показать содержимое таблицы (ВЫБРАТЬ * ИЗ …)"
+          aria-label="Показать содержимое"
+        >
+          👁
         </button>
       </div>
       {open && (

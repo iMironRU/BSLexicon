@@ -3,6 +3,7 @@ import MonacoEditor from '@monaco-editor/react';
 import type { BeforeMount, OnMount } from '@monaco-editor/react';
 import { SchemaPanel } from './SchemaPanel';
 import { ResultTable } from './ResultTable';
+import { ExamplesModal } from './ExamplesModal';
 import { loadEmbeddedFixture } from './embedded-fixture';
 import { registerSdblLanguage, SDBL_LANGUAGE_ID, SDBL_THEME_ID } from './monaco-lang';
 import { registerSdblProviders } from './monaco-providers';
@@ -24,6 +25,7 @@ export function App() {
   const [errors, setErrors] = useState<RunError[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
+  const [examplesOpen, setExamplesOpen] = useState(false);
   const editorRef = useRef<CodeEditor | null>(null);
 
   const handleRun = useCallback((): void => {
@@ -79,6 +81,29 @@ export function App() {
     editor.focus();
   }, []);
 
+  const handleShowTable = useCallback((ref: string): void => {
+    // Заменяем содержимое редактора на «ВЫБРАТЬ * ИЗ Kind.Name»
+    // и сразу выполняем — так пользователь мгновенно видит таблицу.
+    const next = `ВЫБРАТЬ *\nИЗ ${ref}`;
+    setSource(next);
+    Promise.resolve().then(() => {
+      const r = runQuery(next, fixture);
+      if (r.ok) {
+        setRowset(r.rowset);
+        setErrors([]);
+        setWarnings(r.warnings);
+      } else {
+        setRowset(null);
+        setErrors(r.errors);
+        setWarnings([]);
+      }
+    });
+  }, [fixture]);
+
+  const handlePickExample = useCallback((next: string): void => {
+    setSource(next);
+  }, []);
+
   return (
     <div className="qs-app">
       <header className="qs-header">
@@ -92,6 +117,14 @@ export function App() {
           <a href={`${import.meta.env.BASE_URL}help/`} title="Справочник">Справочник</a>
         </nav>
         <div className="qs-header__actions">
+          <button
+            type="button"
+            className="qs-btn qs-btn--secondary"
+            onClick={() => setExamplesOpen(true)}
+            title="Галерея демо-запросов"
+          >
+            📖 Примеры
+          </button>
           <button type="button" className="qs-btn qs-btn--run" onClick={handleRun} disabled={running} title="Ctrl+Enter">
             ▶ Выполнить
           </button>
@@ -100,7 +133,11 @@ export function App() {
 
       <main className="qs-main">
         <aside className="qs-side">
-          <SchemaPanel schema={fixture.schema} onInsertText={handleInsertText} />
+          <SchemaPanel
+            schema={fixture.schema}
+            onInsertText={handleInsertText}
+            onShowTable={handleShowTable}
+          />
         </aside>
         <section className="qs-work">
           <div className="qs-editor">
@@ -129,8 +166,11 @@ export function App() {
         </section>
       </main>
 
-      <HelpFooter hint="Ctrl+Enter — выполнить · Клик по таблице/полю — вставить" />
+      <HelpFooter hint="Ctrl+Enter — выполнить · Клик по таблице/полю — вставить · 👁 — показать содержимое" />
       <PwaBanners />
+      {examplesOpen && (
+        <ExamplesModal onPick={handlePickExample} onClose={() => setExamplesOpen(false)} />
+      )}
     </div>
   );
 }

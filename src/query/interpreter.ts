@@ -131,11 +131,11 @@ function execQuery(q: QueryContext, fx: Fixture): ExecResult {
   const filtered = q._where ? snaps.filter((s) => isTruthy(evalNode(q._where!, s, ctx, null))) : snaps;
 
   // SELECT
-  const columnSpecs = collectSelectedFields(q);
+  const columnSpecs = collectSelectedFields(q, ctx);
 
   // GROUP BY / HAVING / агрегаты
   const groupExprs = q._groupBy ?? [];
-  const hasAgg = columnSpecs.some((c) => containsAggregate(c.expr));
+  const hasAgg = columnSpecs.some((c) => c.kind === 'expr' && containsAggregate(c.expr));
 
   if (groupExprs.length > 0 || hasAgg) {
     const groups = new Map<string, Snap[]>();
@@ -152,13 +152,26 @@ function execQuery(q: QueryContext, fx: Fixture): ExecResult {
     const rows: BslValue[][] = [];
     for (const bucket of groups.values()) {
       if (q._having && !isTruthy(evalNode(q._having, bucket[0] ?? new Map(), ctx, bucket))) continue;
-      rows.push(columnSpecs.map((c) => evalNode(c.expr, bucket[0] ?? new Map(), ctx, bucket)));
+      rows.push(columnSpecs.map((c) => evalOutputColumn(c, bucket[0] ?? new Map(), ctx, bucket)));
     }
     return { rowset: { columns: columnSpecs.map((c) => c.name), rows }, warnings: [...ctx.warnings] };
   }
 
-  const rows: BslValue[][] = filtered.map((s) => columnSpecs.map((c) => evalNode(c.expr, s, ctx, null)));
+  const rows: BslValue[][] = filtered.map((s) => columnSpecs.map((c) => evalOutputColumn(c, s, ctx, null)));
   return { rowset: { columns: columnSpecs.map((c) => c.name), rows }, warnings: [...ctx.warnings] };
+}
+
+/** Универсальный eval итоговой колонки: раскрытая `*` → прямое чтение поля, иначе expr. */
+function evalOutputColumn(c: ColumnSpec, snap: Snap, ctx: QueryCtx, bucket: Snap[] | null): BslValue {
+  if (c.kind === 'field') {
+    const row = snap.get(c.sourceAlias);
+    if (!row) return UNDEFINED;
+    const v = (row as Row)[c.fieldName];
+    // Табличные части — Row[] — не выводим в результат: показываем счёт.
+    if (Array.isArray(v)) return `<таб. часть: ${v.length}>`;
+    return v as BslValue;
+  }
+  return evalNode(c.expr, snap, ctx, bucket);
 }
 
 // ── Источники ─────────────────────────────────────────────────────
@@ -175,21 +188,23 @@ function collectDataSources(dataSources: DataSourceContext[], ctx: QueryCtx): Sn
     if (ds.subquery?.()) throw new QueryRuntimeError('Подзапросы в FROM пока не поддерживаются');
     const primary = ds.table();
     if (!primary) throw new QueryRuntimeError('Некорректный источник ИЗ');
-    let snaps = readTable(primary, ctx);
+    // alias находится в DataSourceContext (sibling с table), не в TableContext
+    const alias = readAlias(ds);
+    let snaps = readTable(primary, ctx, alias);
     for (const j of ds._joins ?? []) snaps = applyJoin(snaps, j, ctx);
     out = out === null ? snaps : cross(out, snaps);
   }
   return out ?? [];
 }
 
-function readTable(table: TableContext, ctx: QueryCtx): Snap[] {
+function readTable(table: TableContext, ctx: QueryCtx, aliasOverride?: string | null): Snap[] {
   const mdo = table.mdo();
   if (!mdo) throw new QueryRuntimeError('Источник не является объектом метаданных');
 
   const ref = mdoRef(mdo);
   const rows = rowsOf(ctx.fx, ref);
   if (rows === null) throw new QueryRuntimeError(`Таблица «${ref}» не найдена в схеме`);
-  const alias = readAlias(table) ?? ref;
+  const alias = aliasOverride ?? readAlias(table) ?? ref;
   ctx.sources.set(alias, ref);
   return rows.map((r) => new Map([[alias, r]]) as Snap);
 }
@@ -253,21 +268,68 @@ function cross(a: Snap[], b: Snap[]): Snap[] {
 
 // ── SELECT list ────────────────────────────────────────────────────
 
-interface ColumnSpec { name: string; expr: ExpressionContext | LogicalExpressionContext; }
+/**
+ * Одна колонка результата:
+ *  - `kind: 'expr'` — обычное выражение, вычисляется через evalNode;
+ *  - `kind: 'field'` — раскрытая `*` / `Т.*` — прямое чтение поля
+ *    без парсинга выражения.
+ */
+type ColumnSpec =
+  | { name: string; kind: 'expr'; expr: ExpressionContext | LogicalExpressionContext }
+  | { name: string; kind: 'field'; sourceAlias: string; fieldName: string };
 
-function collectSelectedFields(q: QueryContext): ColumnSpec[] {
+function collectSelectedFields(q: QueryContext, ctx: QueryCtx): ColumnSpec[] {
   const container = q._columns;
   if (!container) throw new QueryRuntimeError('Отсутствует список полей ВЫБРАТЬ');
   const fields = container.selectedField();
   const out: ColumnSpec[] = [];
   for (const f of fields) {
-    if (f.asteriskField()) throw new QueryRuntimeError('ВЫБРАТЬ * пока не поддерживается — укажи явные поля');
+    const aster = f.asteriskField();
+    if (aster) {
+      // Т.* → только поля источника Т; * → все поля всех источников
+      const idents = aster.identifier();
+      const targetAlias = idents.length > 0 ? idents[idents.length - 1].getText() : null;
+      const expanded = expandAsterisk(ctx, targetAlias);
+      out.push(...expanded);
+      continue;
+    }
     const exprField = f.expressionField();
     if (!exprField) throw new QueryRuntimeError('Не удалось разобрать поле ВЫБРАТЬ');
     const expr = exprField.expression() ?? exprField.logicalExpression();
     if (!expr) throw new QueryRuntimeError('Не удалось разобрать выражение поля');
     const alias = readAlias(f) ?? defaultAliasFromExpr(expr);
-    out.push({ name: alias, expr });
+    out.push({ name: alias, kind: 'expr', expr });
+  }
+  return out;
+}
+
+/** Раскрывает `*` / `Т.*` в список полей активных источников. */
+function expandAsterisk(ctx: QueryCtx, only: string | null): ColumnSpec[] {
+  const out: ColumnSpec[] = [];
+  const takenNames = new Map<string, number>();
+  for (const [alias, tableRef] of ctx.sources) {
+    if (only && alias !== only) continue;
+    const table = ctx.fx.tables.get(tableRef)?.table;
+    if (!table) continue;
+    const fields = tableRef.startsWith('Справочник.') || tableRef.startsWith('Документ.')
+      ? (table as { fields?: { name: string }[] }).fields ?? []
+      : [
+          ...(table as { dimensions?: { name: string }[] }).dimensions ?? [],
+          ...(table as { resources?: { name: string }[] }).resources ?? [],
+          ...(table as { attributes?: { name: string }[] }).attributes ?? [],
+        ];
+    for (const f of fields) {
+      let name = f.name;
+      // При объединении полей из нескольких источников имена коллизят —
+      // добавляем суффикс алиаса, чтобы каждая колонка была уникальна.
+      const seen = takenNames.get(name) ?? 0;
+      if (seen > 0) name = `${f.name}${seen + 1}`;
+      takenNames.set(f.name, seen + 1);
+      out.push({ name, kind: 'field', sourceAlias: alias, fieldName: f.name });
+    }
+  }
+  if (out.length === 0 && only) {
+    throw new QueryRuntimeError(`Источник «${only}» не найден в ИЗ`);
   }
   return out;
 }

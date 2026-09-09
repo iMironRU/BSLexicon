@@ -23,6 +23,39 @@ function run(source: string) {
   return r.rowset;
 }
 
+describe('ВЫБРАТЬ *', () => {
+  it('раскрывается в поля таблицы', () => {
+    const r = run('ВЫБРАТЬ * ИЗ Справочник.Склады');
+    expect(r.columns).toContain('Ссылка');
+    expect(r.columns).toContain('Код');
+    expect(r.columns).toContain('Наименование');
+    expect(r.columns).toContain('ПометкаУдаления');
+    expect(r.rows.length).toBe(2);
+  });
+
+  it('Т.* — только поля этого источника', () => {
+    const r = run(`
+      ВЫБРАТЬ С.*
+      ИЗ Документ.РасходнаяНакладная КАК Н
+      ЛЕВОЕ СОЕДИНЕНИЕ Справочник.Склады КАК С ПО Н.Склад = С.Ссылка
+    `);
+    // Только поля Складов
+    expect(r.columns).toContain('Наименование');
+    expect(r.columns).not.toContain('Номер');
+  });
+
+  it('* по нескольким источникам собирает всё с суффиксами при коллизиях', () => {
+    const r = run(`
+      ВЫБРАТЬ *
+      ИЗ Справочник.Номенклатура КАК Н
+      ВНУТРЕННЕЕ СОЕДИНЕНИЕ Справочник.Контрагенты КАК К ПО ИСТИНА
+    `);
+    // Ссылка есть у обеих — вторая пусть с суффиксом
+    const refCols = r.columns.filter((c) => c.startsWith('Ссылка'));
+    expect(refCols.length).toBe(2);
+  });
+});
+
 describe('SELECT минимум', () => {
   it('одиночное поле', () => {
     const r = run('ВЫБРАТЬ Наименование ИЗ Справочник.Номенклатура');
