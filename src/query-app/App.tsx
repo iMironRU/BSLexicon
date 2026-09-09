@@ -161,7 +161,7 @@ export function App() {
             />
           </div>
           <div className="qs-result-pane">
-            <ResultTable rowset={rowset} errors={errors} warnings={warnings} />
+            <ResultTable rowset={rowset} errors={errors} warnings={warnings} fixture={fixture} />
           </div>
         </section>
       </main>

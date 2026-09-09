@@ -2,18 +2,28 @@
  * Таблица результата запроса. Простая HTML `<table>` — без пагинации
  * пока (учебные объёмы <10K строк, помещаются). Число ← правый край,
  * строка ← левый.
+ *
+ * Ссылки на объекты фикстуры отображаются как «Представление» (#48):
+ *   - Справочник → Наименование
+ *   - Документ  → №<Номер> от <Дата>
+ * Тултип показывает сырой ключ. Тумблер «сырые ключи» отключает подмену.
  */
+import { useState } from 'react';
 import type { BslValue } from '@core/index';
 import type { Rowset, RunError } from '../query/interpreter';
-import { displayValue } from '@core/interpreter/values';
+import type { Fixture } from '../query/fixture';
+import { present } from './presentation';
 
 interface ResultTableProps {
   rowset: Rowset | null;
   errors: RunError[];
   warnings?: string[];
+  fixture: Fixture;
 }
 
-export function ResultTable({ rowset, errors, warnings = [] }: ResultTableProps) {
+export function ResultTable({ rowset, errors, warnings = [], fixture }: ResultTableProps) {
+  const [showRaw, setShowRaw] = useState(false);
+
   if (errors.length > 0) {
     return (
       <div className="qs-result qs-result--error">
@@ -44,8 +54,18 @@ export function ResultTable({ rowset, errors, warnings = [] }: ResultTableProps)
           </ul>
         </div>
       )}
-      <div className="qs-result__label">
-        {rowset.rows.length} {plural(rowset.rows.length, 'строка', 'строки', 'строк')}
+      <div className="qs-result__toolbar">
+        <div className="qs-result__label">
+          {rowset.rows.length} {plural(rowset.rows.length, 'строка', 'строки', 'строк')}
+        </div>
+        <label className="qs-result__toggle" title="Показывать внутренние ключи вместо представлений — только для отладки">
+          <input
+            type="checkbox"
+            checked={showRaw}
+            onChange={(e) => setShowRaw(e.target.checked)}
+          />
+          сырые ключи
+        </label>
       </div>
       <div className="qs-result__scroll">
         <table className="qs-table">
@@ -57,11 +77,7 @@ export function ResultTable({ rowset, errors, warnings = [] }: ResultTableProps)
           <tbody>
             {rowset.rows.map((row, ri) => (
               <tr key={ri}>
-                {row.map((v, ci) => (
-                  <td key={ci} className={typeof v === 'number' ? 'qs-cell--num' : ''}>
-                    {renderValue(v)}
-                  </td>
-                ))}
+                {row.map((v, ci) => <Cell key={ci} value={v} fixture={fixture} showRaw={showRaw} />)}
               </tr>
             ))}
           </tbody>
@@ -71,15 +87,17 @@ export function ResultTable({ rowset, errors, warnings = [] }: ResultTableProps)
   );
 }
 
-function renderValue(v: BslValue): string {
-  if (v === null || v === undefined) return '';
-  if (typeof v === 'boolean') return v ? 'Истина' : 'Ложь';
-  if (typeof v === 'string') return v;
-  if (typeof v === 'number') {
-    if (!Number.isInteger(v)) return v.toFixed(6).replace(/\.?0+$/, '');
-    return String(v);
-  }
-  return displayValue(v);
+function Cell({ value, fixture, showRaw }: { value: BslValue; fixture: Fixture; showRaw: boolean }) {
+  const p = present(value, fixture);
+  const isRef = p.raw !== null;
+  const text = showRaw && isRef ? p.raw! : p.display;
+  const numeric = typeof value === 'number';
+  const classes = [
+    numeric ? 'qs-cell--num' : '',
+    isRef ? 'qs-cell--ref' : '',
+  ].filter(Boolean).join(' ');
+  const title = isRef ? `${p.targetRef ?? '?'} · ${p.raw}` : undefined;
+  return <td className={classes} title={title}>{text}</td>;
 }
 
 function plural(n: number, one: string, few: string, many: string): string {
