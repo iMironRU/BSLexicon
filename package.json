@@ -26,7 +26,7 @@
     "fetch:book-tasks": "tsx scripts/fetch-book-tasks.ts",
     "extract:availability": "tsx scripts/extract-availability-index.ts",
     "import:stubs": "tsx scripts/import-stubs.ts",
-    "gen:sdbl": "antlr4ng -Dlanguage=TypeScript -o src/query/parser/generated -Xexact-output-dir src/query/parser/grammar/SDBLLexer.g4 src/query/parser/grammar/SDBLParser.g4 && tsx scripts/mark-generated.ts src/query/parser/generated",
+    "gen:sdbl": "antlr4ng -Dlanguage=TypeScript -visitor -o src/query/parser/generated -Xexact-output-dir src/query/parser/grammar/SDBLLexer.g4 src/query/parser/grammar/SDBLParser.g4 && tsx scripts/mark-generated.ts src/query/parser/generated",
     "lint": "eslint . --ext .ts,.tsx",
     "verify": "npm run typecheck && npm run check:catalog && npm run test"
   },

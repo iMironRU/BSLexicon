@@ -5,6 +5,8 @@ import * as antlr from "antlr4ng";
 import { Token } from "antlr4ng";
 
 import { SDBLParserListener } from "./SDBLParserListener.js";
+import { SDBLParserVisitor } from "./SDBLParserVisitor.js";
+
 // for running tests with parameters, TODO: discuss strategy for typed parameters in CI
 // eslint-disable-next-line no-unused-vars
 type int = number;
@@ -6019,6 +6021,13 @@ export class QueryPackageContext extends antlr.ParserRuleContext {
              listener.exitQueryPackage(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitQueryPackage) {
+            return visitor.visitQueryPackage(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6043,6 +6052,13 @@ export class QueriesContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitQueries) {
              listener.exitQueries(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitQueries) {
+            return visitor.visitQueries(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -6070,6 +6086,13 @@ export class DropTableQueryContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitDropTableQuery) {
              listener.exitDropTableQuery(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitDropTableQuery) {
+            return visitor.visitDropTableQuery(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -6105,6 +6128,13 @@ export class SelectQueryContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitSelectQuery) {
              listener.exitSelectQuery(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitSelectQuery) {
+            return visitor.visitSelectQuery(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -6145,6 +6175,13 @@ export class SubqueryContext extends antlr.ParserRuleContext {
              listener.exitSubquery(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitSubquery) {
+            return visitor.visitSubquery(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6176,6 +6213,13 @@ export class UnionContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitUnion) {
              listener.exitUnion(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitUnion) {
+            return visitor.visitUnion(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -6341,6 +6385,13 @@ export class QueryContext extends antlr.ParserRuleContext {
              listener.exitQuery(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitQuery) {
+            return visitor.visitQuery(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6370,6 +6421,13 @@ export class LimitationsContext extends antlr.ParserRuleContext {
              listener.exitLimitations(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitLimitations) {
+            return visitor.visitLimitations(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6395,6 +6453,13 @@ export class TopContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitTop) {
              listener.exitTop(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitTop) {
+            return visitor.visitTop(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -6437,6 +6502,13 @@ export class SelectedFieldsContext extends antlr.ParserRuleContext {
              listener.exitSelectedFields(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitSelectedFields) {
+            return visitor.visitSelectedFields(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6473,6 +6545,13 @@ export class SelectedFieldContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitSelectedField) {
              listener.exitSelectedField(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitSelectedField) {
+            return visitor.visitSelectedField(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -6517,6 +6596,13 @@ export class AsteriskFieldContext extends antlr.ParserRuleContext {
              listener.exitAsteriskField(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitAsteriskField) {
+            return visitor.visitAsteriskField(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6543,6 +6629,13 @@ export class ExpressionFieldContext extends antlr.ParserRuleContext {
              listener.exitExpressionField(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitExpressionField) {
+            return visitor.visitExpressionField(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6567,6 +6660,13 @@ export class ColumnFieldContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitColumnField) {
              listener.exitColumnField(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitColumnField) {
+            return visitor.visitColumnField(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -6603,6 +6703,13 @@ export class EmptyTableFieldContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitEmptyTableField) {
              listener.exitEmptyTableField(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitEmptyTableField) {
+            return visitor.visitEmptyTableField(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -6645,6 +6752,13 @@ export class EmptyTableColumnsContext extends antlr.ParserRuleContext {
              listener.exitEmptyTableColumns(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitEmptyTableColumns) {
+            return visitor.visitEmptyTableColumns(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6682,6 +6796,13 @@ export class InlineTableFieldContext extends antlr.ParserRuleContext {
              listener.exitInlineTableField(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitInlineTableField) {
+            return visitor.visitInlineTableField(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6712,6 +6833,13 @@ export class RecordAutoNumberFunctionContext extends antlr.ParserRuleContext {
              listener.exitRecordAutoNumberFunction(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitRecordAutoNumberFunction) {
+            return visitor.visitRecordAutoNumberFunction(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6736,6 +6864,13 @@ export class IndexingItemContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitIndexingItem) {
              listener.exitIndexingItem(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitIndexingItem) {
+            return visitor.visitIndexingItem(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -6788,6 +6923,13 @@ export class IndexingSetContext extends antlr.ParserRuleContext {
              listener.exitIndexingSet(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitIndexingSet) {
+            return visitor.visitIndexingSet(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6831,6 +6973,13 @@ export class OrderByContext extends antlr.ParserRuleContext {
              listener.exitOrderBy(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitOrderBy) {
+            return visitor.visitOrderBy(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6863,6 +7012,13 @@ export class OrdersByExpressionContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitOrdersByExpression) {
              listener.exitOrdersByExpression(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitOrdersByExpression) {
+            return visitor.visitOrdersByExpression(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -6914,6 +7070,13 @@ export class TotalByContext extends antlr.ParserRuleContext {
              listener.exitTotalBy(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitTotalBy) {
+            return visitor.visitTotalBy(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -6951,6 +7114,13 @@ export class TotalsGroupContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitTotalsGroup) {
              listener.exitTotalsGroup(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitTotalsGroup) {
+            return visitor.visitTotalsGroup(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -7033,6 +7203,13 @@ export class PeriodicContext extends antlr.ParserRuleContext {
              listener.exitPeriodic(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitPeriodic) {
+            return visitor.visitPeriodic(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -7075,6 +7252,13 @@ export class ColumnContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitColumn) {
              listener.exitColumn(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitColumn) {
+            return visitor.visitColumn(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -7135,6 +7319,13 @@ export class ExpressionContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitExpression) {
              listener.exitExpression(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitExpression) {
+            return visitor.visitExpression(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -7233,6 +7424,13 @@ export class PrimitiveExpressionContext extends antlr.ParserRuleContext {
              listener.exitPrimitiveExpression(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitPrimitiveExpression) {
+            return visitor.visitPrimitiveExpression(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -7279,6 +7477,13 @@ export class CaseExpressionContext extends antlr.ParserRuleContext {
              listener.exitCaseExpression(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitCaseExpression) {
+            return visitor.visitCaseExpression(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -7314,6 +7519,13 @@ export class CaseBranchContext extends antlr.ParserRuleContext {
              listener.exitCaseBranch(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitCaseBranch) {
+            return visitor.visitCaseBranch(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -7346,6 +7558,13 @@ export class BracketExpressionContext extends antlr.ParserRuleContext {
              listener.exitBracketExpression(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitBracketExpression) {
+            return visitor.visitBracketExpression(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -7370,6 +7589,13 @@ export class UnaryExpressionContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitUnaryExpression) {
              listener.exitUnaryExpression(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitUnaryExpression) {
+            return visitor.visitUnaryExpression(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -7422,6 +7648,13 @@ export class FunctionCallContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitFunctionCall) {
              listener.exitFunctionCall(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitFunctionCall) {
+            return visitor.visitFunctionCall(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -7637,6 +7870,13 @@ export class BuiltInFunctionsContext extends antlr.ParserRuleContext {
              listener.exitBuiltInFunctions(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitBuiltInFunctions) {
+            return visitor.visitBuiltInFunctions(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -7686,6 +7926,13 @@ export class AggregateFunctionsContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitAggregateFunctions) {
              listener.exitAggregateFunctions(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitAggregateFunctions) {
+            return visitor.visitAggregateFunctions(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -7784,6 +8031,13 @@ export class ValueFunctionContext extends antlr.ParserRuleContext {
              listener.exitValueFunction(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitValueFunction) {
+            return visitor.visitValueFunction(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -7863,6 +8117,13 @@ export class CastFunctionContext extends antlr.ParserRuleContext {
              listener.exitCastFunction(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitCastFunction) {
+            return visitor.visitCastFunction(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -7910,6 +8171,13 @@ export class LogicalExpressionContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitLogicalExpression) {
              listener.exitLogicalExpression(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitLogicalExpression) {
+            return visitor.visitLogicalExpression(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -7972,6 +8240,13 @@ export class PredicateContext extends antlr.ParserRuleContext {
              listener.exitPredicate(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitPredicate) {
+            return visitor.visitPredicate(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8020,6 +8295,13 @@ export class LikePredicateContext extends antlr.ParserRuleContext {
              listener.exitLikePredicate(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitLikePredicate) {
+            return visitor.visitLikePredicate(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8050,6 +8332,13 @@ export class IsNullPredicateContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitIsNullPredicate) {
              listener.exitIsNullPredicate(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitIsNullPredicate) {
+            return visitor.visitIsNullPredicate(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -8100,6 +8389,13 @@ export class ComparePredicateContext extends antlr.ParserRuleContext {
              listener.exitComparePredicate(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitComparePredicate) {
+            return visitor.visitComparePredicate(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8133,6 +8429,13 @@ export class BetweenPredicateContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitBetweenPredicate) {
              listener.exitBetweenPredicate(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitBetweenPredicate) {
+            return visitor.visitBetweenPredicate(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -8204,6 +8507,13 @@ export class InPredicateContext extends antlr.ParserRuleContext {
              listener.exitInPredicate(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitInPredicate) {
+            return visitor.visitInPredicate(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8231,6 +8541,13 @@ export class RefsPredicateContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitRefsPredicate) {
              listener.exitRefsPredicate(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitRefsPredicate) {
+            return visitor.visitRefsPredicate(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -8273,6 +8590,13 @@ export class ExpressionListContext extends antlr.ParserRuleContext {
              listener.exitExpressionList(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitExpressionList) {
+            return visitor.visitExpressionList(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8297,6 +8621,13 @@ export class ExpressionListItemContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitExpressionListItem) {
              listener.exitExpressionListItem(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitExpressionListItem) {
+            return visitor.visitExpressionListItem(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -8337,6 +8668,13 @@ export class DataSourcesContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitDataSources) {
              listener.exitDataSources(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitDataSources) {
+            return visitor.visitDataSources(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -8397,6 +8735,13 @@ export class DataSourceContext extends antlr.ParserRuleContext {
              listener.exitDataSource(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitDataSource) {
+            return visitor.visitDataSource(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8426,6 +8771,13 @@ export class TableContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitTable) {
              listener.exitTable(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitTable) {
+            return visitor.visitTable(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -8528,6 +8880,13 @@ export class VirtualTableContext extends antlr.ParserRuleContext {
              listener.exitVirtualTable(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitVirtualTable) {
+            return visitor.visitVirtualTable(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8551,6 +8910,13 @@ export class VirtualTableParameterContext extends antlr.ParserRuleContext {
              listener.exitVirtualTableParameter(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitVirtualTableParameter) {
+            return visitor.visitVirtualTableParameter(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8572,6 +8938,13 @@ export class ParameterTableContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitParameterTable) {
              listener.exitParameterTable(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitParameterTable) {
+            return visitor.visitParameterTable(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -8626,6 +8999,13 @@ export class ExternalDataSourceTableContext extends antlr.ParserRuleContext {
              listener.exitExternalDataSourceTable(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitExternalDataSourceTable) {
+            return visitor.visitExternalDataSourceTable(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8669,6 +9049,13 @@ export class JoinPartContext extends antlr.ParserRuleContext {
              listener.exitJoinPart(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitJoinPart) {
+            return visitor.visitJoinPart(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8694,6 +9081,13 @@ export class RightJoinContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitRightJoin) {
              listener.exitRightJoin(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitRightJoin) {
+            return visitor.visitRightJoin(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -8723,6 +9117,13 @@ export class LeftJoinContext extends antlr.ParserRuleContext {
              listener.exitLeftJoin(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitLeftJoin) {
+            return visitor.visitLeftJoin(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8748,6 +9149,13 @@ export class FullJoinContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitFullJoin) {
              listener.exitFullJoin(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitFullJoin) {
+            return visitor.visitFullJoin(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -8777,6 +9185,13 @@ export class InnerJoinContext extends antlr.ParserRuleContext {
              listener.exitInnerJoin(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitInnerJoin) {
+            return visitor.visitInnerJoin(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8804,6 +9219,13 @@ export class AliasContext extends antlr.ParserRuleContext {
              listener.exitAlias(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitAlias) {
+            return visitor.visitAlias(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8828,6 +9250,13 @@ export class DatePartContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitDatePart) {
              listener.exitDatePart(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitDatePart) {
+            return visitor.visitDatePart(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -8859,6 +9288,13 @@ export class MultiStringContext extends antlr.ParserRuleContext {
              listener.exitMultiString(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitMultiString) {
+            return visitor.visitMultiString(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -8883,6 +9319,13 @@ export class SignContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitSign) {
              listener.exitSign(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitSign) {
+            return visitor.visitSign(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -9208,6 +9651,13 @@ export class IdentifierContext extends antlr.ParserRuleContext {
              listener.exitIdentifier(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitIdentifier) {
+            return visitor.visitIdentifier(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -9258,6 +9708,13 @@ export class TemporaryTableIdentifierContext extends antlr.ParserRuleContext {
              listener.exitTemporaryTableIdentifier(this);
         }
     }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitTemporaryTableIdentifier) {
+            return visitor.visitTemporaryTableIdentifier(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
 }
 
 
@@ -9283,6 +9740,13 @@ export class ParameterContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitParameter) {
              listener.exitParameter(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitParameter) {
+            return visitor.visitParameter(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
@@ -9365,6 +9829,13 @@ export class MdoContext extends antlr.ParserRuleContext {
     public override exitRule(listener: SDBLParserListener): void {
         if(listener.exitMdo) {
              listener.exitMdo(this);
+        }
+    }
+    public override accept<Result>(visitor: SDBLParserVisitor<Result>): Result | null {
+        if (visitor.visitMdo) {
+            return visitor.visitMdo(this);
+        } else {
+            return visitor.visitChildren(this);
         }
     }
 }
