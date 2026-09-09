@@ -173,6 +173,37 @@ export async function fetchNotebookFromSrc(
     cells[idx] = { ...cell, task: spec } as Cell;
   }
 
+  // 2b. Резолвим ref в query-ячейках. Ref без расширения → пара .schema.yaml +
+  // .data.yaml. Если что-то одно из пары не подгрузилось, оба поля
+  // сохраняем как inline (обычно inline — это `mini-erp`, дефолт),
+  // и добавляем warning; ячейка работает на дефолте.
+  const queryCells = cells
+    .map((c, idx) => ({ c, idx }))
+    .filter(({ c }) => c.type === 'query' && c.ref);
+  const queryResolved = await Promise.all(
+    queryCells.map(async ({ idx, c }) => {
+      const ref = (c as { ref?: string }).ref!;
+      const schemaUrl = resolveRefUrl(source, `${ref}.schema.yaml`);
+      const dataUrl = resolveRefUrl(source, `${ref}.data.yaml`);
+      try {
+        const [sr, dr] = await Promise.all([fetchFn(schemaUrl), fetchFn(dataUrl)]);
+        if (!sr.ok) throw new Error(`.schema.yaml: HTTP ${sr.status}`);
+        if (!dr.ok) throw new Error(`.data.yaml: HTTP ${dr.status}`);
+        const [schema, data] = await Promise.all([sr.text(), dr.text()]);
+        return { idx, schema, data };
+      } catch (e) {
+        refWarnings.push(`${ref}: ${(e as Error).message}`);
+        return { idx, schema: null, data: null };
+      }
+    }),
+  );
+  for (const { idx, schema, data } of queryResolved) {
+    if (schema === null || data === null) continue;
+    const cell = cells[idx];
+    if (cell.type !== 'query') continue;
+    cells[idx] = { ...cell, schema, data } as Cell;
+  }
+
   // 3. SHA ветки (best-effort, без токена). Rate-limit публичного API
   // ~60 req/hour на IP — на MVP приемлемо.
   let sha: string | null = null;

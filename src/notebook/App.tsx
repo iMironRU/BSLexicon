@@ -3,6 +3,7 @@ import { Session } from '@core/index';
 import { CodeCell } from './CodeCell';
 import { MarkdownCell } from './MarkdownCell';
 import { TaskCell } from './TaskCell';
+import { QueryCell } from './QueryCell';
 import { NotebooksPanel } from './NotebooksPanel';
 import { clearDraft, loadDraft, saveDraft } from './draft';
 import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
@@ -117,7 +118,9 @@ function NotebookShell() {
       if (!prev) return prev;
       // Overload по литеральному типу — TS не резолвит union, поэтому
       // диспатчим руками.
-      const created = type === 'task' ? newCell('task') : newCell(type);
+      const created = type === 'task' ? newCell('task')
+        : type === 'query' ? newCell('query')
+        : newCell(type);
       return { cells: [...prev.cells, created] };
     });
   }, []);
@@ -346,6 +349,17 @@ function NotebookShell() {
                 onExplanationChange={(v) => updateExplanation(cell.id, v)}
               />
             )}
+            {cell.type === 'query' && (
+              <QueryCell
+                source={cell.source}
+                schema={cell.schema}
+                data={cell.data}
+                onChange={(v) => updateCell(cell.id, v)}
+                readOnly={readOnly}
+                ref={cell.ref}
+                showRefPlaceholder={!!cell.ref && !nbSource}
+              />
+            )}
           </div>
         ))}
 
@@ -359,6 +373,9 @@ function NotebookShell() {
             </button>
             <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('task')}>
               + Задача
+            </button>
+            <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('query')}>
+              + Запрос
             </button>
           </div>
         )}

@@ -40,7 +40,7 @@ export interface LoadedNotebook {
 }
 
 interface StoredCell {
-  t: 'md' | 'code' | 'task';
+  t: 'md' | 'code' | 'task' | 'query';
   s: string;
   task?: TaskSpec;
   ref?: string;
@@ -48,6 +48,9 @@ interface StoredCell {
   task_snapshot?: TaskSpec;
   /** Объяснение решения ученика (#33). */
   explanation?: string;
+  /** Query-ячейка (#42): YAML схемы и данных прямо в файле. */
+  schema?: string;
+  data?: string;
 }
 interface StoredNotebook {
   v: 1;
@@ -140,6 +143,11 @@ export function serializeNotebook(nb: Notebook): string {
         if (c.explanation) cell.explanation = c.explanation;
         return cell;
       }
+      if (c.type === 'query') {
+        const cell: StoredCell = { t: 'query', s: c.source, schema: c.schema, data: c.data };
+        if (c.ref) cell.ref = c.ref;
+        return cell;
+      }
       return { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
     }),
   };
@@ -189,6 +197,17 @@ export function parseAnyFile(text: string): ParsedFile {
       const cell: Cell = { id: nextId(), type: 'task', source: c.s, task: spec };
       if (c.ref && cell.type === 'task') cell.ref = c.ref;
       if (c.explanation && cell.type === 'task') cell.explanation = c.explanation;
+      return cell;
+    }
+    if (c.t === 'query') {
+      const cell: Cell = {
+        id: nextId(),
+        type: 'query',
+        source: c.s,
+        schema: c.schema ?? '',
+        data: c.data ?? '',
+      };
+      if (c.ref) (cell as { ref?: string }).ref = c.ref;
       return cell;
     }
     if (c.t === 'md') return { id: nextId(), type: 'markdown', source: c.s };

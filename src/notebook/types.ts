@@ -14,7 +14,7 @@
  */
 import type { TaskTest } from '../judge/types';
 
-export type CellType = 'markdown' | 'code' | 'task';
+export type CellType = 'markdown' | 'code' | 'task' | 'query';
 
 export interface MarkdownCellData {
   id: string;
@@ -56,7 +56,28 @@ export interface TaskCellData {
   explanation?: string;
 }
 
-export type Cell = MarkdownCellData | CodeCellData | TaskCellData;
+/**
+ * Query-ячейка (#42): SDBL-запрос против встроенной схемы + данных.
+ * Схема/данные хранятся как YAML-строки прямо в ячейке — либо inline
+ * (созданы автором вручную), либо подгружаются через `ref` из репо
+ * педагога аналогично task-ячейкам. `ref` — путь без расширения,
+ * например `datasets/mini-erp`; резолвится в пару файлов
+ * `<ref>.schema.yaml` и `<ref>.data.yaml`.
+ */
+export interface QueryCellData {
+  id: string;
+  type: 'query';
+  /** Текст запроса — то, что редактирует ученик. */
+  source: string;
+  /** YAML схемы (Kind, поля, размерности…). */
+  schema: string;
+  /** YAML данных (записи справочников, движения регистров…). */
+  data: string;
+  /** Опциональная ссылка на пару .schema.yaml/.data.yaml в репо педагога. */
+  ref?: string;
+}
+
+export type Cell = MarkdownCellData | CodeCellData | TaskCellData | QueryCellData;
 
 export interface Notebook {
   cells: Cell[];

@@ -307,6 +307,51 @@
   min-height: 66px;
 }
 
+/* ── query cell (#42) ──────────────────────────────────────── */
+
+.nb-cell--query .nb-cell__editor {
+  min-height: 66px;
+}
+
+.nb-cell__query-hint {
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #808080;
+  background: #1e1e1e;
+  border-bottom: 1px solid #333;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.nb-cell__ref-placeholder {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #dcb27a;
+  background: #2a2114;
+  border-bottom: 1px solid #7a5a20;
+}
+
+.nb-cell__ref-placeholder code {
+  color: #ce9178;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.nb-cell__ref-placeholder--error {
+  color: #f48771;
+  background: #2a1414;
+  border-bottom-color: #7a2a2a;
+}
+
+.nb-cell__query-result {
+  border-top: 1px solid #333;
+  background: #1e1e1e;
+  max-height: 400px;
+  overflow: auto;
+}
+
 .nb-cell__output {
   border-top: 1px solid #333;
   background: #1e1e1e;

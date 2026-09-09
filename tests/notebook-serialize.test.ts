@@ -49,15 +49,46 @@ describe('notebook serialize', () => {
     expect(encoded.length).toBeLessThan(rawSize / 2);
   });
 
-  it('старт-notebook — демо-урок со всеми тремя типами (#26)', () => {
+  it('старт-notebook — демо-урок со всеми четырьмя типами (#26 + #42)', () => {
     const nb = starterNotebook();
     expect(nb.cells.length).toBeGreaterThanOrEqual(5);
     const types = new Set(nb.cells.map((c) => c.type));
     expect(types.has('markdown')).toBe(true);
     expect(types.has('code')).toBe(true);
     expect(types.has('task')).toBe(true);
+    expect(types.has('query')).toBe(true);
     // Первая ячейка — заголовок, задаёт контекст урока.
     expect(nb.cells[0].type).toBe('markdown');
+  });
+
+  it('query-ячейка: round-trip сохраняет source/schema/data и ref', async () => {
+    const initial = newCell('query', {
+      source: 'ВЫБРАТЬ 1',
+      schema: 'version: 1\ntables: []\n',
+      data: 'version: 1\nrecords: {}\n',
+      ref: 'datasets/mini-erp',
+    });
+    const nb: Notebook = { cells: [initial] };
+    const decoded = await decodeNotebook(await encodeNotebook(nb));
+    const cell = decoded.cells[0];
+    expect(cell.type).toBe('query');
+    if (cell.type !== 'query') return;
+    expect(cell.source).toBe('ВЫБРАТЬ 1');
+    expect(cell.schema).toContain('tables: []');
+    expect(cell.data).toContain('records: {}');
+    expect(cell.ref).toBe('datasets/mini-erp');
+  });
+
+  it('newCell("query") без init — вкладывает mini-erp по умолчанию', () => {
+    const c = newCell('query');
+    expect(c.type).toBe('query');
+    if (c.type !== 'query') return;
+    // Дефолтная схема из examples/query-demo — там есть Номенклатура.
+    expect(c.schema).toContain('Номенклатура');
+    expect(c.data).toContain('Молоток');
+    // Дефолтный запрос — «Номенклатура ГДЕ ПометкаУдаления = ЛОЖЬ».
+    expect(c.source).toMatch(/ВЫБРАТЬ/);
+    expect(c.ref).toBeUndefined();
   });
 
   it('битый base64 → decode бросает', async () => {

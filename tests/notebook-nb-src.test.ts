@@ -176,4 +176,65 @@ tests:
     expect(r.notebook.cells).toHaveLength(2);
     expect(r.refWarnings).toEqual([]);
   });
+
+  // ── query-cell ref (#42) ──────────────────────────────────
+
+  const QUERY_NB_URL = 'https://raw.githubusercontent.com/ivanov/tasks/main/notebooks/q.nb.json';
+  const SCHEMA_URL = 'https://raw.githubusercontent.com/ivanov/tasks/main/datasets/mini.schema.yaml';
+  const DATA_URL = 'https://raw.githubusercontent.com/ivanov/tasks/main/datasets/mini.data.yaml';
+  const QUERY_NB_BODY = JSON.stringify({
+    v: 1,
+    cells: [
+      {
+        t: 'query',
+        s: 'ВЫБРАТЬ 1',
+        schema: 'version: 1\ntables: []\n',
+        data: 'version: 1\nrecords: {}\n',
+        ref: 'datasets/mini',
+      },
+    ],
+  });
+  const CUSTOM_SCHEMA = `version: 1
+tables:
+  - kind: Справочник
+    name: Кастомная
+    fields:
+      - { name: Ссылка, type: УникальныйИдентификатор, key: true }
+      - { name: Наименование, type: Строка(50) }
+`;
+  const CUSTOM_DATA = `version: 1
+records:
+  Справочник.Кастомная:
+    - { Ссылка: x1, Наименование: Раз }
+`;
+
+  it('query-cell: ref → подтянуты .schema.yaml и .data.yaml', async () => {
+    const fetchFn = mockFetch({
+      [QUERY_NB_URL]: textResponse(200, QUERY_NB_BODY),
+      [SCHEMA_URL]: textResponse(200, CUSTOM_SCHEMA),
+      [DATA_URL]: textResponse(200, CUSTOM_DATA),
+    });
+    const r = await fetchNotebookFromSrc(QUERY_NB_URL, fetchFn);
+    expect(r.refWarnings).toEqual([]);
+    const cell = r.notebook.cells[0];
+    expect(cell.type).toBe('query');
+    if (cell.type !== 'query') return;
+    expect(cell.schema).toContain('Кастомная');
+    expect(cell.data).toContain('Раз');
+    // ref сохраняется — на будущее (сдача решения, диагностика)
+    expect(cell.ref).toBe('datasets/mini');
+  });
+
+  it('query-cell: 404 на .schema.yaml → warning, inline остаётся', async () => {
+    const fetchFn = mockFetch({
+      [QUERY_NB_URL]: textResponse(200, QUERY_NB_BODY),
+      // SCHEMA_URL, DATA_URL не мокан → 404
+    });
+    const r = await fetchNotebookFromSrc(QUERY_NB_URL, fetchFn);
+    expect(r.refWarnings.length).toBe(1);
+    const cell = r.notebook.cells[0];
+    if (cell.type !== 'query') return;
+    // Должна остаться inline-схема из ноутбука (не переписываем на null)
+    expect(cell.schema).toContain('tables: []');
+  });
 });

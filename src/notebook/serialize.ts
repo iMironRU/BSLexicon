@@ -10,9 +10,11 @@
  * попадает: генерируем свежий при decode.
  */
 import type { Cell, Notebook, TaskSpec } from './types';
+import schemaYaml from '../../examples/query-demo/mini-erp.schema.yaml?raw';
+import dataYaml from '../../examples/query-demo/mini-erp.data.yaml?raw';
 
 interface SerializedCellBase {
-  t: 'md' | 'code' | 'task';
+  t: 'md' | 'code' | 'task' | 'query';
   s: string;
 }
 interface SerializedTaskCell extends SerializedCellBase {
@@ -27,7 +29,16 @@ interface SerializedTaskCell extends SerializedCellBase {
   /** «Объясни своё решение своими словами» (#33). */
   explanation?: string;
 }
-type SerializedCell = SerializedCellBase | SerializedTaskCell;
+interface SerializedQueryCell extends SerializedCellBase {
+  t: 'query';
+  /** YAML схемы — inline или подгружается через ref. */
+  schema: string;
+  /** YAML данных. */
+  data: string;
+  /** Опциональная ссылка на пару .schema.yaml/.data.yaml (без расширения). */
+  ref?: string;
+}
+type SerializedCell = SerializedCellBase | SerializedTaskCell | SerializedQueryCell;
 
 interface SerializedNotebook {
   v: 1;
@@ -46,17 +57,50 @@ const DEFAULT_TASK: TaskSpec = {
   tests: [{ kind: 'stdout', expect: 'привет' }],
 };
 
+const DEFAULT_QUERY_SOURCE = `ВЫБРАТЬ Наименование
+ИЗ Справочник.Номенклатура
+ГДЕ ПометкаУдаления = ЛОЖЬ
+УПОРЯДОЧИТЬ ПО Наименование`;
+
+/**
+ * Стартовая схема+данные для новой query-ячейки — «мини-ERP» из
+ * examples/query-demo. Так автор урока может добавить запрос,
+ * не собирая схему с нуля.
+ */
+export interface QueryCellInit {
+  source?: string;
+  schema?: string;
+  data?: string;
+  ref?: string;
+}
+
 /** Создаёт пустую ячейку нужного типа. Task — из шаблона по умолчанию. */
 export function newCell(type: 'markdown' | 'code'): Cell;
 export function newCell(type: 'markdown' | 'code', source: string): Cell;
 export function newCell(type: 'task'): Cell;
 export function newCell(type: 'task', source: string, task: TaskSpec): Cell;
-export function newCell(type: Cell['type'], source = '', task?: TaskSpec): Cell {
+export function newCell(type: 'query'): Cell;
+export function newCell(type: 'query', init: QueryCellInit): Cell;
+export function newCell(type: Cell['type'], sourceOrInit?: string | QueryCellInit, task?: TaskSpec): Cell {
   if (type === 'task') {
     const t = task ?? DEFAULT_TASK;
-    return { id: nextId(), type: 'task', source: source || t.starter, task: t };
+    const src = typeof sourceOrInit === 'string' ? sourceOrInit : '';
+    return { id: nextId(), type: 'task', source: src || t.starter, task: t };
   }
-  return { id: nextId(), type, source } as Cell;
+  if (type === 'query') {
+    const init = (typeof sourceOrInit === 'object' && sourceOrInit) ? sourceOrInit : {};
+    const cell: Cell = {
+      id: nextId(),
+      type: 'query',
+      source: init.source ?? DEFAULT_QUERY_SOURCE,
+      schema: init.schema ?? schemaYaml,
+      data: init.data ?? dataYaml,
+    };
+    if (init.ref) (cell as { ref?: string }).ref = init.ref;
+    return cell;
+  }
+  const src = typeof sourceOrInit === 'string' ? sourceOrInit : '';
+  return { id: nextId(), type, source: src } as Cell;
 }
 
 /**
@@ -102,6 +146,14 @@ export function starterNotebook(): Notebook {
           hints: ['Функция называется `Сообщить`.'],
         },
       ),
+      newCell(
+        'markdown',
+        '## И язык запросов тоже\n\n' +
+          'Ячейка **запроса** — та же песочница что и на странице /query/, ' +
+          'но живёт прямо в уроке. Схема и данные встроены — здесь это ' +
+          'мини-ERP: справочники, документ и регистр остатков.',
+      ),
+      newCell('query'),
     ],
   };
 }
@@ -118,6 +170,11 @@ export async function encodeNotebook(nb: Notebook): Promise<string> {
         const cell: SerializedTaskCell = { t: 'task', s: c.source, task: c.task };
         if (c.ref) cell.ref = c.ref;
         if (c.explanation) cell.explanation = c.explanation;
+        return cell;
+      }
+      if (c.type === 'query') {
+        const cell: SerializedQueryCell = { t: 'query', s: c.source, schema: c.schema, data: c.data };
+        if (c.ref) cell.ref = c.ref;
         return cell;
       }
       return { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
@@ -193,6 +250,17 @@ export async function decodeNotebook(raw: string): Promise<Notebook> {
         if (withTask.ref && created.type === 'task') created.ref = withTask.ref;
         if (withTask.explanation && created.type === 'task') created.explanation = withTask.explanation;
         return created;
+      }
+      if (c.t === 'query') {
+        const withQuery = c as SerializedQueryCell;
+        // Схема/данные обязательны в сериализации, но старый URL или ручная
+        // правка могут привести к пустым — fallback на встроенный mini-erp.
+        return newCell('query', {
+          source: withQuery.s,
+          schema: withQuery.schema || undefined,
+          data: withQuery.data || undefined,
+          ref: withQuery.ref,
+        });
       }
       return newCell(c.t === 'md' ? 'markdown' : 'code', c.s);
     }),
