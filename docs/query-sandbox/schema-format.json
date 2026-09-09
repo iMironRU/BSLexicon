@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://imironru.github.io/BSLexicon/schemas/query-schema-v1.json",
+  "title": "BSLexicon query-sandbox schema format",
+  "description": "Учебная схема песочницы языка запросов 1С (#36). Формат — docs/query-sandbox/README.md §4.2. Runtime-парсер в src/query/schema-loader.ts — референс поведения; эта JSON-схема нужна для автодополнения в редакторах.",
+  "type": "object",
+  "required": ["version", "tables"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "tables": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/table" }
+    }
+  },
+  "$defs": {
+    "fieldTypeString": {
+      "type": "string",
+      "description": "Тип поля: Строка[(N)] / Число[(N[,M])] / Дата / Булево / Ссылка / УникальныйИдентификатор",
+      "pattern": "^(Строка(\\([0-9]+\\))?|Число(\\([0-9]+(,[0-9]+)?\\))?|Дата|Булево|Ссылка|УникальныйИдентификатор)$"
+    },
+    "field": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "$ref": "#/$defs/fieldTypeString" },
+        "refs": {
+          "type": "string",
+          "description": "Обязательно для type: Ссылка. Формат «<Kind>.<Name>», например Справочник.Номенклатура",
+          "pattern": "^(Справочник|Документ|РегистрНакопления|РегистрСведений)\\.[^\\s]+$"
+        },
+        "key": { "type": "boolean" }
+      }
+    },
+    "tabular": {
+      "type": "object",
+      "required": ["name", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "fields": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/field" } }
+      }
+    },
+    "catalog": {
+      "type": "object",
+      "required": ["kind", "name", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "Справочник" },
+        "name": { "type": "string", "minLength": 1 },
+        "hierarchical": { "type": "boolean" },
+        "fields": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/field" } },
+        "tabular": { "type": "array", "items": { "$ref": "#/$defs/tabular" } }
+      }
+    },
+    "document": {
+      "type": "object",
+      "required": ["kind", "name", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "Документ" },
+        "name": { "type": "string", "minLength": 1 },
+        "fields": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/field" } },
+        "tabular": { "type": "array", "items": { "$ref": "#/$defs/tabular" } }
+      }
+    },
+    "accumRegister": {
+      "type": "object",
+      "required": ["kind", "name", "view", "dimensions", "resources"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "РегистрНакопления" },
+        "name": { "type": "string", "minLength": 1 },
+        "view": { "enum": ["Остатки", "Обороты"] },
+        "dimensions": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+        "resources": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+        "attributes": { "type": "array", "items": { "$ref": "#/$defs/field" } }
+      }
+    },
+    "infoRegister": {
+      "type": "object",
+      "required": ["kind", "name", "periodic", "dimensions", "resources"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "РегистрСведений" },
+        "name": { "type": "string", "minLength": 1 },
+        "periodic": { "type": "boolean" },
+        "dimensions": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+        "resources": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+        "attributes": { "type": "array", "items": { "$ref": "#/$defs/field" } }
+      }
+    },
+    "table": {
+      "oneOf": [
+        { "$ref": "#/$defs/catalog" },
+        { "$ref": "#/$defs/document" },
+        { "$ref": "#/$defs/accumRegister" },
+        { "$ref": "#/$defs/infoRegister" }
+      ]
+    }
+  }
+}

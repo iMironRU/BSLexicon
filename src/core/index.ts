@@ -31,6 +31,7 @@ export type {
   CatalogExample,
 } from './catalog';
 export type { StepEvent, VariableView, FrameView } from './interpreter/interpreter';
+export type { BslValue } from './interpreter/values';
 export type { Token } from './lexer/token';
 export type { RunStage, RunError } from './run-error';
 export type { DebugState, DebugSnapshot, DebugFrame } from './debugger/session';
