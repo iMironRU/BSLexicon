@@ -16,15 +16,20 @@ import type { BeforeMount } from '@monaco-editor/react';
 import { registerSdblLanguage, SDBL_LANGUAGE_ID, SDBL_THEME_ID } from '../query-app/monaco-lang';
 import { registerSdblProviders } from '../query-app/monaco-providers';
 import { ResultTable } from '../query-app/ResultTable';
+import { ParametersPanel } from '../query-app/ParametersPanel';
 import { buildFixture, type Fixture } from '../query/fixture';
 import { parseDataYaml, parseSchemaYaml, validateFixture } from '../query/schema-loader';
 import { runQuery, type Rowset, type RunError } from '../query/interpreter';
+import { toBslValue, type QueryParamEntry } from '../query/parameters';
+import type { BslValue } from '@core/index';
 
 interface QueryCellProps {
   source: string;
   schema: string;
   data: string;
   onChange: (next: string) => void;
+  parameters?: QueryParamEntry[];
+  onParametersChange?: (next: QueryParamEntry[]) => void;
   /** Просмотр решения (#32): Monaco read-only, кнопка ▶ доступна. */
   readOnly?: boolean;
   /** Ссылка на пару .schema/.data.yaml в репо педагога — только для badge. */
@@ -41,7 +46,7 @@ type FixtureLoad =
   | { ok: true; fixture: Fixture }
   | { ok: false; message: string };
 
-export function QueryCell({ source, schema, data, onChange, readOnly, ref, showRefPlaceholder }: QueryCellProps) {
+export function QueryCell({ source, schema, data, onChange, parameters, onParametersChange, readOnly, ref, showRefPlaceholder }: QueryCellProps) {
   const load = useMemo<FixtureLoad>(() => tryLoadFixture(schema, data), [schema, data]);
   const [rowset, setRowset] = useState<Rowset | null>(null);
   const [errors, setErrors] = useState<RunError[]>([]);
@@ -57,7 +62,9 @@ export function QueryCell({ source, schema, data, onChange, readOnly, ref, showR
     if (!load.ok) return;
     setRunning(true);
     Promise.resolve().then(() => {
-      const r = runQuery(source, load.fixture);
+      const paramMap: { [name: string]: BslValue } = {};
+      for (const p of parameters ?? []) paramMap[p.name] = toBslValue(p.value);
+      const r = runQuery(source, load.fixture, { parameters: paramMap });
       if (r.ok) {
         setRowset(r.rowset);
         setErrors([]);
@@ -130,6 +137,14 @@ export function QueryCell({ source, schema, data, onChange, readOnly, ref, showR
             }}
           />
         </div>
+        {load.ok && onParametersChange && (
+          <ParametersPanel
+            source={source}
+            entries={parameters ?? []}
+            onChange={onParametersChange}
+            fixture={load.fixture}
+          />
+        )}
         {(rowset || errors.length > 0) && load.ok && (
           <div className="nb-cell__query-result">
             <ResultTable rowset={rowset} errors={errors} warnings={warnings} fixture={load.fixture} />

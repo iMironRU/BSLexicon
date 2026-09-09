@@ -42,6 +42,7 @@
 import type { BslValue } from '@core/index';
 import { load as yamlLoad } from 'js-yaml';
 import type { Result } from './schema-loader';
+import type { QueryParamEntry, QueryParamValue } from './parameters';
 
 /** Строгий по колонкам эталон; строки — либо строго упорядочены, либо мультимножество. */
 export type QueryExpected =
@@ -59,6 +60,11 @@ export interface QueryTaskSpec {
   /** YAML данных под ту же схему. */
   data: string;
   expected: QueryExpected;
+  /**
+   * Значения параметров, которыми педагог засеивает запрос ученика перед
+   * проверкой. Ученик не меняет — так же, как starter иммутабелен.
+   */
+  parameters?: QueryParamEntry[];
   hints?: string[];
 }
 
@@ -99,7 +105,45 @@ export function parseQueryTaskYaml(text: string): Result<QueryTaskSpec> {
     const arr = hints.filter((h): h is string => typeof h === 'string');
     if (arr.length > 0) spec.hints = arr;
   }
+  const params = parseParameters(o.parameters);
+  if (params.length > 0) spec.parameters = params;
   return { ok: true, value: spec };
+}
+
+/**
+ * Разбирает `parameters:` — массив объектов
+ * `{name: <str>, kind: <вид>, value: <значение>, refs?: <Kind.Name>}` в
+ * список `QueryParamEntry`. Тихо игнорирует битые записи — задача уже
+ * загружена, нельзя ронять всё из-за одного плохого параметра.
+ */
+function parseParameters(raw: unknown): QueryParamEntry[] {
+  if (!Array.isArray(raw)) return [];
+  const out: QueryParamEntry[] = [];
+  for (const item of raw) {
+    if (!isObj(item)) continue;
+    const rec = item as Record<string, unknown>;
+    const name = typeof rec.name === 'string' ? rec.name : null;
+    if (!name) continue;
+    const kind = rec.kind;
+    let value: QueryParamValue;
+    if (kind === 'NULL' || kind === null || kind === undefined) {
+      value = { kind: 'NULL' };
+    } else if (kind === 'Строка' && typeof rec.value === 'string') {
+      value = { kind: 'Строка', value: rec.value };
+    } else if (kind === 'Число' && typeof rec.value === 'number') {
+      value = { kind: 'Число', value: rec.value };
+    } else if (kind === 'Булево' && typeof rec.value === 'boolean') {
+      value = { kind: 'Булево', value: rec.value };
+    } else if (kind === 'Дата' && typeof rec.value === 'string') {
+      value = { kind: 'Дата', value: rec.value };
+    } else if (kind === 'Ссылка' && typeof rec.value === 'string' && typeof rec.refs === 'string') {
+      value = { kind: 'Ссылка', refs: rec.refs, value: rec.value };
+    } else {
+      continue;
+    }
+    out.push({ name, value });
+  }
+  return out;
 }
 
 function parseExpected(raw: unknown): Result<QueryExpected> {

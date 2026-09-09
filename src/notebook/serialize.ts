@@ -11,6 +11,7 @@
  */
 import type { Cell, Notebook, TaskSpec } from './types';
 import type { QueryTaskSpec } from '../query/task-format';
+import type { QueryParamEntry } from '../query/parameters';
 import schemaYaml from '../../examples/query-demo/mini-erp.schema.yaml?raw';
 import dataYaml from '../../examples/query-demo/mini-erp.data.yaml?raw';
 
@@ -38,6 +39,8 @@ interface SerializedQueryCell extends SerializedCellBase {
   data: string;
   /** Опциональная ссылка на пару .schema.yaml/.data.yaml (без расширения). */
   ref?: string;
+  /** Значения параметров &Имя. */
+  parameters?: QueryParamEntry[];
 }
 interface SerializedQueryTaskCell extends SerializedCellBase {
   t: 'query-task';
@@ -220,6 +223,7 @@ export async function encodeNotebook(nb: Notebook): Promise<string> {
       if (c.type === 'query') {
         const cell: SerializedQueryCell = { t: 'query', s: c.source, schema: c.schema, data: c.data };
         if (c.ref) cell.ref = c.ref;
+        if (c.parameters?.length) cell.parameters = c.parameters;
         return cell;
       }
       if (c.type === 'query-task') {
@@ -306,12 +310,16 @@ export async function decodeNotebook(raw: string): Promise<Notebook> {
         const withQuery = c as SerializedQueryCell;
         // Схема/данные обязательны в сериализации, но старый URL или ручная
         // правка могут привести к пустым — fallback на встроенный mini-erp.
-        return newCell('query', {
+        const cell = newCell('query', {
           source: withQuery.s,
           schema: withQuery.schema || undefined,
           data: withQuery.data || undefined,
           ref: withQuery.ref,
         });
+        if (withQuery.parameters?.length && cell.type === 'query') {
+          cell.parameters = withQuery.parameters;
+        }
+        return cell;
       }
       if (c.t === 'query-task') {
         const withQt = c as SerializedQueryTaskCell;

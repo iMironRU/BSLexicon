@@ -103,6 +103,15 @@ function NotebookShell() {
     });
   }, []);
 
+  const updateQueryParameters = useCallback((id: string, parameters: import('../query/parameters').QueryParamEntry[]): void => {
+    setNotebook((prev) => {
+      if (!prev) return prev;
+      return {
+        cells: prev.cells.map((c) => (c.id === id && c.type === 'query' ? { ...c, parameters } : c)),
+      };
+    });
+  }, []);
+
   const updateExplanation = useCallback((id: string, explanation: string): void => {
     setNotebook((prev) => {
       if (!prev) return prev;
@@ -361,6 +370,8 @@ function NotebookShell() {
                 schema={cell.schema}
                 data={cell.data}
                 onChange={(v) => updateCell(cell.id, v)}
+                parameters={cell.parameters}
+                onParametersChange={(v) => updateQueryParameters(cell.id, v)}
                 readOnly={readOnly}
                 ref={cell.ref}
                 showRefPlaceholder={!!cell.ref && !nbSource}

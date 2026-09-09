@@ -15,6 +15,7 @@ import { listDirectory, readFile, writeFile } from '../app/git-storage';
 import type { GitConfig } from '../app/git-config';
 import type { Cell, Notebook, TaskSpec } from './types';
 import type { QueryTaskSpec } from '../query/task-format';
+import type { QueryParamEntry } from '../query/parameters';
 
 const NOTEBOOKS_SUBDIR = 'notebooks';
 const NB_EXT = '.nb.json';
@@ -52,6 +53,8 @@ interface StoredCell {
   /** Query-ячейка (#42): YAML схемы и данных прямо в файле. */
   schema?: string;
   data?: string;
+  /** Значения параметров &Имя (issue #53). */
+  parameters?: QueryParamEntry[];
   /** Query-задача (#43): полная спека query-task. */
   query_task?: QueryTaskSpec;
   /** Snapshot query-task для файла-решения (аналог task_snapshot). */
@@ -151,6 +154,7 @@ export function serializeNotebook(nb: Notebook): string {
       if (c.type === 'query') {
         const cell: StoredCell = { t: 'query', s: c.source, schema: c.schema, data: c.data };
         if (c.ref) cell.ref = c.ref;
+        if (c.parameters?.length) cell.parameters = c.parameters;
         return cell;
       }
       if (c.type === 'query-task') {
@@ -219,6 +223,7 @@ export function parseAnyFile(text: string): ParsedFile {
         data: c.data ?? '',
       };
       if (c.ref) (cell as { ref?: string }).ref = c.ref;
+      if (c.parameters?.length && cell.type === 'query') cell.parameters = c.parameters;
       return cell;
     }
     if (c.t === 'query-task') {

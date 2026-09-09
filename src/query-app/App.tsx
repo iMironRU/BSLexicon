@@ -4,7 +4,10 @@ import type { BeforeMount, OnMount } from '@monaco-editor/react';
 import { SchemaPanel } from './SchemaPanel';
 import { ResultTable } from './ResultTable';
 import { ExamplesModal } from './ExamplesModal';
+import { ParametersPanel } from './ParametersPanel';
 import { loadEmbeddedFixture } from './embedded-fixture';
+import type { QueryParamEntry } from '../query/parameters';
+import { toBslValue } from '../query/parameters';
 import { registerSdblLanguage, SDBL_LANGUAGE_ID, SDBL_THEME_ID } from './monaco-lang';
 import { registerSdblProviders } from './monaco-providers';
 import { runQuery, type Rowset, type RunError } from '../query/interpreter';
@@ -26,12 +29,15 @@ export function App() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
+  const [params, setParams] = useState<QueryParamEntry[]>([]);
   const editorRef = useRef<CodeEditor | null>(null);
 
   const handleRun = useCallback((): void => {
     setRunning(true);
     Promise.resolve().then(() => {
-      const r = runQuery(source, fixture);
+      const paramMap: { [name: string]: import('@core/index').BslValue } = {};
+      for (const p of params) paramMap[p.name] = toBslValue(p.value);
+      const r = runQuery(source, fixture, { parameters: paramMap });
       if (r.ok) {
         setRowset(r.rowset);
         setErrors([]);
@@ -43,7 +49,7 @@ export function App() {
       }
       setRunning(false);
     });
-  }, [source, fixture]);
+  }, [source, fixture, params]);
 
   // Ctrl+Enter / Cmd+Enter — выполнить.
   useEffect(() => {
@@ -162,6 +168,12 @@ export function App() {
             />
           </div>
           <div className="qs-result-pane">
+            <ParametersPanel
+              source={source}
+              entries={params}
+              onChange={setParams}
+              fixture={fixture}
+            />
             <ResultTable rowset={rowset} errors={errors} warnings={warnings} fixture={fixture} />
           </div>
         </section>

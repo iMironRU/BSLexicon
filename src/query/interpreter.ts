@@ -39,6 +39,7 @@ import {
 } from './parser/generated/SDBLParser';
 import { materializeVirtual, type VirtualMethod } from './virtual-tables';
 import type { Field } from './types';
+import { extractParamName } from './parameters';
 
 // ── Публичный API ──────────────────────────────────────────────────
 
@@ -65,13 +66,19 @@ export class QueryRuntimeError extends Error {
   }
 }
 
-export function runQuery(source: string, fx: Fixture): RunResult {
+/** Опции прогона запроса. */
+export interface RunOptions {
+  /** Значения параметров `&Имя` — если параметр не задан, интерпретатор предупредит. */
+  parameters?: { [name: string]: BslValue };
+}
+
+export function runQuery(source: string, fx: Fixture, options: RunOptions = {}): RunResult {
   const parsed = parseQuery(source);
   if (!parsed.ok) {
     return { ok: false, errors: parsed.errors.map((e) => ({ stage: 'parser', message: e.message, line: e.line, column: e.column })) };
   }
   try {
-    const { rowset, warnings } = execPackage(parsed.tree as QueryPackageContext, fx);
+    const { rowset, warnings } = execPackage(parsed.tree as QueryPackageContext, fx, options);
     return { ok: true, rowset, warnings };
   } catch (e) {
     if (e instanceof QueryRuntimeError) return { ok: false, errors: [{ stage: 'runtime', message: e.message }] };
@@ -83,7 +90,7 @@ export function runQuery(source: string, fx: Fixture): RunResult {
 
 interface ExecResult { rowset: Rowset; warnings: string[]; }
 
-function execPackage(pkg: QueryPackageContext, fx: Fixture): ExecResult {
+function execPackage(pkg: QueryPackageContext, fx: Fixture, options: RunOptions): ExecResult {
   const queries = pkg.queries();
   if (queries.length === 0) throw new QueryRuntimeError('Пустой пакет запросов');
   if (queries.length > 1) throw new QueryRuntimeError('Пакеты запросов пока не поддерживаются (см. #46)');
@@ -91,10 +98,10 @@ function execPackage(pkg: QueryPackageContext, fx: Fixture): ExecResult {
   if (q.dropTableQuery()) throw new QueryRuntimeError('УНИЧТОЖИТЬ пока не поддерживается (см. #46)');
   const sel = q.selectQuery();
   if (!sel) throw new QueryRuntimeError('Ожидался ВЫБРАТЬ-запрос');
-  return execSelectQuery(sel, fx);
+  return execSelectQuery(sel, fx, options);
 }
 
-function execSelectQuery(node: SelectQueryContext, fx: Fixture): ExecResult {
+function execSelectQuery(node: SelectQueryContext, fx: Fixture, options: RunOptions): ExecResult {
   const sub = node.subquery() as SubqueryContext | null;
   if (!sub) throw new QueryRuntimeError('Пустой SELECT');
   if (sub._unions && sub._unions.length > 0) throw new QueryRuntimeError('ОБЪЕДИНИТЬ пока не поддерживается (следующий шаг)');
@@ -102,7 +109,7 @@ function execSelectQuery(node: SelectQueryContext, fx: Fixture): ExecResult {
   if (!main) throw new QueryRuntimeError('Отсутствует основная часть SELECT');
   if (main.temporaryTableIdentifier?.()) throw new QueryRuntimeError('ПОМЕСТИТЬ пока не поддерживается (#46)');
 
-  const { rowset, warnings } = execQuery(main, fx);
+  const { rowset, warnings } = execQuery(main, fx, options);
 
   // ORDER BY может быть либо в subquery (стандартное место), либо на
   // уровне selectQuery (после ИТОГИ / АВТОУПОРЯДОЧИВАНИЕ).
@@ -123,6 +130,8 @@ interface QueryCtx {
    * берутся из схемы через `ctx.sources`.
    */
   virtualFields: Map<string, Field[]>;
+  /** Значения параметров `&Имя` — то, что задано снаружи. */
+  parameters: Map<string, BslValue>;
   /** Собранные warning'и: неизвестные поля, битые ссылки. */
   warnings: Set<string>;
 }
@@ -130,8 +139,10 @@ interface QueryCtx {
 /** Одна «строка-снимок»: алиас → Row исходной таблицы. */
 type Snap = Map<string, Row>;
 
-function execQuery(q: QueryContext, fx: Fixture): ExecResult {
-  const ctx: QueryCtx = { fx, sources: new Map(), virtualFields: new Map(), warnings: new Set() };
+function execQuery(q: QueryContext, fx: Fixture, options: RunOptions): ExecResult {
+  const params = new Map<string, BslValue>();
+  for (const [k, v] of Object.entries(options.parameters ?? {})) params.set(k, v);
+  const ctx: QueryCtx = { fx, sources: new Map(), virtualFields: new Map(), parameters: params, warnings: new Set() };
 
   // FROM
   const snaps: Snap[] = q._from_ ? collectDataSources(q._from_.dataSource(), ctx) : [new Map()];
@@ -514,7 +525,12 @@ function evalNode(node: ParserRuleContext | TerminalNode, snap: Snap, ctx: Query
   // Колонка
   if (node instanceof ColumnContext) return evalColumn(node, snap, ctx);
   if (node instanceof MultiStringContext) return unquoteString(node.getText());
-  if (node instanceof ParameterContext) return NULL; // параметры &Имя — пусты (для MVP)
+  if (node instanceof ParameterContext) {
+    const name = extractParamName(node);
+    if (ctx.parameters.has(name)) return ctx.parameters.get(name)!;
+    ctx.warnings.add(`Параметр «&${name}» не задан — вычисления пройдут как для NULL`);
+    return NULL;
+  }
 
   // Predicate с префиксными НЕ — грамматика: `predicate: NOT* (…)`.
   // Отдельно от общего binary-fallback: там `НЕ` без пары ошибочно

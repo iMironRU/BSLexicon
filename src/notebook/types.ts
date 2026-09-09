@@ -76,6 +76,11 @@ export interface QueryCellData {
   data: string;
   /** Опциональная ссылка на пару .schema.yaml/.data.yaml в репо педагога. */
   ref?: string;
+  /**
+   * Значения параметров `&Имя` (issue #53). Порядок сохраняется — так же,
+   * как их вводит пользователь.
+   */
+  parameters?: import('../query/parameters').QueryParamEntry[];
 }
 
 /**
