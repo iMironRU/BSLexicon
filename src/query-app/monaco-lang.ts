@@ -61,6 +61,21 @@ const VIRTUAL_TABLE_METHODS = [
   'ФактическийПериодДействия', 'ДанныеГрафика', 'БазаРасчёта',
 ];
 
+/**
+ * Monaco Monarch cases matching точное (даже с ignoreCase: true), поэтому
+ * генерируем все три варианта регистра: UPPER / lower / Title. Пользователь
+ * пишет как удобно, все подсвечиваются.
+ */
+function anyCase(words: string[]): string[] {
+  const out = new Set<string>();
+  for (const w of words) {
+    out.add(w);
+    out.add(w.toLowerCase());
+    out.add(w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  }
+  return [...out];
+}
+
 /** Регистрирует язык + тему. Вызывать один раз до маунта Editor. */
 export function registerSdblLanguage(monaco: MonacoNS): void {
   // Не повторять регистрацию при HMR — Monaco ругается на дубли.
@@ -87,10 +102,10 @@ export function registerSdblLanguage(monaco: MonacoNS): void {
     defaultToken: '',
     tokenPostfix: '.sdbl',
 
-    keywords: KEYWORDS,
-    constants: CONSTANTS,
-    functions: FUNCTIONS,
-    vtMethods: VIRTUAL_TABLE_METHODS,
+    keywords: anyCase(KEYWORDS),
+    constants: anyCase(CONSTANTS),
+    functions: anyCase(FUNCTIONS),
+    vtMethods: anyCase(VIRTUAL_TABLE_METHODS),
 
     // Kind объектов метаданных — стандартный формат `Kind.Name`.
     metadataKinds: [

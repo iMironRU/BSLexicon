@@ -142,15 +142,22 @@
   background: #2a2d2e;
 }
 
-.qs-schema__list,
-.qs-schema__list *,
-.qs-schema__fields,
-.qs-schema__fields * {
+.qs-schema ul,
+.qs-schema ol,
+.qs-schema li {
   list-style: none !important;
+  list-style-type: none !important;
+  padding-inline-start: 0 !important;
+  margin: 0;
+}
+
+.qs-schema ul::marker,
+.qs-schema li::marker {
+  content: '' !important;
+  display: none !important;
 }
 
 .qs-schema__list {
-  padding: 0;
   margin: 4px 0;
 }
 
