@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
-import type { OnMount } from '@monaco-editor/react';
+import type { BeforeMount, OnMount } from '@monaco-editor/react';
 import { SchemaPanel } from './SchemaPanel';
 import { ResultTable } from './ResultTable';
 import { loadEmbeddedFixture } from './embedded-fixture';
+import { registerSdblLanguage, SDBL_LANGUAGE_ID, SDBL_THEME_ID } from './monaco-lang';
+import { registerSdblProviders } from './monaco-providers';
 import { runQuery, type Rowset, type RunError } from '../query/interpreter';
 import { HelpFooter } from '../help/HelpFooter';
 
@@ -48,6 +50,11 @@ export function App() {
     window.addEventListener('keydown', on);
     return () => window.removeEventListener('keydown', on);
   }, [handleRun]);
+
+  const handleBeforeMount: BeforeMount = (monaco) => {
+    registerSdblLanguage(monaco);
+    registerSdblProviders(monaco, fixture.schema);
+  };
 
   const handleMount: OnMount = (editor) => {
     editorRef.current = editor;
@@ -95,10 +102,11 @@ export function App() {
           <div className="qs-editor">
             <MonacoEditor
               height="100%"
-              defaultLanguage="sql"
-              theme="vs-dark"
+              defaultLanguage={SDBL_LANGUAGE_ID}
+              theme={SDBL_THEME_ID}
               value={source}
               onChange={(next) => setSource(next ?? '')}
+              beforeMount={handleBeforeMount}
               onMount={handleMount}
               options={{
                 fontSize: 14,
