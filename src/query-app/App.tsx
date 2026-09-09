@@ -8,6 +8,7 @@ import { registerSdblLanguage, SDBL_LANGUAGE_ID, SDBL_THEME_ID } from './monaco-
 import { registerSdblProviders } from './monaco-providers';
 import { runQuery, type Rowset, type RunError } from '../query/interpreter';
 import { HelpFooter } from '../help/HelpFooter';
+import { PwaBanners } from '../app/components/PwaBanners';
 
 type CodeEditor = Parameters<OnMount>[0];
 
@@ -129,6 +130,7 @@ export function App() {
       </main>
 
       <HelpFooter hint="Ctrl+Enter — выполнить · Клик по таблице/полю — вставить" />
+      <PwaBanners />
     </div>
   );
 }
