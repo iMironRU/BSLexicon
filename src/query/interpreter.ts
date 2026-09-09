@@ -35,7 +35,10 @@ import {
   SelectQueryContext,
   SubqueryContext,
   TableContext,
+  VirtualTableContext,
 } from './parser/generated/SDBLParser';
+import { materializeVirtual, type VirtualMethod } from './virtual-tables';
+import type { Field } from './types';
 
 // ── Публичный API ──────────────────────────────────────────────────
 
@@ -114,6 +117,12 @@ interface QueryCtx {
   fx: Fixture;
   /** алиас источника → полное имя таблицы. */
   sources: Map<string, string>;
+  /**
+   * Для виртуальных источников — переопределённый список полей (Приход/Расход/
+   * КоличествоОстаток и т.п.). Обычные таблицы не пишутся сюда — их поля
+   * берутся из схемы через `ctx.sources`.
+   */
+  virtualFields: Map<string, Field[]>;
   /** Собранные warning'и: неизвестные поля, битые ссылки. */
   warnings: Set<string>;
 }
@@ -122,7 +131,7 @@ interface QueryCtx {
 type Snap = Map<string, Row>;
 
 function execQuery(q: QueryContext, fx: Fixture): ExecResult {
-  const ctx: QueryCtx = { fx, sources: new Map(), warnings: new Set() };
+  const ctx: QueryCtx = { fx, sources: new Map(), virtualFields: new Map(), warnings: new Set() };
 
   // FROM
   const snaps: Snap[] = q._from_ ? collectDataSources(q._from_.dataSource(), ctx) : [new Map()];
@@ -179,18 +188,20 @@ function evalOutputColumn(c: ColumnSpec, snap: Snap, ctx: QueryCtx, bucket: Snap
 function collectDataSources(dataSources: DataSourceContext[], ctx: QueryCtx): Snap[] {
   let out: Snap[] | null = null;
   for (const ds of dataSources) {
-    // Проверяем виртуальные таблицы регистров прежде обычных
-    if (ds.virtualTable?.()) {
-      throw new QueryRuntimeError('Виртуальные таблицы регистров пока не реализованы (#44/#47)');
-    }
     if (ds.parameterTable?.()) throw new QueryRuntimeError('Параметрические таблицы пока не поддерживаются');
     if (ds.externalDataSourceTable?.()) throw new QueryRuntimeError('Внешние источники данных пока не поддерживаются');
     if (ds.subquery?.()) throw new QueryRuntimeError('Подзапросы в FROM пока не поддерживаются');
-    const primary = ds.table();
-    if (!primary) throw new QueryRuntimeError('Некорректный источник ИЗ');
     // alias находится в DataSourceContext (sibling с table), не в TableContext
     const alias = readAlias(ds);
-    let snaps = readTable(primary, ctx, alias);
+    let snaps: Snap[];
+    const vt = ds.virtualTable?.();
+    if (vt) {
+      snaps = readVirtualTable(vt, ctx, alias);
+    } else {
+      const primary = ds.table();
+      if (!primary) throw new QueryRuntimeError('Некорректный источник ИЗ');
+      snaps = readTable(primary, ctx, alias);
+    }
     for (const j of ds._joins ?? []) snaps = applyJoin(snaps, j, ctx);
     out = out === null ? snaps : cross(out, snaps);
   }
@@ -207,6 +218,51 @@ function readTable(table: TableContext, ctx: QueryCtx, aliasOverride?: string | 
   const alias = aliasOverride ?? readAlias(table) ?? ref;
   ctx.sources.set(alias, ref);
   return rows.map((r) => new Map([[alias, r]]) as Snap);
+}
+
+function readVirtualTable(vt: VirtualTableContext, ctx: QueryCtx, aliasOverride?: string | null): Snap[] {
+  const mdo = vt.mdo();
+  if (!mdo) throw new QueryRuntimeError('Виртуальная таблица без объекта метаданных');
+  const ref = mdoRef(mdo);
+  const tf = ctx.fx.tables.get(ref);
+  if (!tf) throw new QueryRuntimeError(`Регистр «${ref}» не найден в схеме`);
+  if (tf.table.kind !== 'РегистрНакопления') {
+    throw new QueryRuntimeError(`Виртуальные таблицы поддержаны только для регистров накопления (сведений — см. #47). «${ref}» — ${tf.table.kind}.`);
+  }
+  if (tf.table.view !== 'Остатки') {
+    throw new QueryRuntimeError(`Регистр «${ref}» имеет view: '${tf.table.view}' — виртуальные Остатки/Обороты доступны только для view: 'Остатки'`);
+  }
+
+  const method = virtualMethod(vt);
+  const params = collectVirtualParams(vt, ctx);
+  const materialized = materializeVirtual(ctx.fx, { ref, method, params });
+
+  const alias = aliasOverride ?? ref;
+  ctx.sources.set(alias, ref);
+  ctx.virtualFields.set(alias, materialized.virtualFields);
+  return materialized.rows.map((r) => new Map([[alias, r]]) as Snap);
+}
+
+function virtualMethod(vt: VirtualTableContext): VirtualMethod {
+  // _virtualTableName — токен, попадает в getText() того же узла, но проще
+  // прочитать через явные accessors по типу.
+  if (vt.BALANCE_VT()) return 'Остатки';
+  if (vt.TURNOVERS_VT()) return 'Обороты';
+  if (vt.BALANCE_AND_TURNOVERS_VT()) return 'ОстаткиИОбороты';
+  if (vt.SLICELAST_VT()) throw new QueryRuntimeError('СрезПоследних пока не реализован (#47)');
+  if (vt.SLICEFIRST_VT()) throw new QueryRuntimeError('СрезПервых пока не реализован (#47)');
+  if (vt.BOUNDARIES_VT()) throw new QueryRuntimeError('Границы пока не реализованы');
+  throw new QueryRuntimeError('Неизвестный тип виртуальной таблицы');
+}
+
+function collectVirtualParams(vt: VirtualTableContext, ctx: QueryCtx): BslValue[] {
+  const raw = vt.virtualTableParameter();
+  const list = Array.isArray(raw) ? raw : [];
+  return list.map((p) => {
+    const expr = p.logicalExpression();
+    if (!expr) return UNDEFINED;
+    return evalNode(expr, new Map(), ctx, null);
+  });
 }
 
 function applyJoin(left: Snap[], j: JoinPartContext, ctx: QueryCtx): Snap[] {
@@ -309,15 +365,22 @@ function expandAsterisk(ctx: QueryCtx, only: string | null): ColumnSpec[] {
   const takenNames = new Map<string, number>();
   for (const [alias, tableRef] of ctx.sources) {
     if (only && alias !== only) continue;
-    const table = ctx.fx.tables.get(tableRef)?.table;
-    if (!table) continue;
-    const fields = tableRef.startsWith('Справочник.') || tableRef.startsWith('Документ.')
-      ? (table as { fields?: { name: string }[] }).fields ?? []
-      : [
-          ...(table as { dimensions?: { name: string }[] }).dimensions ?? [],
-          ...(table as { resources?: { name: string }[] }).resources ?? [],
-          ...(table as { attributes?: { name: string }[] }).attributes ?? [],
-        ];
+    // Виртуальный источник переопределяет список полей.
+    const overrideFields = ctx.virtualFields.get(alias);
+    let fields: { name: string }[];
+    if (overrideFields) {
+      fields = overrideFields;
+    } else {
+      const table = ctx.fx.tables.get(tableRef)?.table;
+      if (!table) continue;
+      fields = tableRef.startsWith('Справочник.') || tableRef.startsWith('Документ.')
+        ? (table as { fields?: { name: string }[] }).fields ?? []
+        : [
+            ...(table as { dimensions?: { name: string }[] }).dimensions ?? [],
+            ...(table as { resources?: { name: string }[] }).resources ?? [],
+            ...(table as { attributes?: { name: string }[] }).attributes ?? [],
+          ];
+    }
     for (const f of fields) {
       let name = f.name;
       // При объединении полей из нескольких источников имена коллизят —
@@ -484,6 +547,7 @@ function maybeEvalFunction(node: ParserRuleContext, snap: Snap, ctx: QueryCtx, b
     case 'МЕСЯЦ': case 'MONTH': return dateComp(vals[0], (d) => d.getUTCMonth() + 1);
     case 'ДЕНЬ': case 'DAY': return dateComp(vals[0], (d) => d.getUTCDate());
     case 'ПРЕДСТАВЛЕНИЕ': case 'PRESENTATION': return toBslString(vals[0] ?? UNDEFINED);
+    case 'ДАТАВРЕМЯ': case 'DATETIME': return buildDateTime(vals);
     default: return NOT_A_FUNC;
   }
 }
@@ -514,6 +578,23 @@ function computeAggregate(name: string, bucket: Snap[], arg: ParserRuleContext |
     case 'МАКСИМУМ': return Math.max(...values);
     default: return NULL;
   }
+}
+
+/**
+ * `ДАТАВРЕМЯ(Год, Мес, День [, Ч, М, С])` — литерал даты. Возвращаем ISO-строку
+ * без часового пояса, чтобы даты сравнивались лексикографически со значениями
+ * из фикстур (тоже ISO-строки без TZ).
+ */
+function buildDateTime(vals: BslValue[]): BslValue {
+  const y = toNumber(vals[0] ?? 0);
+  const m = toNumber(vals[1] ?? 1);
+  const d = toNumber(vals[2] ?? 1);
+  const hh = toNumber(vals[3] ?? 0);
+  const mm = toNumber(vals[4] ?? 0);
+  const ss = toNumber(vals[5] ?? 0);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return NULL;
+  const pad = (n: number, w = 2): string => String(n).padStart(w, '0');
+  return `${pad(y, 4)}-${pad(m)}-${pad(d)}T${pad(hh)}:${pad(mm)}:${pad(ss)}`;
 }
 
 function dateComp(v: BslValue, get: (d: Date) => number): BslValue {

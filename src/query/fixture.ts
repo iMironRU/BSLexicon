@@ -97,6 +97,10 @@ function keyOf(table: Table): string | null {
 /**
  * Заполняет отсутствующие поля значением по умолчанию (Undefined),
  * копирует табличные части как массивы Row.
+ *
+ * Для регистров сохраняем системные автополя (`Период`, `Регистратор`,
+ * `ВидДвижения` для регистра остатков) — они в схеме явно не описаны,
+ * но нужны и виртуальным таблицам, и учебным запросам.
  */
 function normalizeRow(raw: Record, table: Table): Row {
   const out: Row = {};
@@ -123,6 +127,18 @@ function normalizeRow(raw: Record, table: Table): Row {
         out[ts.name] = [];
       }
     }
+  }
+  // Системные поля регистров.
+  if (table.kind === 'РегистрНакопления') {
+    if (raw['Период'] !== undefined) out['Период'] = raw['Период'] as BslValue;
+    if (raw['Регистратор'] !== undefined) out['Регистратор'] = raw['Регистратор'] as BslValue;
+    if (table.view === 'Остатки' && raw['ВидДвижения'] !== undefined) {
+      out['ВидДвижения'] = raw['ВидДвижения'] as BslValue;
+    }
+  }
+  if (table.kind === 'РегистрСведений') {
+    if (raw['Период'] !== undefined) out['Период'] = raw['Период'] as BslValue;
+    if (raw['Регистратор'] !== undefined) out['Регистратор'] = raw['Регистратор'] as BslValue;
   }
   return out;
 }
