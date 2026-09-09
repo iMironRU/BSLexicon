@@ -19,6 +19,7 @@ import { parseQuery } from './parser/parse';
 import type { Fixture, Row } from './fixture';
 import { rowsOf } from './fixture';
 import {
+  AliasContext,
   ColumnContext,
   DataSourceContext,
   ExpressionContext,
@@ -599,8 +600,10 @@ function cmp(l: BslValue, r: BslValue): number { return compareValues(l, r) ?? 0
 // ── Alias / mdo helpers ──────────────────────────────────────────
 
 function readAlias(node: ParserRuleContext): string | null {
-  // Ищем узел alias среди детей и берём его identifier (не токен КАК!)
-  const child = ruleChildren(node).find((c) => !isTerminal(c) && (c as ParserRuleContext).constructor.name === 'AliasContext') as ParserRuleContext | undefined;
+  // Ищем прямой AliasContext-ребёнок и берём его identifier (не токен КАК!).
+  // Через instanceof, а не constructor.name — минификатор prod-сборки
+  // переименовывает имена классов, но instanceof остаётся стабильным.
+  const child = ruleChildren(node).find((c) => !isTerminal(c) && c instanceof AliasContext) as AliasContext | undefined;
   if (!child) return null;
   const ident = findFirst(child, IdentifierContext);
   return ident?.getText() ?? null;
