@@ -17,6 +17,7 @@
 import type { Notebook, Cell } from './types';
 import { parseTaskYaml } from './task-loader';
 import { parseAnyFile, type SolutionMeta } from './git-notebooks';
+import { parseQueryTaskYaml } from '../query/task-format';
 
 const RAW_HOST = 'https://raw.githubusercontent.com';
 const API_HOST = 'https://api.github.com';
@@ -202,6 +203,34 @@ export async function fetchNotebookFromSrc(
     const cell = cells[idx];
     if (cell.type !== 'query') continue;
     cells[idx] = { ...cell, schema, data } as Cell;
+  }
+
+  // 2c. Резолвим ref в query-task ячейках. Ref → `<ref>.query-task.yaml`.
+  const queryTaskCells = cells
+    .map((c, idx) => ({ c, idx }))
+    .filter(({ c }) => c.type === 'query-task' && c.ref);
+  const queryTaskResolved = await Promise.all(
+    queryTaskCells.map(async ({ idx, c }) => {
+      const ref = (c as { ref?: string }).ref!;
+      const url = resolveRefUrl(source, `${ref}.query-task.yaml`);
+      try {
+        const r = await fetchFn(url);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const yaml = await r.text();
+        const parsed = parseQueryTaskYaml(yaml);
+        if (!parsed.ok) throw new Error(parsed.error);
+        return { idx, spec: parsed.value };
+      } catch (e) {
+        refWarnings.push(`${ref}: ${(e as Error).message}`);
+        return { idx, spec: null };
+      }
+    }),
+  );
+  for (const { idx, spec } of queryTaskResolved) {
+    if (!spec) continue;
+    const cell = cells[idx];
+    if (cell.type !== 'query-task') continue;
+    cells[idx] = { ...cell, task: spec } as Cell;
   }
 
   // 3. SHA ветки (best-effort, без токена). Rate-limit публичного API

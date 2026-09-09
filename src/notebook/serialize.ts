@@ -10,11 +10,12 @@
  * попадает: генерируем свежий при decode.
  */
 import type { Cell, Notebook, TaskSpec } from './types';
+import type { QueryTaskSpec } from '../query/task-format';
 import schemaYaml from '../../examples/query-demo/mini-erp.schema.yaml?raw';
 import dataYaml from '../../examples/query-demo/mini-erp.data.yaml?raw';
 
 interface SerializedCellBase {
-  t: 'md' | 'code' | 'task' | 'query';
+  t: 'md' | 'code' | 'task' | 'query' | 'query-task';
   s: string;
 }
 interface SerializedTaskCell extends SerializedCellBase {
@@ -38,7 +39,19 @@ interface SerializedQueryCell extends SerializedCellBase {
   /** Опциональная ссылка на пару .schema.yaml/.data.yaml (без расширения). */
   ref?: string;
 }
-type SerializedCell = SerializedCellBase | SerializedTaskCell | SerializedQueryCell;
+interface SerializedQueryTaskCell extends SerializedCellBase {
+  t: 'query-task';
+  /** Полная спека задачи. */
+  task: QueryTaskSpec;
+  /** Опциональная ссылка на `.query-task.yaml`. */
+  ref?: string;
+  explanation?: string;
+}
+type SerializedCell =
+  | SerializedCellBase
+  | SerializedTaskCell
+  | SerializedQueryCell
+  | SerializedQueryTaskCell;
 
 interface SerializedNotebook {
   v: 1;
@@ -62,6 +75,20 @@ const DEFAULT_QUERY_SOURCE = `ВЫБРАТЬ Наименование
 ГДЕ ПометкаУдаления = ЛОЖЬ
 УПОРЯДОЧИТЬ ПО Наименование`;
 
+const DEFAULT_QUERY_TASK: QueryTaskSpec = {
+  title: 'Первая задача-запрос',
+  statement: '## Все склады\n\nВыведи **Наименование** всех складов из мини-ERP.',
+  starter: 'ВЫБРАТЬ ...\nИЗ Справочник.Склады',
+  schema: schemaYaml,
+  data: dataYaml,
+  expected: {
+    kind: 'unordered',
+    columns: ['Наименование'],
+    rows: [['Основной'], ['Восточный']],
+  },
+  hints: ['Тебе нужны один столбец и одна таблица — никаких соединений.'],
+};
+
 /**
  * Стартовая схема+данные для новой query-ячейки — «мини-ERP» из
  * examples/query-demo. Так автор урока может добавить запрос,
@@ -81,9 +108,15 @@ export function newCell(type: 'task'): Cell;
 export function newCell(type: 'task', source: string, task: TaskSpec): Cell;
 export function newCell(type: 'query'): Cell;
 export function newCell(type: 'query', init: QueryCellInit): Cell;
-export function newCell(type: Cell['type'], sourceOrInit?: string | QueryCellInit, task?: TaskSpec): Cell {
+export function newCell(type: 'query-task'): Cell;
+export function newCell(type: 'query-task', source: string, task: QueryTaskSpec): Cell;
+export function newCell(
+  type: Cell['type'],
+  sourceOrInit?: string | QueryCellInit,
+  taskSpec?: TaskSpec | QueryTaskSpec,
+): Cell {
   if (type === 'task') {
-    const t = task ?? DEFAULT_TASK;
+    const t = (taskSpec as TaskSpec | undefined) ?? DEFAULT_TASK;
     const src = typeof sourceOrInit === 'string' ? sourceOrInit : '';
     return { id: nextId(), type: 'task', source: src || t.starter, task: t };
   }
@@ -98,6 +131,11 @@ export function newCell(type: Cell['type'], sourceOrInit?: string | QueryCellIni
     };
     if (init.ref) (cell as { ref?: string }).ref = init.ref;
     return cell;
+  }
+  if (type === 'query-task') {
+    const t = (taskSpec as QueryTaskSpec | undefined) ?? DEFAULT_QUERY_TASK;
+    const src = typeof sourceOrInit === 'string' ? sourceOrInit : '';
+    return { id: nextId(), type: 'query-task', source: src || t.starter, task: t };
   }
   const src = typeof sourceOrInit === 'string' ? sourceOrInit : '';
   return { id: nextId(), type, source: src } as Cell;
@@ -154,6 +192,13 @@ export function starterNotebook(): Notebook {
           'мини-ERP: справочники, документ и регистр остатков.',
       ),
       newCell('query'),
+      newCell(
+        'markdown',
+        '## И задачи-запросы\n\n' +
+          'Ячейка **задача-запрос** сравнивает результат твоего запроса ' +
+          'с эталоном. Порядок строк проверяется только если задача так требует.',
+      ),
+      newCell('query-task'),
     ],
   };
 }
@@ -175,6 +220,12 @@ export async function encodeNotebook(nb: Notebook): Promise<string> {
       if (c.type === 'query') {
         const cell: SerializedQueryCell = { t: 'query', s: c.source, schema: c.schema, data: c.data };
         if (c.ref) cell.ref = c.ref;
+        return cell;
+      }
+      if (c.type === 'query-task') {
+        const cell: SerializedQueryTaskCell = { t: 'query-task', s: c.source, task: c.task };
+        if (c.ref) cell.ref = c.ref;
+        if (c.explanation) cell.explanation = c.explanation;
         return cell;
       }
       return { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
@@ -261,6 +312,14 @@ export async function decodeNotebook(raw: string): Promise<Notebook> {
           data: withQuery.data || undefined,
           ref: withQuery.ref,
         });
+      }
+      if (c.t === 'query-task') {
+        const withQt = c as SerializedQueryTaskCell;
+        const task = withQt.task ?? DEFAULT_QUERY_TASK;
+        const created = newCell('query-task', withQt.s, task);
+        if (withQt.ref && created.type === 'query-task') created.ref = withQt.ref;
+        if (withQt.explanation && created.type === 'query-task') created.explanation = withQt.explanation;
+        return created;
       }
       return newCell(c.t === 'md' ? 'markdown' : 'code', c.s);
     }),

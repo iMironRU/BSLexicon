@@ -4,6 +4,7 @@ import { CodeCell } from './CodeCell';
 import { MarkdownCell } from './MarkdownCell';
 import { TaskCell } from './TaskCell';
 import { QueryCell } from './QueryCell';
+import { QueryTaskCell } from './QueryTaskCell';
 import { NotebooksPanel } from './NotebooksPanel';
 import { clearDraft, loadDraft, saveDraft } from './draft';
 import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
@@ -107,7 +108,9 @@ function NotebookShell() {
       if (!prev) return prev;
       return {
         cells: prev.cells.map((c) =>
-          c.id === id && c.type === 'task' ? { ...c, explanation } : c,
+          c.id === id && (c.type === 'task' || c.type === 'query-task')
+            ? { ...c, explanation }
+            : c,
         ),
       };
     });
@@ -120,6 +123,7 @@ function NotebookShell() {
       // диспатчим руками.
       const created = type === 'task' ? newCell('task')
         : type === 'query' ? newCell('query')
+        : type === 'query-task' ? newCell('query-task')
         : newCell(type);
       return { cells: [...prev.cells, created] };
     });
@@ -360,6 +364,18 @@ function NotebookShell() {
                 showRefPlaceholder={!!cell.ref && !nbSource}
               />
             )}
+            {cell.type === 'query-task' && (
+              <QueryTaskCell
+                source={cell.source}
+                onChange={(v) => updateCell(cell.id, v)}
+                task={cell.task}
+                ref={cell.ref}
+                showRefPlaceholder={!!cell.ref && !nbSource}
+                readOnly={readOnly}
+                explanation={cell.explanation}
+                onExplanationChange={(v) => updateExplanation(cell.id, v)}
+              />
+            )}
           </div>
         ))}
 
@@ -376,6 +392,9 @@ function NotebookShell() {
             </button>
             <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('query')}>
               + Запрос
+            </button>
+            <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('query-task')}>
+              + Задача-запрос
             </button>
           </div>
         )}

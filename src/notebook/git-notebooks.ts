@@ -14,6 +14,7 @@
 import { listDirectory, readFile, writeFile } from '../app/git-storage';
 import type { GitConfig } from '../app/git-config';
 import type { Cell, Notebook, TaskSpec } from './types';
+import type { QueryTaskSpec } from '../query/task-format';
 
 const NOTEBOOKS_SUBDIR = 'notebooks';
 const NB_EXT = '.nb.json';
@@ -40,7 +41,7 @@ export interface LoadedNotebook {
 }
 
 interface StoredCell {
-  t: 'md' | 'code' | 'task' | 'query';
+  t: 'md' | 'code' | 'task' | 'query' | 'query-task';
   s: string;
   task?: TaskSpec;
   ref?: string;
@@ -51,6 +52,10 @@ interface StoredCell {
   /** Query-ячейка (#42): YAML схемы и данных прямо в файле. */
   schema?: string;
   data?: string;
+  /** Query-задача (#43): полная спека query-task. */
+  query_task?: QueryTaskSpec;
+  /** Snapshot query-task для файла-решения (аналог task_snapshot). */
+  query_task_snapshot?: QueryTaskSpec;
 }
 interface StoredNotebook {
   v: 1;
@@ -148,6 +153,12 @@ export function serializeNotebook(nb: Notebook): string {
         if (c.ref) cell.ref = c.ref;
         return cell;
       }
+      if (c.type === 'query-task') {
+        const cell: StoredCell = { t: 'query-task', s: c.source, query_task: c.task };
+        if (c.ref) cell.ref = c.ref;
+        if (c.explanation) cell.explanation = c.explanation;
+        return cell;
+      }
       return { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
     }),
   };
@@ -208,6 +219,17 @@ export function parseAnyFile(text: string): ParsedFile {
         data: c.data ?? '',
       };
       if (c.ref) (cell as { ref?: string }).ref = c.ref;
+      return cell;
+    }
+    if (c.t === 'query-task') {
+      const spec = c.query_task_snapshot ?? c.query_task;
+      if (!spec) {
+        // Битая ячейка — не крашим ноутбук, показываем как markdown с текстом ошибки.
+        return { id: nextId(), type: 'markdown', source: '⚠ query-task ячейка без спеки — файл повреждён.' };
+      }
+      const cell: Cell = { id: nextId(), type: 'query-task', source: c.s, task: spec };
+      if (c.ref) (cell as { ref?: string }).ref = c.ref;
+      if (c.explanation) (cell as { explanation?: string }).explanation = c.explanation;
       return cell;
     }
     if (c.t === 'md') return { id: nextId(), type: 'markdown', source: c.s };

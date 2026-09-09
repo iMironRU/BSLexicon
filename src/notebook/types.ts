@@ -13,8 +13,9 @@
  * `?nb=` не попадает (см. serialize.ts).
  */
 import type { TaskTest } from '../judge/types';
+import type { QueryTaskSpec } from '../query/task-format';
 
-export type CellType = 'markdown' | 'code' | 'task' | 'query';
+export type CellType = 'markdown' | 'code' | 'task' | 'query' | 'query-task';
 
 export interface MarkdownCellData {
   id: string;
@@ -77,7 +78,24 @@ export interface QueryCellData {
   ref?: string;
 }
 
-export type Cell = MarkdownCellData | CodeCellData | TaskCellData | QueryCellData;
+/**
+ * Query-задача (#43): SDBL-запрос с эталонным результатом и автопроверкой.
+ * Похоже на TaskCellData, но проверка идёт через сравнение rowset'а с
+ * эталоном (см. src/query/task-runner.ts). Спека `task` иммутабельна для
+ * ученика; `source` — то, что он редактирует.
+ */
+export interface QueryTaskCellData {
+  id: string;
+  type: 'query-task';
+  source: string;
+  task: QueryTaskSpec;
+  /** Опциональная ссылка на `.query-task.yaml` в репо педагога. */
+  ref?: string;
+  /** «Объясни своё решение» — тот же паттерн, что у обычной задачи (#33). */
+  explanation?: string;
+}
+
+export type Cell = MarkdownCellData | CodeCellData | TaskCellData | QueryCellData | QueryTaskCellData;
 
 export interface Notebook {
   cells: Cell[];
