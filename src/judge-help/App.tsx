@@ -12,7 +12,8 @@ import { getProgress, loadProgress, markPassed, saveDraft, type ProgressMap } fr
 import { TaskPage } from './TaskPage';
 import { Home } from './Home';
 
-const TRAINER_URL = import.meta.env.BASE_URL;
+const LANDING_URL = import.meta.env.BASE_URL;
+const TRAINER_URL = `${import.meta.env.BASE_URL}trainer/`;
 const HELP_URL = `${import.meta.env.BASE_URL}help/`;
 
 type Route =
@@ -97,10 +98,11 @@ export function App() {
           </button>
           <NavMenu
             links={[
-              { label: 'Judge', href: `${TRAINER_URL}help/judge/`, current: true, hint: 'Задачи из книг серии' },
+              { label: '↑ К режимам', href: LANDING_URL, hint: 'Стартовая страница со всеми режимами' },
+              { label: 'Judge', href: `${LANDING_URL}help/judge/`, current: true, hint: 'Задачи из книг серии' },
               { label: 'Учебный режим', href: HELP_URL, hint: '~180 записей с тренажёром' },
-              { label: 'Полный СП', href: `${TRAINER_URL}help/full/`, hint: 'Все ~20 тыс. записей платформы' },
-              { label: 'События 1С', href: `${TRAINER_URL}help/events/`, hint: '670 событий + lifecycle' },
+              { label: 'Полный СП', href: `${LANDING_URL}help/full/`, hint: 'Все ~20 тыс. записей платформы' },
+              { label: 'События 1С', href: `${LANDING_URL}help/events/`, hint: '670 событий + lifecycle' },
               { label: '← Тренажёр', href: TRAINER_URL, hint: 'Писать и отлаживать BSL' },
             ]}
           />

@@ -16,7 +16,8 @@ import { search } from './search';
 import type { FullHit } from './search';
 import { buildTree } from './tree';
 
-const TRAINER_URL = import.meta.env.BASE_URL;
+const LANDING_URL = import.meta.env.BASE_URL;
+const TRAINER_URL = `${import.meta.env.BASE_URL}trainer/`;
 const HELP_URL = `${import.meta.env.BASE_URL}help/`;
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const HOTKEY_LABEL = IS_MAC ? '⌘K' : 'Ctrl+K';
@@ -204,10 +205,11 @@ export function App() {
           )}
           <NavMenu
             links={[
-              { label: 'Полный СП', href: `${TRAINER_URL}help/full/`, current: true, hint: 'Все ~20 тыс. записей платформы' },
+              { label: '↑ К режимам', href: LANDING_URL, hint: 'Стартовая страница со всеми режимами' },
+              { label: 'Полный СП', href: `${LANDING_URL}help/full/`, current: true, hint: 'Все ~20 тыс. записей платформы' },
               { label: 'Учебный режим', href: HELP_URL, hint: '~180 записей с тренажёром' },
-              { label: 'События 1С', href: `${TRAINER_URL}help/events/`, hint: '670 событий + lifecycle' },
-              { label: 'Judge', href: `${TRAINER_URL}help/judge/`, hint: 'Задачи из книг серии с чек-поинтами' },
+              { label: 'События 1С', href: `${LANDING_URL}help/events/`, hint: '670 событий + lifecycle' },
+              { label: 'Judge', href: `${LANDING_URL}help/judge/`, hint: 'Задачи из книг серии с чек-поинтами' },
               { label: '← Тренажёр', href: TRAINER_URL, hint: 'Писать и отлаживать BSL' },
             ]}
           />

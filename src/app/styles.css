@@ -57,7 +57,9 @@ body {
   font-size: 16px;
   color: var(--accent);
   letter-spacing: 0.3px;
+  text-decoration: none;
 }
+.app__logo:hover { text-decoration: underline; }
 
 .app__tagline {
   font-size: 12px;

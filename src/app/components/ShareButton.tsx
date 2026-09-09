@@ -25,7 +25,7 @@ export function ShareButton({ code }: ShareButtonProps) {
     const url =
       window.location.origin +
       import.meta.env.BASE_URL +
-      '?code=' +
+      'trainer/?code=' +
       encodeCodeParam(code);
 
     if (navigator.clipboard?.writeText) {

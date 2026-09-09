@@ -112,7 +112,8 @@ export function App() {
           <span className="qs-header__sub">песочница запросов</span>
         </div>
         <nav className="qs-header__nav">
-          <a href={import.meta.env.BASE_URL} title="Тренажёр BSL">Тренажёр</a>
+          <a href={import.meta.env.BASE_URL} title="К режимам">↑ Режимы</a>
+          <a href={`${import.meta.env.BASE_URL}trainer/`} title="Тренажёр BSL">Тренажёр</a>
           <a href={`${import.meta.env.BASE_URL}notebook/`} title="Ноутбук">Ноутбук</a>
           <a href={`${import.meta.env.BASE_URL}help/`} title="Справочник">Справочник</a>
         </nav>

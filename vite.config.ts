@@ -106,10 +106,12 @@ export default defineConfig(({ command }) => ({
     outDir: 'dist',
     sourcemap: true,
     rollupOptions: {
-      // Multi-page: тренажёр (/) + справочник (/help/). Help-entry не импортирует
-      // Monaco — у него свой ≪50 КБ JS-чанк, не дублирующий 4 МБ редактора.
+      // Multi-page: лендинг (/) → тренажёр (/trainer/) → справочник (/help/) и т.д.
+      // Help-entry не импортирует Monaco — у него свой ≪50 КБ JS-чанк, не
+      // дублирующий 4 МБ редактора.
       input: {
-        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        landing: fileURLToPath(new URL('./index.html', import.meta.url)),
+        trainer: fileURLToPath(new URL('./trainer/index.html', import.meta.url)),
         help: fileURLToPath(new URL('./help/index.html', import.meta.url)),
         fullHelp: fileURLToPath(new URL('./help/full/index.html', import.meta.url)),
         eventsHelp: fileURLToPath(new URL('./help/events/index.html', import.meta.url)),

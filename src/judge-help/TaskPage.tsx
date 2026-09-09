@@ -66,7 +66,7 @@ export function TaskPage({
     setResult(null);
   };
 
-  const trainerUrl = `${import.meta.env.BASE_URL}?code=${encodeCodeParam(source)}&title=${encodeURIComponent(`${book.title} — ${task.title}`)}`;
+  const trainerUrl = `${import.meta.env.BASE_URL}trainer/?code=${encodeCodeParam(source)}&title=${encodeURIComponent(`${book.title} — ${task.title}`)}`;
 
   return (
     <article className="judge__task">

@@ -18,7 +18,7 @@ export function Home({ catalog }: HomeProps) {
       <h1 className="home__title">Синтакс-помощник BSL</h1>
       <p className="home__lead">
         Справочник по встроенному языку 1С (BSL): типы, функции, методы и свойства.
-        Записи в каталоге исполняются в <a href={import.meta.env.BASE_URL}>тренажёре</a>{' '}
+        Записи в каталоге исполняются в <a href={`${import.meta.env.BASE_URL}trainer/`}>тренажёре</a>{' '}
         и проходят doctest в CI — то, что здесь, гарантированно работает.
       </p>
 
@@ -37,7 +37,7 @@ export function Home({ catalog }: HomeProps) {
         <h2>С чего начать</h2>
         <ul className="home__hints">
           <li>
-            Тренажёр и пошаговая отладка — <a href={import.meta.env.BASE_URL}>BSLexicon</a>.
+            Тренажёр и пошаговая отладка — <a href={`${import.meta.env.BASE_URL}trainer/`}>BSLexicon</a>.
           </li>
           <li>Дерево справа сгруппировано по категориям функций и по типам.</li>
           <li>

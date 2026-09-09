@@ -202,7 +202,13 @@ export function App() {
     <div className={'app' + (urlParams.embed ? ' app--embed' : '')}>
       <header className="app__header">
         <div className="app__brand">
-          <span className="app__logo">BSLexicon</span>
+          <a
+            className="app__logo"
+            href={import.meta.env.BASE_URL}
+            title="К стартовой странице со всеми режимами"
+          >
+            BSLexicon
+          </a>
           <span className="app__tagline">тренажёр языка 1С (BSL)</span>
           <a className="app__author" href={AUTHOR_URL} target="_blank" rel="noopener noreferrer">
             от iMironRU

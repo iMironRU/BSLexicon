@@ -22,7 +22,8 @@ import {
 } from './events';
 import type { EventGroup, GroupKey, Phase } from './events';
 
-const TRAINER_URL = import.meta.env.BASE_URL;
+const LANDING_URL = import.meta.env.BASE_URL;
+const TRAINER_URL = `${import.meta.env.BASE_URL}trainer/`;
 const HELP_URL = `${import.meta.env.BASE_URL}help/`;
 const FULL_URL = `${import.meta.env.BASE_URL}help/full/`;
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -217,10 +218,11 @@ export function App() {
           )}
           <NavMenu
             links={[
-              { label: 'События 1С', href: `${TRAINER_URL}help/events/`, current: true, hint: '670 событий + lifecycle' },
+              { label: '↑ К режимам', href: LANDING_URL, hint: 'Стартовая страница со всеми режимами' },
+              { label: 'События 1С', href: `${LANDING_URL}help/events/`, current: true, hint: '670 событий + lifecycle' },
               { label: 'Учебный режим', href: HELP_URL, hint: '~180 записей с тренажёром' },
               { label: 'Полный СП', href: FULL_URL, hint: 'Все ~20 тыс. записей платформы' },
-              { label: 'Judge', href: `${TRAINER_URL}help/judge/`, hint: 'Задачи из книг серии с чек-поинтами' },
+              { label: 'Judge', href: `${LANDING_URL}help/judge/`, hint: 'Задачи из книг серии с чек-поинтами' },
               { label: '← Тренажёр', href: TRAINER_URL, hint: 'Писать и отлаживать BSL' },
             ]}
           />

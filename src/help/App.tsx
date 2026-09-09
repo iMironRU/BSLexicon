@@ -17,7 +17,8 @@ import { useHashRoute } from './router';
 import { defaultTarget, loadTarget, saveTarget, versionsFromEntries } from './target';
 import type { Target } from './target';
 
-const TRAINER_URL = import.meta.env.BASE_URL; // '/' в dev, '/BSLexicon/' в build
+const LANDING_URL = import.meta.env.BASE_URL; // '/' в dev, '/BSLexicon/' в build
+const TRAINER_URL = `${import.meta.env.BASE_URL}trainer/`;
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const HOTKEY_LABEL = IS_MAC ? '⌘K' : 'Ctrl+K';
 
@@ -157,10 +158,11 @@ export function App() {
           </button>
           <NavMenu
             links={[
-              { label: 'Учебный режим', href: TRAINER_URL + 'help/', current: true, hint: '~180 курированных + тренажёр' },
-              { label: 'Полный СП', href: `${TRAINER_URL}help/full/`, hint: 'Все ~20 тыс. записей платформы' },
-              { label: 'События 1С', href: `${TRAINER_URL}help/events/`, hint: '670 событий + lifecycle' },
-              { label: 'Judge', href: `${TRAINER_URL}help/judge/`, hint: 'Задачи из книг серии с чек-поинтами' },
+              { label: '↑ К режимам', href: LANDING_URL, hint: 'Стартовая страница со всеми режимами' },
+              { label: 'Учебный режим', href: `${LANDING_URL}help/`, current: true, hint: '~180 курированных + тренажёр' },
+              { label: 'Полный СП', href: `${LANDING_URL}help/full/`, hint: 'Все ~20 тыс. записей платформы' },
+              { label: 'События 1С', href: `${LANDING_URL}help/events/`, hint: '670 событий + lifecycle' },
+              { label: 'Judge', href: `${LANDING_URL}help/judge/`, hint: 'Задачи из книг серии с чек-поинтами' },
               { label: '← Тренажёр', href: TRAINER_URL, hint: 'Писать и отлаживать BSL' },
             ]}
           />

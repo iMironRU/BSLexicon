@@ -209,9 +209,11 @@ function NotebookShell() {
           <span className="nb-header__sub">ноутбук BSL</span>
         </div>
         <nav className="nb-header__nav">
-          <a href={import.meta.env.BASE_URL} title="Тренажёр">Тренажёр</a>
+          <a href={import.meta.env.BASE_URL} title="К режимам">↑ Режимы</a>
+          <a href={`${import.meta.env.BASE_URL}trainer/`} title="Тренажёр">Тренажёр</a>
+          <a href={`${import.meta.env.BASE_URL}query/`} title="Песочница запросов">Запросы</a>
           <a href={`${import.meta.env.BASE_URL}help/`} title="Справочник">Справочник</a>
-          <a href={`${import.meta.env.BASE_URL}help/judge/`} title="Задачи">Задачи</a>
+          <a href={`${import.meta.env.BASE_URL}help/judge/`} title="Задачи">Задачник</a>
         </nav>
         <div className="nb-header__actions">
           {readOnly && (

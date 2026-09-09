@@ -5,15 +5,405 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <link rel="apple-touch-icon" href="%BASE_URL%favicon.svg" />
-    <meta name="theme-color" content="#4ec9b0" />
-    <title>BSLexicon — тренажёр языка 1С (BSL)</title>
+    <meta name="theme-color" content="#0e0f13" />
+    <title>BSLexicon — язык 1С в браузере</title>
     <meta
       name="description"
-      content="Браузерный тренажёр языка 1С (BSL): пишешь код, исполняешь и отлаживаешь пошагово, без платформы 1С."
+      content="Пять режимов работы с 1С:BSL в браузере — тренажёр, ноутбук с уроками, песочница языка запросов, справочник и задачник. Без десктопной 1С."
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    />
+    <style>
+      :root {
+        --bg: #0e0f13;
+        --panel: #16181f;
+        --panel-2: #1c1f27;
+        --border: #262932;
+        --border-hi: #3a3e49;
+        --text: #e6e7ea;
+        --muted: #7a7d87;
+        --dim: #4a4d55;
+        --teal: #4ec9b0;
+        --teal-dark: #2f8f7c;
+        --yellow: #dcdcaa;
+        --blue: #9cdcfe;
+        --orange: #ce9178;
+        --coral: #f48771;
+        --violet: #c586c0;
+        color-scheme: dark;
+        --font-body: 'Golos Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 15px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: inherit; text-decoration: none; }
+      code, pre { font-family: var(--font-mono); }
+
+      .page {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 32px 24px 64px;
+        display: flex;
+        flex-direction: column;
+        gap: 48px;
+      }
+
+      /* шапка */
+      .head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      .brand {
+        font-family: var(--font-mono);
+        font-weight: 700;
+        font-size: 20px;
+        letter-spacing: -0.02em;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 1px;
+      }
+      .brand__name { color: var(--text); }
+      .brand__ext { color: var(--muted); font-weight: 500; }
+      .brand__accent { color: var(--teal); }
+      .micro-nav {
+        display: inline-flex;
+        align-items: center;
+        gap: 20px;
+        color: var(--muted);
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .micro-nav a { color: var(--muted); border-bottom: 1px dashed var(--dim); padding-bottom: 1px; }
+      .micro-nav a:hover { color: var(--text); border-color: var(--muted); }
+      .micro-nav .dot { color: var(--dim); }
+
+      /* hero */
+      .hero { display: flex; flex-direction: column; gap: 18px; padding: 8px 0 4px; }
+      .hero__eyebrow {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--teal);
+      }
+      .hero__title {
+        font-family: var(--font-body);
+        font-weight: 600;
+        font-size: 48px;
+        line-height: 1.05;
+        letter-spacing: -0.025em;
+        text-wrap: balance;
+        margin: 0;
+        max-width: 20ch;
+      }
+      .hero__title em { font-style: normal; color: var(--teal); }
+      .hero__lead {
+        font-size: 18px;
+        color: var(--muted);
+        max-width: 60ch;
+        line-height: 1.5;
+      }
+      .hero__lead b { color: var(--text); font-weight: 500; }
+
+      /* карточки-режимы */
+      .modes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+      .mode {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px 20px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        transition: border-color .15s, transform .15s;
+        position: relative;
+        overflow: hidden;
+      }
+      .mode:hover { border-color: var(--teal-dark); transform: translateY(-1px); }
+      .mode--wide { grid-column: span 2; }
+      .mode__head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+      .mode__label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .mode__title {
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+        margin: 0;
+        color: var(--text);
+      }
+      .mode__title-icon {
+        display: inline-block;
+        width: 22px;
+        text-align: center;
+        color: var(--teal);
+        margin-right: 4px;
+      }
+      .mode__desc {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+        max-width: 55ch;
+        min-height: 3em;
+      }
+      .mode__snippet {
+        background: var(--panel-2);
+        border-top: 1px solid var(--border);
+        margin: 0 -20px;
+        padding: 14px 20px 12px;
+        font-family: var(--font-mono);
+        font-size: 12.5px;
+        line-height: 1.55;
+        overflow-x: auto;
+        white-space: pre;
+        color: var(--text);
+        tab-size: 4;
+      }
+      .kw { color: var(--blue); }
+      .kw2 { color: var(--violet); }
+      .str { color: var(--orange); }
+      .num { color: #b5cea8; }
+      .cmt { color: #6a9955; font-style: italic; }
+      .fn { color: var(--yellow); }
+      .id { color: var(--teal); }
+      .op { color: var(--text); }
+      .md { color: var(--muted); }
+      .cell { color: var(--dim); font-weight: 500; }
+
+      .mode__foot {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        background: var(--panel-2);
+        border-top: 1px solid var(--border);
+        margin: 0 -20px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .mode__cta {
+        color: var(--teal);
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .mode__cta::after { content: '→'; transition: transform .15s; }
+      .mode:hover .mode__cta::after { transform: translateX(2px); }
+      .mode__path { color: var(--dim); }
+
+      /* footer */
+      .foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted);
+        flex-wrap: wrap;
+      }
+      .foot__meta { display: flex; gap: 20px; flex-wrap: wrap; }
+      .foot a { color: var(--muted); border-bottom: 1px dashed var(--dim); }
+      .foot a:hover { color: var(--text); }
+
+      @media (max-width: 720px) {
+        .hero__title { font-size: 36px; }
+        .hero__lead { font-size: 16px; }
+        .modes { grid-template-columns: 1fr; }
+        .mode--wide { grid-column: auto; }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div class="page">
+      <header class="head">
+        <div class="brand" title="BSLexicon">
+          <span class="brand__name">BSLexicon</span><span class="brand__ext">.<span class="brand__accent">bsl</span></span>
+        </div>
+        <nav class="micro-nav">
+          <a href="https://github.com/iMironRU/BSLexicon" target="_blank" rel="noopener">github</a>
+          <span class="dot">·</span>
+          <span>сборка <span id="build-sha">…</span></span>
+          <span class="dot">·</span>
+          <span>MIT</span>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div class="hero__eyebrow">пять режимов, одна платформа</div>
+        <h1 class="hero__title">Учи 1С в браузере — от <em>Сообщить("привет")</em> до отчёта по регистру.</h1>
+        <p class="hero__lead">
+          Интерпретатор BSL, песочница языка запросов SDBL, ноутбук с исполняемыми ячейками
+          и справочник с doctest-ами — всё в одном PWA, без десктопной 1С.
+          <b>Выбирай режим ниже.</b>
+        </p>
+      </section>
+
+      <section class="modes" aria-label="Режимы">
+
+        <a class="mode mode--wide" href="%BASE_URL%trainer/">
+          <div class="mode__head">
+            <div>
+              <div class="mode__label">01 · интерпретатор</div>
+              <h2 class="mode__title"><span class="mode__title-icon">▶</span>Тренажёр</h2>
+            </div>
+          </div>
+          <p class="mode__desc">
+            Пиши BSL и сразу видишь, как считает интерпретатор. Автодополнение из
+            справочника, отладчик со стеком и переменными, ссылка «поделиться» —
+            код едет в URL и никуда не уходит с твоей машины.
+          </p>
+<pre class="mode__snippet"><span class="cmt">// Быстрое «привет»</span>
+<span class="fn">Сообщить</span>(<span class="str">"Здравствуй, 1С"</span>);
+
+<span class="kw2">Функция</span> <span class="fn">Факториал</span>(<span class="id">Н</span>) <span class="kw">Экспорт</span>
+    <span class="kw">Если</span> <span class="id">Н</span> <span class="op">&lt;=</span> <span class="num">1</span> <span class="kw">Тогда</span>
+        <span class="kw">Возврат</span> <span class="num">1</span>;
+    <span class="kw">КонецЕсли</span>;
+    <span class="kw">Возврат</span> <span class="id">Н</span> <span class="op">*</span> <span class="fn">Факториал</span>(<span class="id">Н</span> <span class="op">-</span> <span class="num">1</span>);
+<span class="kw2">КонецФункции</span>;</pre>
+          <div class="mode__foot">
+            <span class="mode__path">/trainer/</span>
+            <span class="mode__cta">Открыть тренажёр</span>
+          </div>
+        </a>
+
+        <a class="mode" href="%BASE_URL%notebook/">
+          <div class="mode__head">
+            <div>
+              <div class="mode__label">02 · уроки</div>
+              <h2 class="mode__title"><span class="mode__title-icon">▤</span>Ноутбук</h2>
+            </div>
+          </div>
+          <p class="mode__desc">
+            Уроки-статьи с исполняемыми ячейками: текст, код, задача, запрос,
+            задача-запрос. Педагог собирает урок в git — ученик открывает по ссылке.
+          </p>
+<pre class="mode__snippet"><span class="cell">▤ markdown</span>
+<span class="md"># Строки</span>
+
+<span class="cell">▶ code            [1]</span>
+<span class="id">С</span> <span class="op">=</span> <span class="str">"мир"</span>;
+<span class="fn">Сообщить</span>(<span class="fn">СтрДлина</span>(<span class="id">С</span>));
+
+<span class="cell">⊘ task</span>
+<span class="cmt">// Выведи 42</span></pre>
+          <div class="mode__foot">
+            <span class="mode__path">/notebook/</span>
+            <span class="mode__cta">Открыть ноутбук</span>
+          </div>
+        </a>
+
+        <a class="mode" href="%BASE_URL%query/">
+          <div class="mode__head">
+            <div>
+              <div class="mode__label">03 · SDBL</div>
+              <h2 class="mode__title"><span class="mode__title-icon">◧</span>Запросы</h2>
+            </div>
+          </div>
+          <p class="mode__desc">
+            Язык запросов 1С на реальных таблицах: справочники, документы,
+            регистры накопления. Виртуальные <code>Остатки</code> и <code>Обороты</code>
+            считаются как в проде.
+          </p>
+<pre class="mode__snippet"><span class="kw">ВЫБРАТЬ</span>
+    <span class="id">Склад</span>,
+    <span class="fn">СУММА</span>(<span class="id">КоличествоОстаток</span>) <span class="kw">КАК</span> <span class="id">Итог</span>
+<span class="kw">ИЗ</span> <span class="id">РегистрНакопления</span>.<span class="id">ОстаткиТоваров</span>.<span class="fn">Остатки</span>(
+        <span class="fn">ДАТАВРЕМЯ</span>(<span class="num">2024</span>, <span class="num">3</span>, <span class="num">1</span>))
+<span class="kw">СГРУППИРОВАТЬ ПО</span> <span class="id">Склад</span></pre>
+          <div class="mode__foot">
+            <span class="mode__path">/query/</span>
+            <span class="mode__cta">Открыть песочницу</span>
+          </div>
+        </a>
+
+        <a class="mode" href="%BASE_URL%help/">
+          <div class="mode__head">
+            <div>
+              <div class="mode__label">04 · reference</div>
+              <h2 class="mode__title"><span class="mode__title-icon">§</span>Справочник</h2>
+            </div>
+          </div>
+          <p class="mode__desc">
+            Язык, типы, встроенные функции. С примерами и doctest-ами:
+            то, что есть в рантайме, то и в справке.
+          </p>
+<pre class="mode__snippet"><span class="fn">СтрНайти</span>(<span class="id">Строка</span>, <span class="id">Подстрока</span> [, <span class="id">НаправлениеПоиска</span>]) → <span class="id">Число</span>
+
+<span class="cmt">// doctest</span>
+<span class="fn">Сообщить</span>(<span class="fn">СтрНайти</span>(<span class="str">"abcabc"</span>, <span class="str">"b"</span>));
+<span class="cmt">// → 2 ✓</span></pre>
+          <div class="mode__foot">
+            <span class="mode__path">/help/</span>
+            <span class="mode__cta">Открыть справочник</span>
+          </div>
+        </a>
+
+        <a class="mode mode--wide" href="%BASE_URL%help/judge/">
+          <div class="mode__head">
+            <div>
+              <div class="mode__label">05 · judge</div>
+              <h2 class="mode__title"><span class="mode__title-icon">⚖</span>Задачник</h2>
+            </div>
+          </div>
+          <p class="mode__desc">
+            Коллекции задач из книг с автопрогонкой тестов. Пиши решение —
+            песочница сравнивает вывод с эталоном. Задачи-запросы работают
+            точно так же: сверяем rowset с ожидаемым.
+          </p>
+<pre class="mode__snippet"><span class="cmt">// Задача: развернуть строку</span>
+
+<span class="kw2">Функция</span> <span class="fn">Развернуть</span>(<span class="id">С</span>) <span class="kw">Экспорт</span>
+    <span class="id">Р</span> <span class="op">=</span> <span class="str">""</span>;
+    <span class="kw">Для</span> <span class="id">и</span> <span class="op">=</span> <span class="fn">СтрДлина</span>(<span class="id">С</span>) <span class="kw">По</span> <span class="num">1</span> <span class="kw">Цикл</span>
+        <span class="id">Р</span> <span class="op">=</span> <span class="id">Р</span> <span class="op">+</span> <span class="fn">Сред</span>(<span class="id">С</span>, <span class="id">и</span>, <span class="num">1</span>);
+    <span class="kw">КонецЦикла</span>;
+    <span class="kw">Возврат</span> <span class="id">Р</span>;
+<span class="kw2">КонецФункции</span>;
+
+<span class="cmt">// ✓ test 1: "abc" → "cba"</span>
+<span class="cmt">// ✓ test 2: "мир" → "рим"</span></pre>
+          <div class="mode__foot">
+            <span class="mode__path">/help/judge/</span>
+            <span class="mode__cta">Открыть задачник</span>
+          </div>
+        </a>
+      </section>
+
+      <footer class="foot">
+        <div class="foot__meta">
+          <span>© BSLexicon · <a href="https://github.com/iMironRU/BSLexicon/blob/main/LICENSE" target="_blank" rel="noopener">MIT</a></span>
+          <span>стек: React 18 · Vite · Monaco · ANTLR</span>
+        </div>
+        <div>
+          <a href="https://github.com/iMironRU/BSLexicon" target="_blank" rel="noopener">iMironRU/BSLexicon</a>
+        </div>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/landing/main.ts"></script>
   </body>
 </html>

@@ -305,7 +305,7 @@ function Examples({ examples }: { examples: CatalogExample[] }) {
           )}
           <a
             className="example__open"
-            href={`${import.meta.env.BASE_URL}?code=${encodeCodeParam(ex.code)}`}
+            href={`${import.meta.env.BASE_URL}trainer/?code=${encodeCodeParam(ex.code)}`}
             target="_self"
             title="Открыть код в тренажёре"
           >
