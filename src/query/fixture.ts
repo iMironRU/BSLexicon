@@ -79,16 +79,26 @@ export function rowsOf(fx: Fixture, tableRef: string): Row[] | null {
  * `undefined` (отсутствие ключа) — Неопределено. Остальное — как есть.
  * Без этого `ЕСТЬ NULL` не срабатывал бы над Родитель у групп.
  */
-function normalizeValue(v: BslValue | undefined | null): BslValue {
+function normalizeValue(v: unknown): BslValue {
   if (v === null) return NULL;
   if (v === undefined) return UNDEFINED;
-  return v;
+  return v as BslValue;
 }
 
 // ── helpers ────────────────────────────────────────────────────────
 
-/** Все top-level поля таблицы (независимо от kind). */
-function fieldsOf(table: Table): Field[] {
+/**
+ * Все top-level поля таблицы: сначала стандартные автополя (Ссылка,
+ * ПометкаУдаления, для иерархических — Родитель/ЭтоГруппа, для документа —
+ * Номер/Дата/Проведён, для регистров — Период/Регистратор). Потом —
+ * поля, объявленные в схеме. Дубли решаются в пользу объявленного
+ * (автор может переопределить тип).
+ */
+export function fieldsOf(table: Table): Field[] {
+  return mergeFields(autoFieldsFor(table), declaredFieldsOf(table));
+}
+
+function declaredFieldsOf(table: Table): Field[] {
   switch (table.kind) {
     case 'Справочник':
     case 'Документ':
@@ -97,6 +107,54 @@ function fieldsOf(table: Table): Field[] {
     case 'РегистрСведений':
       return [...table.dimensions, ...table.resources, ...(table.attributes ?? [])];
   }
+}
+
+/** Синтетические автополя, которые в 1С всегда есть — даже если автор их не объявил. */
+function autoFieldsFor(table: Table): Field[] {
+  switch (table.kind) {
+    case 'Справочник': {
+      const auto: Field[] = [
+        { name: 'Ссылка', type: { kind: 'УникальныйИдентификатор' }, key: true },
+        { name: 'Код', type: { kind: 'Строка' } },
+        { name: 'Наименование', type: { kind: 'Строка' } },
+        { name: 'ПометкаУдаления', type: { kind: 'Булево' } },
+      ];
+      if (table.hierarchical) {
+        auto.push({ name: 'Родитель', type: { kind: 'Ссылка', refs: `Справочник.${table.name}` } });
+        auto.push({ name: 'ЭтоГруппа', type: { kind: 'Булево' } });
+      }
+      return auto;
+    }
+    case 'Документ':
+      return [
+        { name: 'Ссылка', type: { kind: 'УникальныйИдентификатор' }, key: true },
+        { name: 'Номер', type: { kind: 'Строка' } },
+        { name: 'Дата', type: { kind: 'Дата' } },
+        { name: 'ПометкаУдаления', type: { kind: 'Булево' } },
+        { name: 'Проведён', type: { kind: 'Булево' } },
+      ];
+    case 'РегистрНакопления':
+      return [
+        { name: 'Период', type: { kind: 'Дата' } },
+        { name: 'Регистратор', type: { kind: 'Строка' } },
+        ...(table.view === 'Остатки'
+          ? [{ name: 'ВидДвижения', type: { kind: 'Строка' } as const }]
+          : []),
+      ];
+    case 'РегистрСведений':
+      return [
+        ...(table.periodic ? [{ name: 'Период', type: { kind: 'Дата' } as const }] : []),
+        { name: 'Регистратор', type: { kind: 'Строка' } },
+      ];
+  }
+}
+
+function mergeFields(auto: Field[], declared: Field[]): Field[] {
+  const byName = new Map<string, Field>();
+  for (const f of auto) byName.set(f.name, f);
+  // Объявленные перезаписывают автополя одноимённые.
+  for (const f of declared) byName.set(f.name, f);
+  return [...byName.values()];
 }
 
 /** Имя ключевого поля (для быстрого byRef-индекса). */
@@ -136,18 +194,6 @@ function normalizeRow(raw: Record, table: Table): Row {
         out[ts.name] = [];
       }
     }
-  }
-  // Системные поля регистров.
-  if (table.kind === 'РегистрНакопления') {
-    if (raw['Период'] !== undefined) out['Период'] = raw['Период'] as BslValue;
-    if (raw['Регистратор'] !== undefined) out['Регистратор'] = raw['Регистратор'] as BslValue;
-    if (table.view === 'Остатки' && raw['ВидДвижения'] !== undefined) {
-      out['ВидДвижения'] = raw['ВидДвижения'] as BslValue;
-    }
-  }
-  if (table.kind === 'РегистрСведений') {
-    if (raw['Период'] !== undefined) out['Период'] = raw['Период'] as BslValue;
-    if (raw['Регистратор'] !== undefined) out['Регистратор'] = raw['Регистратор'] as BslValue;
   }
   return out;
 }
