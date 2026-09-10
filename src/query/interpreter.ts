@@ -21,6 +21,7 @@ import {
   AliasContext,
   BetweenPredicateContext,
   CaseExpressionContext,
+  CastFunctionContext,
   ColumnContext,
   ComparePredicateContext,
   DataSourceContext,
@@ -893,6 +894,7 @@ function evalNode(node: ParserRuleContext | TerminalNode, snap: Snap, ctx: Query
   if (node instanceof LikePredicateContext) return evalLike(node, snap, ctx, bucket);
   if (node instanceof CaseExpressionContext) return evalCase(node, snap, ctx, bucket);
   if (node instanceof ComparePredicateContext) return evalCompare(node, snap, ctx, bucket);
+  if (node instanceof CastFunctionContext) return evalCast(node, snap, ctx, bucket);
 
   // Унарный ±: `sign expression` (#72). Без этого кейса fallback ловит только
   // `-<число>` через `getText()`-регэксп («-5»), а `-Поле`/`-СУММА(x)`/`-(a+b)`
@@ -1186,8 +1188,75 @@ function maybeEvalFunction(node: ParserRuleContext, snap: Snap, ctx: QueryCtx, b
       const v = vals[0];
       return v === NULL || v === UNDEFINED ? (vals[1] ?? NULL) : v;
     }
+    case 'ПОДСТРОКА': case 'SUBSTRING': {
+      // ПОДСТРОКА(строка, начало, длина) — индексация с 1 (как в 1С),
+      // отрицательные / нечисловые аргументы → NULL.
+      const v = vals[0];
+      if (v === NULL || v === UNDEFINED) return NULL;
+      const s = toBslString(v);
+      const start = toNumber(vals[1]);
+      const len = toNumber(vals[2]);
+      if (!Number.isFinite(start) || !Number.isFinite(len)) return NULL;
+      const from = Math.max(0, Math.trunc(start) - 1);
+      return s.substring(from, from + Math.max(0, Math.trunc(len)));
+    }
     default: return NOT_A_FUNC;
   }
+}
+
+/**
+ * ВЫРАЗИТЬ(expr КАК Тип) — приведение типа (#69). Правила близки к
+ * платформе: если значение уже нужного типа — возвращается оно
+ * (со срезкой строки до длины); если нет — `NULL`. Приведение к
+ * ссылочному типу метаданных пока не реализовано — возвращает NULL
+ * с warning'ом (внятнее тихой пустоты).
+ */
+function evalCast(node: CastFunctionContext, snap: Snap, ctx: QueryCtx, bucket: Snap[] | null): BslValue {
+  const expr = node._value;
+  if (!expr) return NULL;
+  const v = evalNode(expr, snap, ctx, bucket);
+  if (v === NULL || v === UNDEFINED) return NULL;
+
+  if (node.STRING()) {
+    const s = toBslString(v);
+    const lenText = node._len?.text;
+    if (lenText) {
+      const n = Number(lenText);
+      if (Number.isFinite(n) && n >= 0) return s.slice(0, n);
+    }
+    return s;
+  }
+  if (node.NUMBER()) {
+    const n = toNumber(v);
+    if (!Number.isFinite(n)) return NULL;
+    const precText = node._prec?.text;
+    if (precText) {
+      const p = Number(precText);
+      if (Number.isFinite(p) && p >= 0) {
+        const mult = Math.pow(10, p);
+        return Math.round(n * mult) / mult;
+      }
+    }
+    // ЧИСЛО без указания дробной части — целочисленное приведение.
+    if (node._len) return Math.trunc(n);
+    return n;
+  }
+  if (node.BOOLEAN()) {
+    if (typeof v === 'boolean') return v;
+    if (typeof v === 'number') return v !== 0;
+    return NULL;
+  }
+  if (node.DATE()) {
+    // Даты в интерпретаторе — ISO-строки (`buildDateTime`). Всё, что не
+    // выглядит как ISO — не дата в этом рантайме.
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) return v;
+    return NULL;
+  }
+  if (node.mdo()) {
+    ctx.warnings.add('ВЫРАЗИТЬ КАК ссылка на метаданные пока не реализовано — возвращаю NULL');
+    return NULL;
+  }
+  return NULL;
 }
 
 function computeAggregate(name: string, bucket: Snap[], arg: ParserRuleContext | undefined, ctx: QueryCtx): BslValue {

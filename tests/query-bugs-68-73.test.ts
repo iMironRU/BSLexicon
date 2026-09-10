@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { NULL } from '@core/interpreter/values';
 import { buildFixture, type Fixture } from '../src/query/fixture';
 import { runQuery } from '../src/query/interpreter';
 import { parseDataYaml, parseSchemaYaml } from '../src/query/schema-loader';
@@ -140,5 +141,86 @@ describe('#68 — ПЕРВЫЕ и УПОРЯДОЧИТЬ ПО внутри по�
     `);
     // В движениях есть только два вида: Приход и Расход
     expect(r.rows.length).toBe(2);
+  });
+});
+
+describe('#69 — ВЫРАЗИТЬ и ПОДСТРОКА', () => {
+  it('ПОДСТРОКА возвращает кусок строки (индексация с 1)', () => {
+    const r = ok(`
+      ВЫБРАТЬ ПОДСТРОКА(Т.Наименование, 1, 3) КАК Кусок
+      ИЗ Справочник.Номенклатура КАК Т
+      УПОРЯДОЧИТЬ ПО Т.Наименование
+    `);
+    // Все значения — непустые строки длиной ≤ 3
+    for (const [chunk] of r.rows) {
+      expect(typeof chunk).toBe('string');
+      expect((chunk as string).length).toBeLessThanOrEqual(3);
+      expect((chunk as string).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('ПОДСТРОКА(строка, 2, 4) даёт четыре символа со второго', () => {
+    const r = ok(`
+      ВЫБРАТЬ ПОДСТРОКА("Здравствуй", 2, 4) КАК Кусок
+    `);
+    expect(r.rows[0][0]).toBe('драв');
+  });
+
+  it('ВЫРАЗИТЬ КАК СТРОКА(N) обрезает строку до длины N', () => {
+    const r = ok(`
+      ВЫБРАТЬ ВЫРАЗИТЬ(Т.Наименование КАК СТРОКА(2)) КАК Кор,
+              Т.Наименование КАК Полное
+      ИЗ Справочник.Номенклатура КАК Т
+    `);
+    for (const [cropped, full] of r.rows) {
+      expect(typeof cropped).toBe('string');
+      expect((cropped as string).length).toBeLessThanOrEqual(2);
+      expect(cropped).toBe((full as string).slice(0, 2));
+    }
+  });
+
+  it('ВЫРАЗИТЬ КАК ЧИСЛО(M,N) округляет до N знаков', () => {
+    const r = ok(`
+      ВЫБРАТЬ ПЕРВЫЕ 1 ВЫРАЗИТЬ(3.14159 КАК ЧИСЛО(5,2)) КАК Пи
+      ИЗ Справочник.Номенклатура КАК Т
+    `);
+    expect(r.rows[0][0]).toBe(3.14);
+  });
+
+  it('ВЫРАЗИТЬ КАК ЧИСЛО(M) — целочисленное приведение', () => {
+    const r = ok(`
+      ВЫБРАТЬ ПЕРВЫЕ 1 ВЫРАЗИТЬ(3.7 КАК ЧИСЛО(3)) КАК Три
+      ИЗ Справочник.Номенклатура КАК Т
+    `);
+    expect(r.rows[0][0]).toBe(3);
+  });
+
+  it('ВЫРАЗИТЬ КАК БУЛЕВО прогоняет булево, а неподходящее → NULL', () => {
+    const r = ok(`
+      ВЫБРАТЬ ПЕРВЫЕ 1
+              ВЫРАЗИТЬ(ИСТИНА КАК БУЛЕВО) КАК Т,
+              ВЫРАЗИТЬ("привет" КАК БУЛЕВО) КАК Нет
+      ИЗ Справочник.Номенклатура КАК Т
+    `);
+    expect(r.rows[0][0]).toBe(true);
+    expect(r.rows[0][1]).toBe(NULL);
+  });
+
+  it('ВЫРАЗИТЬ КАК ДАТА пропускает ISO-строку', () => {
+    const r = ok(`
+      ВЫБРАТЬ ПЕРВЫЕ 1 ВЫРАЗИТЬ(ДАТАВРЕМЯ(2024,1,15) КАК ДАТА) КАК Д
+      ИЗ Справочник.Номенклатура КАК Т
+    `);
+    expect(typeof r.rows[0][0]).toBe('string');
+    expect(r.rows[0][0]).toMatch(/^2024-01-15/);
+  });
+
+  it('ВЫРАЗИТЬ КАК ссылка на метаданные — NULL + warning', () => {
+    const r = runQuery(`
+      ВЫБРАТЬ ПЕРВЫЕ 1 ВЫРАЗИТЬ(Т.Ссылка КАК Справочник.Контрагенты) КАК К
+      ИЗ Справочник.Номенклатура КАК Т
+    `, fx);
+    if (!r.ok) throw new Error(r.errors.map((e) => e.message).join('\n'));
+    expect(r.warnings.some((w) => /ВЫРАЗИТЬ.*метаданн/i.test(w))).toBe(true);
   });
 });
