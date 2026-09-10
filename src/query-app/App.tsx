@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import type { BeforeMount, OnMount } from '@monaco-editor/react';
 import { SchemaPanel } from './SchemaPanel';
@@ -6,15 +6,23 @@ import { ResultTable } from './ResultTable';
 import { ExamplesModal } from './ExamplesModal';
 import { ParametersPanel } from './ParametersPanel';
 import { loadEmbeddedFixture } from './embedded-fixture';
+import { loadRemoteFixture, readFixtureSource, type FixtureOrigin } from './remote-fixture';
 import type { QueryParamEntry } from '../query/parameters';
 import { toBslValue } from '../query/parameters';
 import { registerSdblLanguage, SDBL_LANGUAGE_ID, SDBL_THEME_ID } from './monaco-lang';
 import { registerSdblProviders } from './monaco-providers';
 import { runQuery, type Rowset, type RunError } from '../query/interpreter';
+import type { Fixture } from '../query/fixture';
 import { HelpFooter } from '../help/HelpFooter';
 import { PwaBanners } from '../app/components/PwaBanners';
 
 type CodeEditor = Parameters<OnMount>[0];
+
+/** Что сейчас с учебной базой: своя по ссылке грузится не мгновенно. */
+type BaseState =
+  | { status: 'готова'; fixture: Fixture; origin: FixtureOrigin; note?: string }
+  | { status: 'грузится'; origin: { kind: 'по ссылке'; schemaUrl: string; dataUrl: string } }
+  | { status: 'сломалась'; error: string; origin: FixtureOrigin };
 
 const STARTER_QUERY = `ВЫБРАТЬ Наименование
 ИЗ Справочник.Номенклатура
@@ -22,7 +30,7 @@ const STARTER_QUERY = `ВЫБРАТЬ Наименование
 УПОРЯДОЧИТЬ ПО Наименование`;
 
 export function App() {
-  const fixture = useMemo(() => loadEmbeddedFixture(), []);
+  const [base, setBase] = useState<BaseState>(() => initialBase());
   const [source, setSource] = useState<string>(() => initialSource());
   const [rowset, setRowset] = useState<Rowset | null>(null);
   const [errors, setErrors] = useState<RunError[]>([]);
@@ -32,7 +40,26 @@ export function App() {
   const [params, setParams] = useState<QueryParamEntry[]>([]);
   const editorRef = useRef<CodeEditor | null>(null);
 
+  const fixture = base.status === 'готова' ? base.fixture : null;
+
+  // База по ссылке (#55): грузим после первого рендера, чтобы читатель
+  // видел, что происходит, а не пустой экран.
+  useEffect(() => {
+    if (base.status !== 'грузится') return;
+    let живо = true;
+    loadRemoteFixture(base.origin.schemaUrl, base.origin.dataUrl, {
+      fetchImpl: (url) => fetch(url),
+      store: safeSessionStorage(),
+    }).then((r) => {
+      if (!живо) return;
+      if (r.ok) setBase({ status: 'готова', fixture: r.fixture, origin: r.origin });
+      else setBase({ status: 'сломалась', error: r.error, origin: base.origin });
+    });
+    return () => { живо = false; };
+  }, [base]);
+
   const handleRun = useCallback((): void => {
+    if (!fixture) return;
     setRunning(true);
     Promise.resolve().then(() => {
       const paramMap: { [name: string]: import('@core/index').BslValue } = {};
@@ -65,7 +92,7 @@ export function App() {
 
   const handleBeforeMount: BeforeMount = (monaco) => {
     registerSdblLanguage(monaco);
-    registerSdblProviders(monaco, fixture.schema);
+    if (fixture) registerSdblProviders(monaco, fixture.schema);
   };
 
   const handleMount: OnMount = (editor) => {
@@ -88,6 +115,7 @@ export function App() {
   }, []);
 
   const handleShowTable = useCallback((ref: string): void => {
+    if (!fixture) return;
     // Заменяем содержимое редактора на «ВЫБРАТЬ * ИЗ Kind.Name»
     // и сразу выполняем — так пользователь мгновенно видит таблицу.
     const next = `ВЫБРАТЬ *\nИЗ ${ref}`;
@@ -138,10 +166,34 @@ export function App() {
         </div>
       </header>
 
+      {base.status === 'сломалась' && (
+        <div className="qs-base-banner qs-base-banner--error" role="alert">
+          <span>⚠ {base.error}</span>
+          <button type="button" className="qs-btn qs-btn--secondary" onClick={() => setBase(embeddedBase())}>
+            Открыть встроенную базу
+          </button>
+        </div>
+      )}
+      {base.status === 'готова' && base.note && (
+        <div className="qs-base-banner" role="status">⚠ {base.note}</div>
+      )}
+      {base.status === 'готова' && base.origin.kind === 'по ссылке' && (
+        <div className="qs-base-banner" role="status">
+          🗄 База по ссылке:{' '}
+          <a href={base.origin.schemaUrl} target="_blank" rel="noreferrer noopener">{shortUrl(base.origin.schemaUrl)}</a>
+        </div>
+      )}
+
+      {base.status === 'грузится' && (
+        <div className="qs-base-banner" role="status">🗄 Загружаю учебную базу по ссылке…</div>
+      )}
+
+      {fixture && (
       <main className="qs-main">
         <aside className="qs-side">
           <SchemaPanel
             schema={fixture.schema}
+            schemaUrl={base.status === 'готова' && base.origin.kind === 'по ссылке' ? base.origin.schemaUrl : undefined}
             onInsertText={handleInsertText}
             onShowTable={handleShowTable}
           />
@@ -179,6 +231,8 @@ export function App() {
         </section>
       </main>
 
+      )}
+
       <HelpFooter hint="Ctrl+Enter — выполнить · Клик по таблице/полю — вставить · 👁 — показать содержимое" />
       <PwaBanners />
       {examplesOpen && (
@@ -186,6 +240,44 @@ export function App() {
       )}
     </div>
   );
+}
+
+/** Встроенная мини-ERP — состояние по умолчанию. */
+function embeddedBase(): Extract<BaseState, { status: 'готова' }> {
+  return { status: 'готова', fixture: loadEmbeddedFixture(), origin: { kind: 'встроенная' } };
+}
+
+/**
+ * Что открыть на старте: свою базу по ссылке или встроенную. Если ссылки
+ * заданы наполовину или не по http — говорим об этом вслух и открываем
+ * встроенную, а не молчим.
+ */
+function initialBase(): BaseState {
+  const { origin, error } = readFixtureSource(window.location.search);
+  if (origin.kind === 'по ссылке') return { status: 'грузится', origin };
+  const base = embeddedBase();
+  return error ? { ...base, note: error } : base;
+}
+
+function safeSessionStorage(): { getItem(k: string): string | null; setItem(k: string, v: string): void } | undefined {
+  try {
+    const s = window.sessionStorage;
+    s.getItem('qs-probe');
+    return s;
+  } catch {
+    return undefined; // приватное окно или запрет хранилища — обойдёмся без кэша
+  }
+}
+
+/** Для баннера: домен и имя файла, середину пути опускаем. */
+function shortUrl(raw: string): string {
+  try {
+    const u = new URL(raw);
+    const name = u.pathname.split('/').filter(Boolean).pop() ?? '';
+    return `${u.host}/…/${name}`;
+  } catch {
+    return raw;
+  }
 }
 
 function initialSource(): string {

@@ -7,6 +7,8 @@ import type { Field, Schema, Table } from '../query/types';
 
 interface SchemaPanelProps {
   schema: Schema;
+  /** Ссылка на схему, если база пришла по ней, — чтобы было видно, чем работаем. */
+  schemaUrl?: string;
   onInsertText: (text: string) => void;
   /** Клик по строке-таблице — заменить содержимое редактора на `ВЫБРАТЬ * ИЗ Kind.Name`. */
   onShowTable: (ref: string) => void;
@@ -21,7 +23,7 @@ const KIND_LABEL: { [k in Table['kind']]: string } = {
 
 const KIND_ORDER: Table['kind'][] = ['Справочник', 'Документ', 'РегистрНакопления', 'РегистрСведений'];
 
-export function SchemaPanel({ schema, onInsertText, onShowTable }: SchemaPanelProps) {
+export function SchemaPanel({ schema, schemaUrl, onInsertText, onShowTable }: SchemaPanelProps) {
   const groups = useMemo(() => {
     const map = new Map<Table['kind'], Table[]>();
     for (const t of schema.tables) {
@@ -35,6 +37,12 @@ export function SchemaPanel({ schema, onInsertText, onShowTable }: SchemaPanelPr
   return (
     <div className="qs-schema">
       <div className="qs-schema__head">📚 Схема</div>
+      {schemaUrl && (
+        <div className="qs-schema__origin">
+          база по ссылке ·{' '}
+          <a href={schemaUrl} target="_blank" rel="noreferrer noopener">схема</a>
+        </div>
+      )}
       {KIND_ORDER.map((kind) => {
         const items = groups.get(kind);
         if (!items || items.length === 0) return null;
