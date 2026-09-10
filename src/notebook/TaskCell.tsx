@@ -7,6 +7,7 @@ import { BSL_LANGUAGE_ID, BSL_THEME, registerBslLanguage } from '../app/monaco/l
 import { runTask } from '../judge/runner';
 import type { Task, TaskResult } from '../judge/types';
 import { renderMarkdown } from './markdown';
+import { TaskEditor } from './TaskEditor';
 import { parseEditableRegions, isSelectionEditable } from './blanks';
 import type { TaskSpec } from './types';
 
@@ -51,6 +52,13 @@ interface TaskCellProps {
   /** Объяснение ученика своими словами (#33). */
   explanation?: string;
   onExplanationChange?: (next: string) => void;
+  /**
+   * Author-режим (#27): показываем форму TaskEditor и обновляем task-spec.
+   * Без коллбэка форма не показывается — call-site может отключить
+   * редактирование (например, ref-cell с подтянутым yaml иммутабелен для
+   * автора локального notebook'а).
+   */
+  onTaskChange?: (next: TaskSpec) => void;
 }
 
 /**
@@ -64,7 +72,7 @@ interface TaskCellProps {
  * Тесты и условие приходят из спеки автора (`task`), редактируется
  * только `source` — решение.
  */
-export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlaceholder, readOnly, explanation, onExplanationChange }: TaskCellProps) {
+export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlaceholder, readOnly, explanation, onExplanationChange, onTaskChange }: TaskCellProps) {
   // Все хуки объявляем ДО ранних return — правило React rules-of-hooks.
   const [showExplanation, setShowExplanation] = useState<boolean>(
     // В readOnly — раскрываем автоматически если есть текст (педагог сразу видит).
@@ -314,6 +322,11 @@ export function TaskCell({ source, onChange, catalog, task, taskRef, showRefPlac
               );
             })}
           </div>
+        )}
+
+        {/* Author-режим (#27): форма редактирования task-спеки. */}
+        {onTaskChange && (
+          <TaskEditor task={task} onChange={onTaskChange} catalog={catalog} />
         )}
 
         {/* Feynman-объяснение (#33). В readOnly-режиме рендерим как markdown,

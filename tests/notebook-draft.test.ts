@@ -67,6 +67,24 @@ describe('notebook draft', () => {
     expect(loadDraft()).toBeNull();
   });
 
+  it('round-trip query, query-task, frozen, autorun (все расширения)', () => {
+    const codeCell = { ...newCell('code', 'X = 1;'), frozen: true, autorun: true };
+    const query = { ...newCell('query'), autorun: true };
+    const nb: Notebook = { cells: [codeCell as never, query as never] };
+    saveDraft(nb);
+    const loaded = loadDraft();
+    expect(loaded).not.toBeNull();
+    const [c1, c2] = loaded!.cells;
+    expect(c1.type).toBe('code');
+    expect((c1 as { frozen?: boolean }).frozen).toBe(true);
+    expect((c1 as { autorun?: boolean }).autorun).toBe(true);
+    expect(c2.type).toBe('query');
+    if (c2.type === 'query') {
+      expect(c2.schema).toContain('Номенклатура');
+      expect(c2.autorun).toBe(true);
+    }
+  });
+
   it('id при load генерится новый (не полагаемся на storage)', () => {
     saveDraft({ cells: [newCell('code', 'x')] });
     const loaded = loadDraft();

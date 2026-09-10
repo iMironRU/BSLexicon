@@ -65,7 +65,33 @@
   margin-left: auto;
   display: flex;
   gap: 8px;
+  align-items: center;
 }
+
+/* Mode toggle Педагог/Ученик (#27) */
+.nb-mode-toggle {
+  display: inline-flex;
+  border: 1px solid #333;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #1a1c22;
+}
+.nb-mode-toggle__btn {
+  background: transparent;
+  border: none;
+  color: #808080;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+.nb-mode-toggle__btn:hover { color: #d4d4d4; }
+.nb-mode-toggle__btn--active {
+  background: #4ec9b0;
+  color: #1e1e1e;
+  font-weight: 500;
+}
+.nb-mode-toggle__btn--active:hover { color: #1e1e1e; }
 
 .nb-btn {
   background: #0e639c;
@@ -116,6 +142,140 @@
   padding: 10px 20px;
   font-size: 13px;
   border-bottom: 1px solid #7a2a2a;
+}
+
+/* TaskEditor — форма для педагога (#27) */
+.nb-task-editor {
+  margin-top: 12px;
+  background: #1a1c22;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+.nb-task-editor__summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #dcdcaa;
+  user-select: none;
+}
+.nb-task-editor__summary:hover { color: #f0e18a; }
+.nb-task-editor__body {
+  padding: 8px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.nb-task-editor__field { display: flex; flex-direction: column; gap: 4px; }
+.nb-task-editor__label {
+  font-size: 11px;
+  color: #808080;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.nb-task-editor__label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.nb-task-editor__input,
+.nb-task-editor__textarea,
+.nb-task-editor__select {
+  background: #252526;
+  border: 1px solid #333;
+  color: #d4d4d4;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font: inherit;
+  font-size: 13px;
+}
+.nb-task-editor__textarea {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  resize: vertical;
+  min-height: 60px;
+}
+.nb-task-editor__textarea--sm { min-height: 40px; }
+.nb-task-editor__preview {
+  background: #252526;
+  border: 1px solid #333;
+  padding: 8px 12px;
+  border-radius: 3px;
+  font-size: 13px;
+  color: #d4d4d4;
+}
+.nb-task-editor__toggle {
+  background: transparent;
+  border: 1px solid #4a4a4a;
+  color: #9cdcfe;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.nb-task-editor__toggle:hover { border-color: #9cdcfe; }
+.nb-task-editor__monaco {
+  border: 1px solid #333;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.nb-task-editor__tests,
+.nb-task-editor__hints {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nb-task-editor__test,
+.nb-task-editor__hint {
+  background: #252526;
+  border: 1px solid #333;
+  border-radius: 3px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nb-task-editor__hint {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+.nb-task-editor__hint .nb-task-editor__textarea { flex: 1; }
+.nb-task-editor__test-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  color: #808080;
+}
+.nb-task-editor__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.nb-task-editor__checkbox input {
+  margin: 0;
+  accent-color: #4ec9b0;
+}
+.nb-task-editor__remove {
+  background: transparent;
+  border: 1px solid #7a2a2a;
+  color: #f48771;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-left: auto;
+  font-size: 11px;
+}
+.nb-task-editor__remove:hover:not(:disabled) {
+  background: #7a2a2a;
+  color: #fff;
+}
+.nb-task-editor__remove:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Book chapter banner (#71) */

@@ -10,6 +10,7 @@ import { clearDraft, loadDraft, saveDraft } from './draft';
 import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
 import { fetchNotebookFromSrc, type NbSource } from './nb-src';
 import { loadBookContext, chapterHref, type BookContext } from './book-context';
+import { initialMode, setModeInUrl, withStudentMode, type NotebookMode } from './mode';
 import type { SolutionMeta } from './git-notebooks';
 import { pushSolution, suggestSolutionName } from './git-solutions';
 import { GitApiError } from '../app/git-storage';
@@ -45,6 +46,8 @@ function NotebookShell() {
   const [refWarnings, setRefWarnings] = useState<string[]>([]);
   // Контекст главы книги (#71): показываем banner «Глава N из M» + prev/next.
   const [bookCtx, setBookCtx] = useState<BookContext | null>(null);
+  // Режим (#27): author правит всё, student — только своё решение.
+  const [mode, setMode] = useState<NotebookMode>(() => initialMode(window.location.search));
   // Педагог смотрит файл-решение ученика (#32): весь UI в readOnly,
   // banner подсвечивает откуда пришёл исходный урок.
   const [viewingSolution, setViewingSolution] = useState<SolutionMeta | null>(null);
@@ -123,6 +126,13 @@ function NotebookShell() {
     });
   }, []);
 
+  const updateTaskSpec = useCallback((id: string, task: import('./types').TaskSpec): void => {
+    setNotebook((prev) => {
+      if (!prev) return prev;
+      return { cells: prev.cells.map((c) => (c.id === id && c.type === 'task' ? { ...c, task } : c)) };
+    });
+  }, []);
+
   const updateExplanation = useCallback((id: string, explanation: string): void => {
     setNotebook((prev) => {
       if (!prev) return prev;
@@ -171,13 +181,18 @@ function NotebookShell() {
     if (!notebook) return;
     try {
       const encoded = await encodeNotebook(notebook);
-      const url = `${window.location.origin}${window.location.pathname}?nb=${encoded}`;
+      // Педагог делится — ссылка всегда открывается в student-режиме,
+      // иначе ученик увидит + Задача и педагогскую механику (#27).
+      const rawUrl = `${window.location.origin}${window.location.pathname}?nb=${encoded}`;
+      const url = mode === 'author' ? withStudentMode(rawUrl) : rawUrl;
       await navigator.clipboard.writeText(url);
-      toast.show('Ссылка скопирована');
-    } catch (e) {
+      toast.show(mode === 'author'
+        ? 'Ссылка для ученика скопирована'
+        : 'Ссылка скопирована');
+    } catch {
       toast.show('Не удалось скопировать ссылку', 'error');
     }
-  }, [notebook, toast]);
+  }, [notebook, toast, mode]);
 
   const handleReset = useCallback((): void => {
     if (!window.confirm('Сбросить ноутбук к стартовому? Твои ячейки потеряются.')) return;
@@ -238,6 +253,26 @@ function NotebookShell() {
         <div className="nb-header__actions">
           {readOnly && (
             <span className="nb-header__mode">🔍 Просмотр решения</span>
+          )}
+          {!readOnly && (
+            <div className="nb-mode-toggle" role="group" aria-label="Режим ноутбука">
+              <button
+                type="button"
+                className={'nb-mode-toggle__btn' + (mode === 'author' ? ' nb-mode-toggle__btn--active' : '')}
+                onClick={() => { setMode('author'); setModeInUrl('author'); }}
+                title="Педагог редактирует всё"
+              >
+                👨‍🏫 Педагог
+              </button>
+              <button
+                type="button"
+                className={'nb-mode-toggle__btn' + (mode === 'student' ? ' nb-mode-toggle__btn--active' : '')}
+                onClick={() => { setMode('student'); setModeInUrl('student'); }}
+                title="Ученик — только своё решение"
+              >
+                👨‍🎓 Ученик
+              </button>
+            </div>
           )}
           {gitCfg && !readOnly && (
             <button
@@ -381,9 +416,13 @@ function NotebookShell() {
 
         {notebook.cells.map((cell) => {
           const cellReadOnly = readOnly || !!cell.frozen;
+          // В student-режиме markdown — это условие/пояснение, ученик его не правит.
+          const mdReadOnly = cellReadOnly || mode === 'student';
+          // В student-режиме педагогская механика (переставить/удалить) выключена.
+          const authorControls = !readOnly && mode === 'author';
           return (
           <div key={cell.id} className={'nb-cell-slot' + (cell.frozen ? ' nb-cell-slot--frozen' : '')}>
-            {!readOnly && (
+            {authorControls && (
               <div className="nb-cell-controls">
                 <button type="button" className="nb-cell-ctl" onClick={() => moveCell(cell.id, -1)} title="Вверх" aria-label="Вверх">↑</button>
                 <button type="button" className="nb-cell-ctl" onClick={() => moveCell(cell.id, 1)} title="Вниз" aria-label="Вниз">↓</button>
@@ -394,7 +433,7 @@ function NotebookShell() {
               <div className="nb-cell-frozen-mark" title="Ячейка заморожена автором — редактирование запрещено">🔒</div>
             )}
             {cell.type === 'markdown' && (
-              <MarkdownCell source={cell.source} onChange={(v) => updateCell(cell.id, v)} readOnly={cellReadOnly} />
+              <MarkdownCell source={cell.source} onChange={(v) => updateCell(cell.id, v)} readOnly={mdReadOnly} />
             )}
             {cell.type === 'code' && (
               <CodeCell
@@ -418,6 +457,7 @@ function NotebookShell() {
                 readOnly={cellReadOnly}
                 explanation={cell.explanation}
                 onExplanationChange={(v) => updateExplanation(cell.id, v)}
+                onTaskChange={mode === 'author' && !readOnly ? (t) => updateTaskSpec(cell.id, t) : undefined}
               />
             )}
             {cell.type === 'query' && (
@@ -450,7 +490,7 @@ function NotebookShell() {
           );
         })}
 
-        {!readOnly && (
+        {!readOnly && mode === 'author' && (
           <div className="nb-add">
             <button type="button" className="nb-btn nb-btn--add" onClick={() => addCell('markdown')}>
               + Текст
