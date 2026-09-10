@@ -118,6 +118,7 @@ export default defineConfig(({ command }) => ({
         judgeHelp: fileURLToPath(new URL('./help/judge/index.html', import.meta.url)),
         notebook: fileURLToPath(new URL('./notebook/index.html', import.meta.url)),
         query: fileURLToPath(new URL('./query/index.html', import.meta.url)),
+        book: fileURLToPath(new URL('./book/index.html', import.meta.url)),
       },
     },
   },
