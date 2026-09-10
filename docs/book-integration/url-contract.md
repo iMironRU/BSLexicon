@@ -1,6 +1,6 @@
 # Интеграция BSLexicon с книгами
 
-> **Версия контракта: 1.0** (2026-06-22)
+> **Версия контракта: 1.1** (2026-09-10)
 
 BSLexicon принимает BSL-листинги через URL-параметры и умеет:
 
@@ -195,6 +195,68 @@ function bslToUrlGz(code, options = {}) {
 }
 ```
 
+---
+
+## Песочница запросов: `/query/`
+
+Всё то же самое, только вместо кода — запрос, и адрес другой:
+
+```
+https://imironru.github.io/BSLexicon/query/
+```
+
+| параметр | что делает |
+|---|---|
+| `?q=<base64>` | запрос в редакторе. URL-safe base64, как `?code` |
+| `?gzq=<base64>` | он же, сжатый gzip. Приоритетнее `?q` — как `?gzcode` над `?code` |
+| `?source=`, `?title=`, `?embed=` | ровно как у тренажёра языка |
+| `?schema-src=`, `?data-src=` | учебная база по ссылке (см. `docs/query-sandbox/README.md` §5.1) |
+
+Запрос, как и код, **не выполняется сам** — читатель нажимает «Выполнить».
+
+Ограничение на размер — 50 КБ после раскодирования; сверх того запрос всё равно
+показывается, но с предупреждением.
+
+### Полная ссылка из книги
+
+```
+https://imironru.github.io/BSLexicon/query/
+  ?gzq=<запрос>
+  &schema-src=https://raw.githubusercontent.com/…/kanctovary.schema.yaml
+  &data-src=https://raw.githubusercontent.com/…/kanctovary.data.yaml
+  &source=https://imiron.ru/1c-reading-queries/ch5
+  &title=§ 5.4. Виртуальные таблицы
+```
+
+Схема и данные — на стороне книги: база принадлежит ей и меняется вместе с ней.
+
+### Как сформировать
+
+```js
+import { gzipSync } from 'node:zlib';
+
+function queryToUrl(query, options = {}) {
+  const { schemaSrc, dataSrc, source, title, embed, gzip = true } = options;
+
+  const raw = gzip ? gzipSync(Buffer.from(query, 'utf8')) : Buffer.from(query, 'utf8');
+  const b64 = raw.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  const params = new URLSearchParams({ [gzip ? 'gzq' : 'q']: b64 });
+  if (schemaSrc) params.set('schema-src', schemaSrc);
+  if (dataSrc)   params.set('data-src', dataSrc);
+  if (source)    params.set('source', source);
+  if (title)     params.set('title', title);
+  if (embed)     params.set('embed', '1');
+
+  return `https://imironru.github.io/BSLexicon/query/?${params}`;
+}
+```
+
+Для печати берите `gzip: true`: на запросе в сорок строк ссылка выходит вдвое короче,
+и QR-код получается разборчивым.
+
+---
+
 ### Встраивание через iframe
 
 ```html
@@ -225,7 +287,7 @@ function bslToUrlGz(code, options = {}) {
 
 ## Версионирование
 
-Текущая версия контракта: **1.0**.
+Текущая версия контракта: **1.1**.
 
 - **Добавление новых параметров** — обратно совместимо, минорный релиз.
 - **Изменение семантики или удаление параметра** — только мажорный релиз с анонсом
@@ -238,3 +300,4 @@ function bslToUrlGz(code, options = {}) {
 | Дата | Версия | Изменения |
 |---|---|---|
 | 2026-06-22 | 1.0 | Первый релиз: `?code`, `?gzcode`, `?source`, `?title`, `?embed` |
+| 2026-09-10 | 1.1 | Песочница запросов `/query/`: `?q`, `?gzq` и те же `?source`, `?title`, `?embed`; учебная база по `?schema-src` / `?data-src` |
