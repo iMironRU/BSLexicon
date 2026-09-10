@@ -1,0 +1,19 @@
+title: Простая задача
+statement: Выведи одну строку.
+starter: |
+  ВЫБРАТЬ 1 КАК Х
+schema: |
+  version: 1
+  tables:
+    - kind: Справочник
+      name: X
+      fields:
+        - { name: Ссылка, type: УникальныйИдентификатор, key: true }
+data: |
+  version: 1
+  records:
+    Справочник.X: []
+expected:
+  columns: [Х]
+  rows_ordered:
+    - [1]

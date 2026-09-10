@@ -1,0 +1,6 @@
+title: Тестовая книга
+author: Кто-то
+version: "0.1"
+chapters:
+  - title: Первая
+    notebook: notebooks/01.nb.json
