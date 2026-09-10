@@ -582,8 +582,8 @@ function readVirtualTable(vt: VirtualTableContext, ctx: QueryCtx, aliasOverride?
     }
   }
 
-  const params = collectVirtualParams(vt, ctx);
-  const materialized = materializeVirtual(ctx.fx, { ref, method, params });
+  const { values, condition } = collectVirtualParams(vt, method, ctx);
+  const materialized = materializeVirtual(ctx.fx, { ref, method, params: values, condition });
 
   const alias = aliasOverride ?? ref;
   ctx.sources.set(alias, ref);
@@ -603,15 +603,49 @@ function virtualMethod(vt: VirtualTableContext): VirtualMethod {
   throw new QueryRuntimeError('Неизвестный тип виртуальной таблицы');
 }
 
-function collectVirtualParams(vt: VirtualTableContext, ctx: QueryCtx): BslValue[] {
+function collectVirtualParams(vt: VirtualTableContext, method: VirtualMethod, ctx: QueryCtx): {
+  values: BslValue[];
+  condition: import('./virtual-tables').VirtualCondition | undefined;
+} {
   const raw = vt.virtualTableParameter();
   const list = Array.isArray(raw) ? raw : [];
-  return list.map((p) => {
+  // Позиция «условия» зависит от метода (issue #59):
+  //   Остатки(Период, Условие) — 2-й
+  //   СрезПоследних/СрезПервых(Период, Условие) — 2-й
+  //   Обороты/ОстаткиИОбороты(Начало, Конец, Периодичность, Условие) — 4-й
+  // Пользователь может опустить хвост; условие — последний непустой параметр,
+  // но по позиции. Ниже — жёсткое соответствие индекса методу.
+  const conditionIdx =
+    method === 'Обороты' || method === 'ОстаткиИОбороты' ? 3 : 1;
+
+  const values: BslValue[] = [];
+  let condition: import('./virtual-tables').VirtualCondition | undefined;
+  for (let i = 0; i < list.length; i += 1) {
+    const p = list[i];
     const expr = p.logicalExpression();
-    if (!expr) return UNDEFINED;
-    return evalNode(expr, new Map(), ctx, null);
-  });
+    if (i === conditionIdx) {
+      if (expr) {
+        // Замыкание: интерпретатор применит выражение к каждой строке
+        // регистра при агрегации. Alias «Регистр» условно __vt__; поля
+        // без префикса ловятся через evalColumn (первый source в snap).
+        const conditionExpr = expr;
+        condition = (row: Row): boolean => {
+          const snap: Snap = new Map([[VT_INTERNAL_ALIAS, row]]);
+          return isTruthy(evalNode(conditionExpr, snap, ctx, null));
+        };
+      }
+      continue;
+    }
+    if (!expr) {
+      values.push(UNDEFINED);
+      continue;
+    }
+    values.push(evalNode(expr, new Map(), ctx, null));
+  }
+  return { values, condition };
 }
+
+const VT_INTERNAL_ALIAS = '__vt__';
 
 function applyJoin(left: Snap[], j: JoinPartContext, ctx: QueryCtx): Snap[] {
   const rightSrc = j._source ?? j.dataSource();

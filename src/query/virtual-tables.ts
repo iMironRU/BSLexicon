@@ -30,12 +30,21 @@ export type VirtualMethod =
   | 'Остатки' | 'Обороты' | 'ОстаткиИОбороты'
   | 'СрезПоследних' | 'СрезПервых';
 
+/** Отбор по строкам регистра — применяется до агрегирования. */
+export type VirtualCondition = (row: Row) => boolean;
+
 export interface VirtualQuery {
   /** Полное имя регистра: `РегистрНакопления.ОстаткиТоваров`. */
   ref: string;
   method: VirtualMethod;
-  /** Уже вычисленные параметры в порядке следования в скобках. */
+  /** Уже вычисленные параметры в порядке следования в скобках (без условия). */
   params: BslValue[];
+  /**
+   * Условие отбора (issue #59) — применяется к каждой сырой строке регистра.
+   * Если undefined — фильтр не применяется. Замыкание, а не выражение, чтобы
+   * не тянуть парсер сюда: интерпретатор сам собирает контекст для evalNode.
+   */
+  condition?: VirtualCondition;
 }
 
 export interface MaterializedVirtual {
@@ -73,12 +82,13 @@ export function materializeVirtual(fx: Fixture, vq: VirtualQuery): MaterializedV
       break;
   }
 
+  const cond = vq.condition;
   switch (vq.method) {
-    case 'Остатки': return balance(tf.table as AccumRegister, rows, vq.params[0]);
-    case 'Обороты': return turnovers(tf.table as AccumRegister, rows, vq.params[0], vq.params[1]);
-    case 'ОстаткиИОбороты': return balanceAndTurnovers(tf.table as AccumRegister, rows, vq.params[0], vq.params[1]);
-    case 'СрезПоследних': return slice(tf.table as InfoRegister, rows, vq.params[0], 'last');
-    case 'СрезПервых': return slice(tf.table as InfoRegister, rows, vq.params[0], 'first');
+    case 'Остатки': return balance(tf.table as AccumRegister, rows, vq.params[0], cond);
+    case 'Обороты': return turnovers(tf.table as AccumRegister, rows, vq.params[0], vq.params[1], cond);
+    case 'ОстаткиИОбороты': return balanceAndTurnovers(tf.table as AccumRegister, rows, vq.params[0], vq.params[1], cond);
+    case 'СрезПоследних': return slice(tf.table as InfoRegister, rows, vq.params[0], 'last', cond);
+    case 'СрезПервых': return slice(tf.table as InfoRegister, rows, vq.params[0], 'first', cond);
   }
 }
 
@@ -90,13 +100,14 @@ export function materializeVirtual(fx: Fixture, vq: VirtualQuery): MaterializedV
  * — считаем как «Приход» (регистр только на прирост).
  * Строки с нулевыми ресурсами не возвращаем — 1С так и делает.
  */
-function balance(reg: AccumRegister, movements: Row[], date: BslValue): MaterializedVirtual {
+function balance(reg: AccumRegister, movements: Row[], date: BslValue, condition?: VirtualCondition): MaterializedVirtual {
   const upTo = periodBound(date);
   const groups = new Map<string, DimGroup>();
 
   for (const m of movements) {
     const p = periodOf(m);
     if (upTo !== null && (p === null || p > upTo)) continue;
+    if (condition && !condition(m)) continue;
     const g = groupFor(groups, reg, m);
     const sign = movementSign(m);
     for (const res of reg.resources) {
@@ -128,7 +139,7 @@ function balance(reg: AccumRegister, movements: Row[], date: BslValue): Material
  * `[Начало; Конец)`. Для каждого ресурса три колонки:
  * `<ресурс>Приход`, `<ресурс>Расход`, `<ресурс>Оборот = Приход − Расход`.
  */
-function turnovers(reg: AccumRegister, movements: Row[], start: BslValue, end: BslValue): MaterializedVirtual {
+function turnovers(reg: AccumRegister, movements: Row[], start: BslValue, end: BslValue, condition?: VirtualCondition): MaterializedVirtual {
   const from = periodBound(start);
   const to = periodBound(end);
   const groups = new Map<string, DimGroup & { income: { [k: string]: number }; expense: { [k: string]: number } }>();
@@ -137,6 +148,7 @@ function turnovers(reg: AccumRegister, movements: Row[], start: BslValue, end: B
     const p = periodOf(m);
     if (from !== null && (p === null || p < from)) continue;
     if (to !== null && (p === null || p >= to)) continue;
+    if (condition && !condition(m)) continue;
     const g = groupFor(groups, reg, m) as ReturnType<typeof groupFor> & { income: { [k: string]: number }; expense: { [k: string]: number } };
     if (!g.income) { g.income = {}; g.expense = {}; }
     const isIncome = movementSign(m) > 0;
@@ -185,10 +197,10 @@ function turnovers(reg: AccumRegister, movements: Row[], start: BslValue, end: B
  * `КонечныйОстаток`, `Приход`, `Расход`, `Оборот`.
  * Периодичность не поддерживаем — общий срез без разбивки.
  */
-function balanceAndTurnovers(reg: AccumRegister, movements: Row[], start: BslValue, end: BslValue): MaterializedVirtual {
-  const openingRaw = balance(reg, movements, minusEpsilon(start));
-  const closingRaw = balance(reg, movements, minusEpsilon(end));
-  const t = turnovers(reg, movements, start, end);
+function balanceAndTurnovers(reg: AccumRegister, movements: Row[], start: BslValue, end: BslValue, condition?: VirtualCondition): MaterializedVirtual {
+  const openingRaw = balance(reg, movements, minusEpsilon(start), condition);
+  const closingRaw = balance(reg, movements, minusEpsilon(end), condition);
+  const t = turnovers(reg, movements, start, end, condition);
 
   // Индекс по ключу измерений: сначала соберём все уникальные группы.
   const keyOf = (row: Row): string => reg.dimensions.map((d) => stableKey(row[d.name] as BslValue)).join('');
@@ -266,7 +278,7 @@ function balanceAndTurnovers(reg: AccumRegister, movements: Row[], start: BslVal
  * Непериодический регистр: параметр даты игнорируется, возвращаем один
  * ряд на комбинацию измерений (последний по порядку вставки).
  */
-function slice(reg: InfoRegister, rows: Row[], date: BslValue, mode: 'first' | 'last'): MaterializedVirtual {
+function slice(reg: InfoRegister, rows: Row[], date: BslValue, mode: 'first' | 'last', condition?: VirtualCondition): MaterializedVirtual {
   const bound = periodBound(date);
   const groups = new Map<string, Row>();
   const dimKey = (r: Row): string => reg.dimensions.map((d) => stableKey(r[d.name] as BslValue)).join('|');
@@ -278,6 +290,7 @@ function slice(reg: InfoRegister, rows: Row[], date: BslValue, mode: 'first' | '
       if (mode === 'last' && p > bound) continue;
       if (mode === 'first' && p < bound) continue;
     }
+    if (condition && !condition(r)) continue;
     const key = dimKey(r);
     const prev = groups.get(key);
     if (!prev) { groups.set(key, r); continue; }
