@@ -605,3 +605,32 @@
     grid-template-rows: 300px 1fr;
   }
 }
+
+/* Баннер учебной базы: откуда она взялась и что с ней не так (#55). */
+.qs-base-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  font-size: 13px;
+  background: #252526;
+  border-bottom: 1px solid #333;
+  color: #d4d4d4;
+}
+
+
+.qs-base-banner--error {
+  background: #3a1d1a;
+  border-bottom-color: #6b2b23;
+  color: #f3b9b2;
+}
+
+.qs-base-banner a {
+  color: #6fb3e0;
+}
+
+.qs-schema__origin {
+  padding: 4px 10px 8px;
+  font-size: 11px;
+  opacity: 0.75;
+}
