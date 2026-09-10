@@ -42,6 +42,7 @@ import {
   SubqueryContext,
   TableContext,
   TotalByContext,
+  UnaryExpressionContext,
   VirtualTableContext,
 } from './parser/generated/SDBLParser';
 import { materializeVirtual, type VirtualMethod } from './virtual-tables';
@@ -868,6 +869,15 @@ function evalNode(node: ParserRuleContext | TerminalNode, snap: Snap, ctx: Query
   if (node instanceof LikePredicateContext) return evalLike(node, snap, ctx, bucket);
   if (node instanceof CaseExpressionContext) return evalCase(node, snap, ctx, bucket);
   if (node instanceof ComparePredicateContext) return evalCompare(node, snap, ctx, bucket);
+
+  // Унарный ±: `sign expression` (#72). Без этого кейса fallback ловит только
+  // `-<число>` через `getText()`-регэксп («-5»), а `-Поле`/`-СУММА(x)`/`-(a+b)`
+  // молча падают в UNDEFINED. Семантика — как у binary `0 ± X`.
+  if (node instanceof UnaryExpressionContext) {
+    const inner = evalNode(node.expression(), snap, ctx, bucket);
+    const op = node.sign().getText();
+    return op === '-' ? applyBinary('-', 0, inner) : num(inner);
+  }
 
   // Функция (агрегат / скалярная)
   const funcResult = maybeEvalFunction(node, snap, ctx, bucket);
