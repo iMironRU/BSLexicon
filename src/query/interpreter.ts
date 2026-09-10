@@ -582,7 +582,7 @@ function readVirtualTable(vt: VirtualTableContext, ctx: QueryCtx, aliasOverride?
     }
   }
 
-  const { values, condition } = collectVirtualParams(vt, method, ctx);
+  const { values, condition } = collectVirtualParams(vt, method, ctx, ref);
   const materialized = materializeVirtual(ctx.fx, { ref, method, params: values, condition });
 
   const alias = aliasOverride ?? ref;
@@ -603,7 +603,12 @@ function virtualMethod(vt: VirtualTableContext): VirtualMethod {
   throw new QueryRuntimeError('Неизвестный тип виртуальной таблицы');
 }
 
-function collectVirtualParams(vt: VirtualTableContext, method: VirtualMethod, ctx: QueryCtx): {
+function collectVirtualParams(
+  vt: VirtualTableContext,
+  method: VirtualMethod,
+  ctx: QueryCtx,
+  registerRef: string,
+): {
   values: BslValue[];
   condition: import('./virtual-tables').VirtualCondition | undefined;
 } {
@@ -628,10 +633,19 @@ function collectVirtualParams(vt: VirtualTableContext, method: VirtualMethod, ct
         // Замыкание: интерпретатор применит выражение к каждой строке
         // регистра при агрегации. Alias «Регистр» условно __vt__; поля
         // без префикса ловятся через evalColumn (первый source в snap).
+        // Регистрируем __vt__ → регистр в ctx.sources, чтобы разыменование
+        // (`Номенклатура.Родитель` в условии — #65) знало таблицу-источник.
         const conditionExpr = expr;
         condition = (row: Row): boolean => {
-          const snap: Snap = new Map([[VT_INTERNAL_ALIAS, row]]);
-          return isTruthy(evalNode(conditionExpr, snap, ctx, null));
+          const prev = ctx.sources.get(VT_INTERNAL_ALIAS);
+          ctx.sources.set(VT_INTERNAL_ALIAS, registerRef);
+          try {
+            const snap: Snap = new Map([[VT_INTERNAL_ALIAS, row]]);
+            return isTruthy(evalNode(conditionExpr, snap, ctx, null));
+          } finally {
+            if (prev === undefined) ctx.sources.delete(VT_INTERNAL_ALIAS);
+            else ctx.sources.set(VT_INTERNAL_ALIAS, prev);
+          }
         };
       }
       continue;
@@ -977,13 +991,26 @@ function evalIn(node: InPredicateContext, snap: Snap, ctx: QueryCtx, bucket: Sna
 function applyInHierarchy(v: BslValue, items: BslValue[], ctx: QueryCtx, invert: boolean): boolean {
   if (typeof v !== 'string' || items.length === 0) return invert;
   const targets = new Set(items.filter((x) => typeof x === 'string') as string[]);
-  // Найдём таблицу с этой ссылкой (по первой из items — предполагаем один тип).
+  // Ищем таблицу-владелец: сначала по v, если не нашли — по первому target
+  // (v может быть уже мимо любой таблицы, но target ссылается на группу).
   let ownerRef: string | null = null;
   for (const [ref, tf] of ctx.fx.tables) {
     if (tf.byRef.has(v)) { ownerRef = ref; break; }
   }
+  if (!ownerRef) {
+    for (const [ref, tf] of ctx.fx.tables) {
+      for (const t of targets) if (tf.byRef.has(t)) { ownerRef = ref; break; }
+      if (ownerRef) break;
+    }
+  }
   if (!ownerRef) return invert;
-  const table = ctx.fx.tables.get(ownerRef)!;
+  const tableInfo = ctx.fx.tables.get(ownerRef)!;
+  if (tableInfo.table.kind === 'Справочник' && !tableInfo.table.hierarchical) {
+    throw new QueryRuntimeError(
+      `В ИЕРАРХИИ не применимо к «${ownerRef}» — справочник не иерархический.`,
+    );
+  }
+  const table = tableInfo;
   let cur = v;
   const seen = new Set<string>();
   while (cur && !seen.has(cur)) {
@@ -1198,14 +1225,39 @@ function evalColumn(node: ColumnContext, snap: Snap, ctx: QueryCtx): BslValue {
     if (snap.size > 0) ctx.warnings.add(`Поле «${names[0]}» не найдено ни в одном источнике`);
     return UNDEFINED;
   }
-  // Первый — алиас источника, остальные — путь
-  const [alias, ...path] = names;
-  let cur: Row | null = snap.get(alias) as Row | null;
-  if (!cur) {
-    ctx.warnings.add(`Алиас источника «${alias}» не найден`);
-    return UNDEFINED;
+  // Первый — алиас источника, остальные — путь.
+  // Если первый — не алиас (нет такого источника в snap), пробуем
+  // трактовать как поле любого источника: `Товар.Родитель` вместо
+  // `Т.Товар.Родитель` — короткая запись, живёт в условиях виртуальных
+  // таблиц и в тексте без алиасов (issue #65).
+  let alias: string;
+  let path: string[];
+  let cur: Row | null;
+  let tableRef: string | undefined;
+
+  const maybeAlias = names[0];
+  const asAliasRow = snap.get(maybeAlias) as Row | null | undefined;
+  if (asAliasRow) {
+    alias = maybeAlias;
+    path = names.slice(1);
+    cur = asAliasRow;
+    tableRef = ctx.sources.get(alias);
+  } else {
+    // Пробуем маркировать как поле: ищем первый источник, где есть такое поле.
+    let foundAlias: string | null = null;
+    let foundRow: Row | null = null;
+    for (const [aliasKey, row] of snap) {
+      if (names[0] in (row as Row)) { foundAlias = aliasKey; foundRow = row as Row; break; }
+    }
+    if (!foundAlias) {
+      ctx.warnings.add(`Поле или алиас «${maybeAlias}» не найдено ни в одном источнике`);
+      return UNDEFINED;
+    }
+    alias = foundAlias;
+    path = names.slice(0); // включая первое имя (это поле, не алиас)
+    cur = foundRow;
+    tableRef = ctx.sources.get(alias);
   }
-  let tableRef = ctx.sources.get(alias);
   // Первый шаг может опираться на override для виртуальных / табличных
   // источников (напр. синтетическая Ссылка табличной части — issue #49).
   let firstStep = true;
