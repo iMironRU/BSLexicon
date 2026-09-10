@@ -352,8 +352,8 @@ function readVirtualTable(vt: VirtualTableContext, ctx: QueryCtx, aliasOverride?
       `Виртуальная ${method} доступна только для регистров остатков; используй .Обороты.`,
     );
   }
-  const params = collectVirtualParams(vt, ctx);
-  const materialized = materializeVirtual(ctx.fx, { ref, method, params });
+  const { params, filter } = collectVirtualParams(vt, ctx, method, ref);
+  const materialized = materializeVirtual(ctx.fx, { ref, method, params, filter });
 
   const alias = aliasOverride ?? ref;
   ctx.sources.set(alias, ref);
@@ -373,14 +373,91 @@ function virtualMethod(vt: VirtualTableContext): VirtualMethod {
   throw new QueryRuntimeError('Неизвестный тип виртуальной таблицы');
 }
 
-function collectVirtualParams(vt: VirtualTableContext, ctx: QueryCtx): BslValue[] {
+/**
+ * Позиция условия в скобках — как в синтаксисе платформы:
+ *   Остатки(Период, Условие)
+ *   Обороты(Начало, Конец, Периодичность, Условие)
+ *   ОстаткиИОбороты(Начало, Конец, Периодичность, МетодДополнения, Условие)
+ */
+const CONDITION_AT: { [k in VirtualMethod]: number } = {
+  'Остатки': 1,
+  'Обороты': 3,
+  'ОстаткиИОбороты': 4,
+};
+
+/** Похоже ли выражение на условие отбора, а не на значение. */
+function looksLikeCondition(text: string): boolean {
+  return /(<>|>=|<=|=|>|<)|\bПОДОБНО\b|\bМЕЖДУ\b|\bЕСТЬ\b/i.test(text);
+}
+
+/**
+ * Разбирает скобки виртуальной таблицы: значения вычисляем сразу, а
+ * условие оставляем выражением — его надо применить к каждому движению
+ * при сборке итога, а не вычислять на пустом месте (#59).
+ */
+function collectVirtualParams(
+  vt: VirtualTableContext,
+  ctx: QueryCtx,
+  method: VirtualMethod,
+  ref: string,
+): { params: BslValue[]; filter?: (movement: Row) => boolean } {
   const raw = vt.virtualTableParameter();
   const list = Array.isArray(raw) ? raw : [];
-  return list.map((p) => {
+  const at = CONDITION_AT[method];
+
+  const params: BslValue[] = [];
+  let filter: ((movement: Row) => boolean) | undefined;
+
+  list.forEach((p, i) => {
     const expr = p.logicalExpression();
-    if (!expr) return UNDEFINED;
-    return evalNode(expr, new Map(), ctx, null);
+    if (!expr) { params.push(UNDEFINED); return; }
+
+    if (i === at) {
+      filter = makeMovementFilter(expr, ctx, ref);
+      params.push(UNDEFINED);
+      return;
+    }
+
+    if (looksLikeCondition(expr.getText())) {
+      throw new QueryRuntimeError(
+        `Условие отбора в виртуальной таблице стоит последним параметром. ` +
+        `Для ${method} это ${at + 1}-й: ${signatureHint(method)}. ` +
+        `Пропущенные параметры оставляют пустыми: ${exampleHint(method)}`,
+      );
+    }
+    params.push(evalNode(expr, new Map(), ctx, null));
   });
+
+  return { params, filter };
+}
+
+function signatureHint(method: VirtualMethod): string {
+  switch (method) {
+    case 'Остатки': return 'Остатки(Период, Условие)';
+    case 'Обороты': return 'Обороты(Начало, Конец, Периодичность, Условие)';
+    case 'ОстаткиИОбороты': return 'ОстаткиИОбороты(Начало, Конец, Периодичность, МетодДополнения, Условие)';
+  }
+}
+
+function exampleHint(method: VirtualMethod): string {
+  switch (method) {
+    case 'Остатки': return 'Остатки(, Склад = &Склад)';
+    case 'Обороты': return 'Обороты(&Начало, &Конец, , Склад = &Склад)';
+    case 'ОстаткиИОбороты': return 'ОстаткиИОбороты(&Начало, &Конец, , , Склад = &Склад)';
+  }
+}
+
+/**
+ * Предикат по одному движению. Снимок — одна строка регистра под его же
+ * именем, поэтому в условии пишут поля регистра как есть: `Склад = &Склад`.
+ */
+function makeMovementFilter(
+  expr: LogicalExpressionContext,
+  ctx: QueryCtx,
+  ref: string,
+): (movement: Row) => boolean {
+  ctx.sources.set(ref, ref);
+  return (movement: Row) => isTruthy(evalNode(expr, new Map([[ref, movement]]), ctx, null));
 }
 
 function applyJoin(left: Snap[], j: JoinPartContext, ctx: QueryCtx): Snap[] {
@@ -770,13 +847,29 @@ function evalColumn(node: ColumnContext, snap: Snap, ctx: QueryCtx): BslValue {
     return UNDEFINED;
   }
   // Первый — алиас источника, остальные — путь
-  const [alias, ...path] = names;
+  const [alias, ...rest] = names;
   let cur: Row | null = snap.get(alias) as Row | null;
+  let path = rest;
+  let tableRef = ctx.sources.get(alias);
+
+  if (!cur) {
+    // Источник можно не называть, если он один или поле однозначно:
+    // «Номенклатура.Родитель» вместо «О.Номенклатура.Родитель». Так пишут
+    // в условии виртуальной таблицы, где алиаса ещё нет вовсе (#59).
+    for (const [srcAlias, row] of snap) {
+      if (alias in (row as Row)) {
+        cur = row as Row;
+        tableRef = ctx.sources.get(srcAlias);
+        path = names;
+        break;
+      }
+    }
+  }
+
   if (!cur) {
     ctx.warnings.add(`Алиас источника «${alias}» не найден`);
     return UNDEFINED;
   }
-  let tableRef = ctx.sources.get(alias);
   // Первый шаг может опираться на override для виртуальных / табличных
   // источников (напр. синтетическая Ссылка табличной части — issue #49).
   let firstStep = true;
