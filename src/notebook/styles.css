@@ -118,6 +118,56 @@
   border-bottom: 1px solid #7a2a2a;
 }
 
+/* Book chapter banner (#71) */
+.nb-chapter-banner {
+  background: #1a2422;
+  color: #d4d4d4;
+  padding: 8px 20px;
+  font-size: 13px;
+  border-bottom: 1px solid #2f8f7c;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.nb-chapter-banner__meta {
+  flex: 1;
+}
+.nb-chapter-banner__meta b {
+  color: #4ec9b0;
+}
+.nb-chapter-banner__nav {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+}
+.nb-chapter-banner__link {
+  color: #9cdcfe;
+  border-bottom: 1px dashed #4a4a4a;
+  padding-bottom: 1px;
+  max-width: 26ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nb-chapter-banner__link:hover {
+  color: #d4e6ff;
+  border-color: #9cdcfe;
+}
+.nb-chapter-banner__link--disabled {
+  color: #606060;
+  border-color: transparent;
+  cursor: default;
+}
+.nb-chapter-banner__toc {
+  color: #808080;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+.nb-chapter-banner__toc:hover { color: #d4d4d4; }
+
 .nb-source-banner {
   background: #1e2a38;
   color: #9cdcfe;

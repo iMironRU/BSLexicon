@@ -97,7 +97,7 @@ function BookView({ book, src }: { book: Book; src: string }) {
               {ch.summary && <p className="book-toc__summary">{ch.summary}</p>}
               <a
                 className="book-toc__open"
-                href={openChapterHref(src, ch)}
+                href={openChapterHref(src, ch, i)}
                 title="Открыть главу в ноутбуке"
               >
                 ▶ Открыть главу
@@ -133,12 +133,19 @@ function HowTo() {
 
 /**
  * Формирует ссылку «Открыть главу»: путь к `.nb.json` в книге →
- * raw-URL → `/notebook/?nb-src=<encoded>`.
+ * raw-URL → `/notebook/?nb-src=<encoded>&book-src=<bookYaml>&chapter=<idx>`.
+ * Параметры `book-src` и `chapter` включают навигацию Prev/Next в notebook
+ * (issue #71).
  */
-function openChapterHref(bookYamlUrl: string, chapter: BookChapter): string {
+function openChapterHref(bookYamlUrl: string, chapter: BookChapter, chapterIndex: number): string {
   const notebookRawUrl = resolveNotebookUrl(bookYamlUrl, chapter.notebook);
   const base = import.meta.env.BASE_URL;
-  return `${base}notebook/?nb-src=${encodeURIComponent(notebookRawUrl)}`;
+  const params = new URLSearchParams({
+    'nb-src': notebookRawUrl,
+    'book-src': bookYamlUrl,
+    chapter: String(chapterIndex),
+  });
+  return `${base}notebook/?${params.toString()}`;
 }
 
 /** notebook path в book.yaml — относительно директории самого book.yaml. */

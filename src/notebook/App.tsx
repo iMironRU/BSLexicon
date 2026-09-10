@@ -9,6 +9,7 @@ import { NotebooksPanel } from './NotebooksPanel';
 import { clearDraft, loadDraft, saveDraft } from './draft';
 import { decodeNotebook, encodeNotebook, newCell, starterNotebook } from './serialize';
 import { fetchNotebookFromSrc, type NbSource } from './nb-src';
+import { loadBookContext, chapterHref, type BookContext } from './book-context';
 import type { SolutionMeta } from './git-notebooks';
 import { pushSolution, suggestSolutionName } from './git-solutions';
 import { GitApiError } from '../app/git-storage';
@@ -42,6 +43,8 @@ function NotebookShell() {
   // сохранении решения ученика (snapshot версии репо на момент открытия).
   const [nbSource, setNbSource] = useState<{ source: NbSource; sha: string | null } | null>(null);
   const [refWarnings, setRefWarnings] = useState<string[]>([]);
+  // Контекст главы книги (#71): показываем banner «Глава N из M» + prev/next.
+  const [bookCtx, setBookCtx] = useState<BookContext | null>(null);
   // Педагог смотрит файл-решение ученика (#32): весь UI в readOnly,
   // banner подсвечивает откуда пришёл исходный урок.
   const [viewingSolution, setViewingSolution] = useState<SolutionMeta | null>(null);
@@ -58,6 +61,8 @@ function NotebookShell() {
     const params = new URLSearchParams(window.location.search);
     const nbSrcParam = params.get('nb-src');
     const nbParam = params.get('nb');
+    const bookSrcParam = params.get('book-src');
+    const chapterParam = params.get('chapter');
     if (nbSrcParam) {
       fetchNotebookFromSrc(nbSrcParam)
         .then((r) => {
@@ -72,6 +77,12 @@ function NotebookShell() {
           setLoadError(`Загрузка из репо: ${e instanceof Error ? e.message : String(e)}`);
           setNotebook(loadDraft() ?? starterNotebook());
         });
+      if (bookSrcParam) {
+        const hint = chapterParam !== null ? Number.parseInt(chapterParam, 10) : null;
+        loadBookContext(bookSrcParam, nbSrcParam, Number.isFinite(hint) ? hint : null).then((res) => {
+          if (res.ok) setBookCtx(res.ctx);
+        });
+      }
       return;
     }
     if (nbParam) {
@@ -272,6 +283,45 @@ function NotebookShell() {
       {loadError && (
         <div className="nb-error-banner">
           Не удалось загрузить ноутбук из ссылки — показан стартовый. ({loadError})
+        </div>
+      )}
+
+      {bookCtx && !viewingSolution && (
+        <div className="nb-chapter-banner">
+          <div className="nb-chapter-banner__meta">
+            📖 <b>{bookCtx.book.title}</b> · Глава {bookCtx.chapterIndex + 1} из {bookCtx.book.chapters.length} · {bookCtx.chapter.title}
+          </div>
+          <div className="nb-chapter-banner__nav">
+            {bookCtx.chapterIndex > 0 ? (
+              <a
+                className="nb-chapter-banner__link"
+                href={chapterHref(import.meta.env.BASE_URL, bookCtx.bookSrcUrl, bookCtx.book, bookCtx.chapterIndex - 1)}
+                title={bookCtx.book.chapters[bookCtx.chapterIndex - 1].title}
+              >
+                ← {bookCtx.book.chapters[bookCtx.chapterIndex - 1].title}
+              </a>
+            ) : (
+              <span className="nb-chapter-banner__link nb-chapter-banner__link--disabled">← Начало книги</span>
+            )}
+            <a
+              className="nb-chapter-banner__toc"
+              href={`${import.meta.env.BASE_URL}book/?src=${encodeURIComponent(bookCtx.bookSrcUrl)}`}
+              title="Оглавление книги"
+            >
+              📚 Оглавление
+            </a>
+            {bookCtx.chapterIndex < bookCtx.book.chapters.length - 1 ? (
+              <a
+                className="nb-chapter-banner__link"
+                href={chapterHref(import.meta.env.BASE_URL, bookCtx.bookSrcUrl, bookCtx.book, bookCtx.chapterIndex + 1)}
+                title={bookCtx.book.chapters[bookCtx.chapterIndex + 1].title}
+              >
+                {bookCtx.book.chapters[bookCtx.chapterIndex + 1].title} →
+              </a>
+            ) : (
+              <span className="nb-chapter-banner__link nb-chapter-banner__link--disabled">Конец книги →</span>
+            )}
+          </div>
         </div>
       )}
 
