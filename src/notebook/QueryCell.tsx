@@ -10,7 +10,7 @@
  *   - при ошибке в схеме/данных ячейка честно сообщает: «схема сломана»
  *     вместо тихого падения запроса.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import type { BeforeMount } from '@monaco-editor/react';
 import { registerSdblLanguage, SDBL_LANGUAGE_ID, SDBL_THEME_ID } from '../query-app/monaco-lang';
@@ -40,13 +40,15 @@ interface QueryCellProps {
    * открыть по ссылке педагога, чтобы забрать свежую схему.
    */
   showRefPlaceholder?: boolean;
+  /** Auto-run demo-ячейки (issue #70): выполнить при первом рендере. */
+  autorun?: boolean;
 }
 
 type FixtureLoad =
   | { ok: true; fixture: Fixture }
   | { ok: false; message: string };
 
-export function QueryCell({ source, schema, data, onChange, parameters, onParametersChange, readOnly, ref, showRefPlaceholder }: QueryCellProps) {
+export function QueryCell({ source, schema, data, onChange, parameters, onParametersChange, readOnly, ref, showRefPlaceholder, autorun }: QueryCellProps) {
   const load = useMemo<FixtureLoad>(() => tryLoadFixture(schema, data), [schema, data]);
   const [rowset, setRowset] = useState<Rowset | null>(null);
   const [errors, setErrors] = useState<RunError[]>([]);
@@ -77,6 +79,14 @@ export function QueryCell({ source, schema, data, onChange, parameters, onParame
       setRunning(false);
     });
   };
+
+  // Auto-run (issue #70): при первой отрисовке demo-ячейки — сразу выполняем.
+  useEffect(() => {
+    if (!autorun || !load.ok) return;
+    const id = window.setTimeout(() => handleRun(), 0);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autorun, load.ok]);
 
   const lineCount = Math.max(3, Math.min(20, source.split('\n').length));
   const editorHeight = lineCount * 22 + 12;

@@ -18,6 +18,8 @@ interface CodeCellProps {
   sessionEpoch: number;
   /** Просмотр решения педагогом (#32): Monaco read-only. */
   readOnly?: boolean;
+  /** Auto-run demo-ячейки (issue #70): выполнить при первом рендере. */
+  autorun?: boolean;
 }
 
 /**
@@ -30,7 +32,7 @@ interface CodeCellProps {
  * Высота редактора динамическая по числу строк (min 3 строки, max 20).
  * Пользователь не должен возиться с ресайзом внутри статьи-notebook'а.
  */
-export function CodeCell({ source, onChange, catalog, session, sessionEpoch, readOnly }: CodeCellProps) {
+export function CodeCell({ source, onChange, catalog, session, sessionEpoch, readOnly, autorun }: CodeCellProps) {
   const [output, setOutput] = useState<CodeCellOutput | null>(null);
   const [runIndex, setRunIndex] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
@@ -43,6 +45,22 @@ export function CodeCell({ source, onChange, catalog, session, sessionEpoch, rea
   useEffect(() => {
     if (sessionEpoch > 0) setRunIndex(null);
   }, [sessionEpoch]);
+
+  // Auto-run (issue #70): при первой отрисовке demo-ячейки сразу
+  // выполняем. Ставим через 0 мс, чтобы Monaco успел смонтироваться.
+  useEffect(() => {
+    if (!autorun) return;
+    const id = window.setTimeout(() => {
+      const result = session.eval(source);
+      const next: CodeCellOutput = result.error
+        ? { lines: result.output, error: formatError(result.error) }
+        : { lines: result.output, error: null };
+      setOutput(next);
+      setRunIndex(result.runIndex);
+    }, 0);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionEpoch, autorun]);
 
   const handleBeforeMount: BeforeMount = (monaco) => {
     registerBslLanguage(monaco, catalog);

@@ -20,6 +20,8 @@ interface SerializedCellBase {
   s: string;
   /** Ячейка заморожена автором (issue #60). */
   frozen?: boolean;
+  /** Auto-run (issue #70) — только для code и query. */
+  autorun?: boolean;
 }
 interface SerializedTaskCell extends SerializedCellBase {
   t: 'task';
@@ -228,6 +230,7 @@ export async function encodeNotebook(nb: Notebook): Promise<string> {
         if (c.ref) cell.ref = c.ref;
         if (c.parameters?.length) cell.parameters = c.parameters;
         if (c.frozen) cell.frozen = true;
+        if (c.autorun) cell.autorun = true;
         return cell;
       }
       if (c.type === 'query-task') {
@@ -239,6 +242,7 @@ export async function encodeNotebook(nb: Notebook): Promise<string> {
       }
       const base: SerializedCellBase = { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
       if (c.frozen) base.frozen = true;
+      if (c.type === 'code' && c.autorun) base.autorun = true;
       return base;
     }),
   };
@@ -335,6 +339,9 @@ export async function decodeNotebook(raw: string): Promise<Notebook> {
         created = newCell(c.t === 'md' ? 'markdown' : 'code', c.s);
       }
       if (c.frozen) (created as { frozen?: boolean }).frozen = true;
+      if (c.autorun && (created.type === 'code' || created.type === 'query')) {
+        (created as { autorun?: boolean }).autorun = true;
+      }
       return created;
     }),
   };

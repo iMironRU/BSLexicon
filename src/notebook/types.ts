@@ -33,6 +33,11 @@ export interface CodeCellData {
   type: 'code';
   source: string;
   frozen?: boolean;
+  /**
+   * Autorun (issue #70): при открытии ноутбука ячейка выполняется сама.
+   * Полезно для книжных demo-ячеек — читатель сразу видит результат.
+   */
+  autorun?: boolean;
 }
 
 export interface TaskCellData {
@@ -89,6 +94,8 @@ export interface QueryCellData {
    */
   parameters?: import('../query/parameters').QueryParamEntry[];
   frozen?: boolean;
+  /** Autorun (issue #70): выполнить сразу при открытии. */
+  autorun?: boolean;
 }
 
 /**

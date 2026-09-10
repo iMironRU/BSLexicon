@@ -92,6 +92,28 @@ describe('notebook serialize', () => {
     }
   });
 
+  it('autorun: сохраняется у code и query', async () => {
+    const code = newCell('code', 'Сообщить(1);') as { autorun?: boolean; type: string };
+    const query = newCell('query') as { autorun?: boolean; type: string };
+    code.autorun = true;
+    query.autorun = true;
+    const nb: Notebook = { cells: [code as unknown as import('../src/notebook/types').Cell, query as unknown as import('../src/notebook/types').Cell] };
+    const decoded = await decodeNotebook(await encodeNotebook(nb));
+    expect(decoded.cells[0].type).toBe('code');
+    expect(decoded.cells[1].type).toBe('query');
+    for (const c of decoded.cells) {
+      expect((c as { autorun?: boolean }).autorun).toBe(true);
+    }
+  });
+
+  it('autorun: игнорируется у markdown/task', async () => {
+    const md = newCell('markdown', '# x') as { autorun?: boolean };
+    md.autorun = true; // не сохраняется
+    const nb: Notebook = { cells: [md as unknown as import('../src/notebook/types').Cell] };
+    const decoded = await decodeNotebook(await encodeNotebook(nb));
+    expect((decoded.cells[0] as { autorun?: boolean }).autorun).toBeUndefined();
+  });
+
   it('frozen: незаданный флаг → не появляется в decode', async () => {
     const nb: Notebook = { cells: [newCell('code', 'X = 1;')] };
     const decoded = await decodeNotebook(await encodeNotebook(nb));

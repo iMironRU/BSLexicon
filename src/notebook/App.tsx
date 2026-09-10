@@ -354,6 +354,7 @@ function NotebookShell() {
                 session={session}
                 sessionEpoch={sessionEpoch}
                 readOnly={cellReadOnly}
+                autorun={cell.autorun}
               />
             )}
             {cell.type === 'task' && (
@@ -380,6 +381,7 @@ function NotebookShell() {
                 readOnly={cellReadOnly}
                 ref={cell.ref}
                 showRefPlaceholder={!!cell.ref && !nbSource}
+                autorun={cell.autorun}
               />
             )}
             {cell.type === 'query-task' && (

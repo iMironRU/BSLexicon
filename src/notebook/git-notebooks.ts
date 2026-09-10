@@ -61,6 +61,8 @@ interface StoredCell {
   query_task_snapshot?: QueryTaskSpec;
   /** Ячейка заморожена автором (issue #60). */
   frozen?: boolean;
+  /** Auto-run (issue #70) — только для code и query. */
+  autorun?: boolean;
 }
 interface StoredNotebook {
   v: 1;
@@ -164,6 +166,7 @@ export function serializeNotebook(nb: Notebook): string {
         cell = { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
       }
       if (c.frozen) cell.frozen = true;
+      if ((c.type === 'code' || c.type === 'query') && c.autorun) cell.autorun = true;
       return cell;
     }),
   };
@@ -239,6 +242,9 @@ export function parseAnyFile(text: string): ParsedFile {
       cell = { id: nextId(), type: 'code', source: c.s };
     }
     if (c.frozen) (cell as { frozen?: boolean }).frozen = true;
+    if (c.autorun && (cell.type === 'code' || cell.type === 'query')) {
+      (cell as { autorun?: boolean }).autorun = true;
+    }
     return cell;
   });
   const notebook: Notebook = { cells };
