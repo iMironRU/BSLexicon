@@ -154,8 +154,33 @@ function execSelectQuery(node: SelectQueryContext, fx: Fixture, options: RunOpti
   // положит результат в ctx.tempTables (см. #46).
 
   const { rowset, warnings } = execQuery(main, fx, options, node._totals);
+  finalizeSubquery(sub, rowset, warnings, fx, options, node._orders);
+  // ИТОГИ ПО обрабатывается внутри execQuery — здесь ничего не делаем.
+  return { rowset, warnings };
+}
 
-  // РАЗЛИЧНЫЕ — до ORDER BY.
+/**
+ * Пост-обработка subquery: РАЗЛИЧНЫЕ → ОБЪЕДИНИТЬ → УПОРЯДОЧИТЬ → ПЕРВЫЕ N.
+ *
+ * Общий хвост для обоих путей исполнения: верхнеуровневого `SELECT`
+ * (в `execSelectQuery`) и `ИЗ (…) КАК Т` (в `readSubquerySource`). До
+ * этого fix'а FROM-подзапрос шёл мимо, из-за чего `ПЕРВЫЕ N`,
+ * `УПОРЯДОЧИТЬ ПО` и `ОБЪЕДИНИТЬ` внутри него игнорировались (#68).
+ *
+ * `outerOrderBy` — `_orders` из внешнего SelectQuery (стоит после
+ * ИТОГИ ПО): для FROM-подзапроса его нет.
+ */
+function finalizeSubquery(
+  sub: SubqueryContext,
+  rowset: Rowset,
+  warnings: string[],
+  fx: Fixture,
+  options: RunOptions,
+  outerOrderBy?: OrderByContext | null,
+): void {
+  const main = sub._main;
+  if (!main) return;
+
   const lim = main.limitations();
   if (lim?.DISTINCT()) rowset.rows = dedupeRows(rowset.rows);
 
@@ -165,10 +190,8 @@ function execSelectQuery(node: SelectQueryContext, fx: Fixture, options: RunOpti
   const unions = sub._unions ?? [];
   let anyDedupe = false;
   for (const u of unions) {
-    const partQuery = u.query();
-    const partRes = execQuery(partQuery, fx, options);
+    const partRes = execQuery(u.query(), fx, options);
     for (const w of partRes.warnings) warnings.push(w);
-    // Проверяем совпадение числа колонок; имена берём из основной.
     if (partRes.rowset.columns.length !== rowset.columns.length) {
       throw new QueryRuntimeError(
         `ОБЪЕДИНИТЬ: число колонок не совпадает (${partRes.rowset.columns.length} vs ${rowset.columns.length}).`,
@@ -181,7 +204,7 @@ function execSelectQuery(node: SelectQueryContext, fx: Fixture, options: RunOpti
 
   // ORDER BY может быть либо в subquery (стандартное место), либо на
   // уровне selectQuery (после ИТОГИ / АВТОУПОРЯДОЧИВАНИЕ).
-  const orderBy = node._orders ?? sub.orderBy?.();
+  const orderBy = outerOrderBy ?? sub.orderBy?.();
   if (orderBy) applyOrderBy(rowset, orderBy);
 
   // ПЕРВЫЕ N — после сортировки, чтобы взять «первые N по УПОРЯДОЧИТЬ».
@@ -190,9 +213,6 @@ function execSelectQuery(node: SelectQueryContext, fx: Fixture, options: RunOpti
     const n = Number(topN);
     if (Number.isFinite(n) && n >= 0) rowset.rows = rowset.rows.slice(0, n);
   }
-
-  // ИТОГИ ПО обрабатывается внутри execQuery — здесь ничего не делаем.
-  return { rowset, warnings };
 }
 
 /** Дедупликация Rowset по всем колонкам. Порядок сохраняем (стабильный). */
@@ -446,7 +466,11 @@ function collectDataSources(dataSources: DataSourceContext[], ctx: QueryCtx): Sn
 function readSubquerySource(sub: SubqueryContext, ctx: QueryCtx, aliasOverride?: string | null): Snap[] {
   const main = sub._main;
   if (!main) throw new QueryRuntimeError('Пустой подзапрос в ИЗ');
-  const nested = execQuery(main, ctx.fx, buildOptionsFromCtx(ctx));
+  const options = buildOptionsFromCtx(ctx);
+  const nested = execQuery(main, ctx.fx, options);
+  // РАЗЛИЧНЫЕ / ОБЪЕДИНИТЬ / УПОРЯДОЧИТЬ ПО / ПЕРВЫЕ N внутри подзапроса
+  // применяются здесь — раньше эта ветка шла мимо и брала все строки (#68).
+  finalizeSubquery(sub, nested.rowset, nested.warnings, ctx.fx, options);
   const alias = aliasOverride ?? '_sub';
   // Складываем warning'и подзапроса к внешним, чтобы UI их всё-таки показал.
   for (const w of nested.warnings) ctx.warnings.add(w);
