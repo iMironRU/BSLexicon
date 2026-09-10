@@ -75,11 +75,18 @@ export function ResultTable({ rowset, errors, warnings = [], fixture }: ResultTa
             </tr>
           </thead>
           <tbody>
-            {rowset.rows.map((row, ri) => (
-              <tr key={ri}>
-                {row.map((v, ci) => <Cell key={ci} value={v} fixture={fixture} showRaw={showRaw} />)}
-              </tr>
-            ))}
+            {rowset.rows.map((row, ri) => {
+              // Строки-итоги (#45): уровень 0 — общий, дальше по контрольным точкам.
+              const level = rowset.totalLevels?.[ri] ?? null;
+              const cls = level === null ? undefined : `qs-row--total qs-row--total-${Math.min(level, 3)}`;
+              return (
+                <tr key={ri} className={cls}>
+                  {row.map((v, ci) => (
+                    <Cell key={ci} value={v} fixture={fixture} showRaw={showRaw} indent={ci === 0 ? level : null} />
+                  ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -87,7 +94,13 @@ export function ResultTable({ rowset, errors, warnings = [], fixture }: ResultTa
   );
 }
 
-function Cell({ value, fixture, showRaw }: { value: BslValue; fixture: Fixture; showRaw: boolean }) {
+function Cell({ value, fixture, showRaw, indent = null }: {
+  value: BslValue;
+  fixture: Fixture;
+  showRaw: boolean;
+  /** Уровень итога для первой колонки: 0 — общий, дальше вложенность. */
+  indent?: number | null;
+}) {
   const p = present(value, fixture);
   const isRef = p.raw !== null;
   const text = showRaw && isRef ? p.raw! : p.display;
@@ -97,7 +110,14 @@ function Cell({ value, fixture, showRaw }: { value: BslValue; fixture: Fixture; 
     isRef ? 'qs-cell--ref' : '',
   ].filter(Boolean).join(' ');
   const title = isRef ? `${p.targetRef ?? '?'} · ${p.raw}` : undefined;
-  return <td className={classes} title={title}>{text}</td>;
+  const style = indent !== null && indent > 0 ? { paddingLeft: `${6 + indent * 12}px` } : undefined;
+  const prefix = indent === 0 ? 'Итого' : '';
+  return (
+    <td className={classes} title={title} style={style}>
+      {prefix && <span className="qs-cell__total-mark">{prefix}</span>}
+      {text}
+    </td>
+  );
 }
 
 function plural(n: number, one: string, few: string, many: string): string {

@@ -638,3 +638,19 @@
 .qs-app--embed .qs-header {
   padding: 6px 12px;
 }
+
+/* Строки-итоги (#45): итог виден сразу, подробности под ним с отступом. */
+.qs-row--total > td {
+  font-weight: 600;
+  background: #2a2d2e;
+}
+
+.qs-row--total-0 > td {
+  background: #33383a;
+}
+
+.qs-cell__total-mark {
+  opacity: 0.65;
+  margin-right: 6px;
+  font-weight: 400;
+}

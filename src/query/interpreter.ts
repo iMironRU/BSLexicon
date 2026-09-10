@@ -38,6 +38,7 @@ import {
   VirtualTableContext,
 } from './parser/generated/SDBLParser';
 import { materializeVirtual, type VirtualMethod } from './virtual-tables';
+import { aggregateFuncOf, applyTotals, type TotalLevel } from './totals';
 import type { Field } from './types';
 import { extractParamName } from './parameters';
 
@@ -46,6 +47,12 @@ import { extractParamName } from './parameters';
 export interface Rowset {
   columns: string[];
   rows: BslValue[][];
+  /**
+   * Строки-итоги (#45): `null` — обычная строка, число — уровень итога
+   * (0 — общий, дальше по контрольным точкам). Массив идёт вровень с
+   * `rows` и появляется только когда в запросе есть ИТОГИ.
+   */
+  totalLevels?: TotalLevel[];
 }
 
 export interface RunError {
@@ -88,7 +95,14 @@ export function runQuery(source: string, fx: Fixture, options: RunOptions = {}):
 
 // ── Дерево ──────────────────────────────────────────────────────────
 
-interface ExecResult { rowset: Rowset; warnings: string[]; }
+interface ExecResult {
+  rowset: Rowset;
+  warnings: string[];
+  /** Колонки-агрегаты списка выборки — нужны ИТОГИ без списка функций. */
+  aggregates?: { index: number; func: string }[];
+  /** Был ли СГРУППИРОВАТЬ ПО — от этого зависит сложение уже посчитанного. */
+  grouped?: boolean;
+}
 
 function execPackage(pkg: QueryPackageContext, fx: Fixture, options: RunOptions): ExecResult {
   const queries = pkg.queries();
@@ -109,13 +123,28 @@ function execSelectQuery(node: SelectQueryContext, fx: Fixture, options: RunOpti
   if (!main) throw new QueryRuntimeError('Отсутствует основная часть SELECT');
   if (main.temporaryTableIdentifier?.()) throw new QueryRuntimeError('ПОМЕСТИТЬ пока не поддерживается (#46)');
 
-  const { rowset, warnings } = execQuery(main, fx, options);
+  const { rowset, warnings, aggregates, grouped } = execQuery(main, fx, options);
 
   // ORDER BY может быть либо в subquery (стандартное место), либо на
   // уровне selectQuery (после ИТОГИ / АВТОУПОРЯДОЧИВАНИЕ).
   const orderBy = node._orders ?? sub.orderBy?.();
   if (orderBy) applyOrderBy(rowset, orderBy);
-  if (node._totals) throw new QueryRuntimeError('ИТОГИ ПО пока не реализованы (#45)');
+
+  if (node._totals) {
+    const extra = new Set<string>();
+    const { rows, levels } = applyTotals({
+      columns: rowset.columns,
+      rows: rowset.rows,
+      aggregates: aggregates ?? [],
+      grouped: grouped ?? false,
+      nameOf: defaultAliasFromExpr,
+      warn: (m) => extra.add(m),
+      fail: (m) => { throw new QueryRuntimeError(m); },
+    }, node._totals);
+    rowset.rows = rows;
+    rowset.totalLevels = levels;
+    return { rowset, warnings: [...warnings, ...extra] };
+  }
 
   return { rowset, warnings };
 }
@@ -174,11 +203,32 @@ function execQuery(q: QueryContext, fx: Fixture, options: RunOptions): ExecResul
       if (q._having && !isTruthy(evalNode(q._having, bucket[0] ?? new Map(), ctx, bucket))) continue;
       rows.push(columnSpecs.map((c) => evalOutputColumn(c, bucket[0] ?? new Map(), ctx, bucket)));
     }
-    return { rowset: { columns: columnSpecs.map((c) => c.name), rows }, warnings: [...ctx.warnings] };
+    return {
+      rowset: { columns: columnSpecs.map((c) => c.name), rows },
+      warnings: [...ctx.warnings],
+      aggregates: aggregateColumns(columnSpecs),
+      grouped: true,
+    };
   }
 
   const rows: BslValue[][] = filtered.map((s) => columnSpecs.map((c) => evalOutputColumn(c, s, ctx, null)));
-  return { rowset: { columns: columnSpecs.map((c) => c.name), rows }, warnings: [...ctx.warnings] };
+  return {
+    rowset: { columns: columnSpecs.map((c) => c.name), rows },
+    warnings: [...ctx.warnings],
+    aggregates: aggregateColumns(columnSpecs),
+    grouped: false,
+  };
+}
+
+/** Колонки списка выборки, которые сами по себе агрегат: их и суммируют ИТОГИ без списка функций. */
+function aggregateColumns(specs: ColumnSpec[]): { index: number; func: string }[] {
+  const out: { index: number; func: string }[] = [];
+  specs.forEach((c, index) => {
+    if (c.kind !== 'expr') return;
+    const func = aggregateFuncOf(c.expr.getText());
+    if (func) out.push({ index, func });
+  });
+  return out;
 }
 
 /** Универсальный eval итоговой колонки: раскрытая `*` → прямое чтение поля, иначе expr. */
