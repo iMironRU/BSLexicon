@@ -12,7 +12,7 @@
  * через плоский JS.
  */
 import type { BslValue } from '@core/index';
-import { UNDEFINED } from '@core/interpreter/values';
+import { NULL, UNDEFINED } from '@core/interpreter/values';
 import type { Data, Field, Record, Schema, Table } from './types';
 
 /** Одна запись — плоский объект «имя поля → значение 1С». */
@@ -74,6 +74,17 @@ export function rowsOf(fx: Fixture, tableRef: string): Row[] | null {
   return fx.tables.get(tableRef)?.rows ?? null;
 }
 
+/**
+ * Приводит YAML-значение к BslValue: `null` в YAML — это NULL из 1С,
+ * `undefined` (отсутствие ключа) — Неопределено. Остальное — как есть.
+ * Без этого `ЕСТЬ NULL` не срабатывал бы над Родитель у групп.
+ */
+function normalizeValue(v: BslValue | undefined | null): BslValue {
+  if (v === null) return NULL;
+  if (v === undefined) return UNDEFINED;
+  return v;
+}
+
 // ── helpers ────────────────────────────────────────────────────────
 
 /** Все top-level поля таблицы (независимо от kind). */
@@ -105,7 +116,7 @@ function keyOf(table: Table): string | null {
 function normalizeRow(raw: Record, table: Table): Row {
   const out: Row = {};
   for (const f of fieldsOf(table)) {
-    out[f.name] = raw[f.name] !== undefined ? (raw[f.name] as BslValue) : UNDEFINED;
+    out[f.name] = normalizeValue(raw[f.name]);
   }
   // Табличные части — только у Справочника и Документа.
   if (table.kind === 'Справочник' || table.kind === 'Документ') {
@@ -116,9 +127,7 @@ function normalizeRow(raw: Record, table: Table): Row {
         const rows: Row[] = rawTs.map((r) => {
           const rr: Row = {};
           for (const f of ts.fields) {
-            rr[f.name] = (r as Record)[f.name] !== undefined
-              ? ((r as Record)[f.name] as BslValue)
-              : UNDEFINED;
+            rr[f.name] = normalizeValue((r as Record)[f.name]);
           }
           return rr;
         });
