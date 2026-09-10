@@ -24,9 +24,11 @@
 import type { BslValue } from '@core/index';
 import { UNDEFINED } from '@core/interpreter/values';
 import type { Fixture, Row } from './fixture';
-import type { AccumRegister, Field } from './types';
+import type { AccumRegister, Field, InfoRegister } from './types';
 
-export type VirtualMethod = 'Остатки' | 'Обороты' | 'ОстаткиИОбороты';
+export type VirtualMethod =
+  | 'Остатки' | 'Обороты' | 'ОстаткиИОбороты'
+  | 'СрезПоследних' | 'СрезПервых';
 
 export interface VirtualQuery {
   /** Полное имя регистра: `РегистрНакопления.ОстаткиТоваров`. */
@@ -45,20 +47,38 @@ export interface MaterializedVirtual {
 }
 
 /**
- * Материализует виртуальную таблицу. Не бросает исключений о неподдержке —
- * зовущий должен сам проверить, что таблица — регистр накопления с
- * `view: 'Остатки'` и метод из поддерживаемого списка.
+ * Материализует виртуальную таблицу. Диспетчирует по типу регистра:
+ *   - РегистрНакопления: Остатки / Обороты / ОстаткиИОбороты
+ *   - РегистрСведений (периодический): СрезПоследних / СрезПервых
  */
 export function materializeVirtual(fx: Fixture, vq: VirtualQuery): MaterializedVirtual {
   const tf = fx.tables.get(vq.ref);
   if (!tf) throw new Error(`Виртуальная таблица: регистр «${vq.ref}» не найден`);
-  const reg = tf.table as AccumRegister;
-  const movements = tf.rows;
+  const kind = tf.table.kind;
+  const rows = tf.rows;
 
   switch (vq.method) {
-    case 'Остатки': return balance(reg, movements, vq.params[0]);
-    case 'Обороты': return turnovers(reg, movements, vq.params[0], vq.params[1]);
-    case 'ОстаткиИОбороты': return balanceAndTurnovers(reg, movements, vq.params[0], vq.params[1]);
+    case 'Остатки':
+    case 'Обороты':
+    case 'ОстаткиИОбороты':
+      if (kind !== 'РегистрНакопления') {
+        throw new Error(`Виртуальная ${vq.method} доступна только регистру накопления, а «${vq.ref}» — ${kind}`);
+      }
+      break;
+    case 'СрезПоследних':
+    case 'СрезПервых':
+      if (kind !== 'РегистрСведений') {
+        throw new Error(`Виртуальная ${vq.method} доступна только регистру сведений, а «${vq.ref}» — ${kind}`);
+      }
+      break;
+  }
+
+  switch (vq.method) {
+    case 'Остатки': return balance(tf.table as AccumRegister, rows, vq.params[0]);
+    case 'Обороты': return turnovers(tf.table as AccumRegister, rows, vq.params[0], vq.params[1]);
+    case 'ОстаткиИОбороты': return balanceAndTurnovers(tf.table as AccumRegister, rows, vq.params[0], vq.params[1]);
+    case 'СрезПоследних': return slice(tf.table as InfoRegister, rows, vq.params[0], 'last');
+    case 'СрезПервых': return slice(tf.table as InfoRegister, rows, vq.params[0], 'first');
   }
 }
 
@@ -235,6 +255,61 @@ function balanceAndTurnovers(reg: AccumRegister, movements: Row[], start: BslVal
     if (anyNonZero) rows.push(row);
   }
   return { fieldNames, virtualFields, rows };
+}
+
+// ── СрезПоследних / СрезПервых ──────────────────────────────────
+
+/**
+ * Срез регистра сведений: для каждой комбинации измерений — запись с
+ * максимальным (для СрезПоследних) или минимальным (для СрезПервых)
+ * Периодом, удовлетворяющим ограничению по &Дата.
+ * Непериодический регистр: параметр даты игнорируется, возвращаем один
+ * ряд на комбинацию измерений (последний по порядку вставки).
+ */
+function slice(reg: InfoRegister, rows: Row[], date: BslValue, mode: 'first' | 'last'): MaterializedVirtual {
+  const bound = periodBound(date);
+  const groups = new Map<string, Row>();
+  const dimKey = (r: Row): string => reg.dimensions.map((d) => stableKey(r[d.name] as BslValue)).join('|');
+
+  for (const r of rows) {
+    const p = reg.periodic ? periodOf(r) : null;
+    if (reg.periodic && bound !== null) {
+      if (p === null) continue;
+      if (mode === 'last' && p > bound) continue;
+      if (mode === 'first' && p < bound) continue;
+    }
+    const key = dimKey(r);
+    const prev = groups.get(key);
+    if (!prev) { groups.set(key, r); continue; }
+    if (!reg.periodic) continue; // непериодический: первая победила
+    const prevP = periodOf(prev);
+    if (prevP === null || p === null) { groups.set(key, r); continue; }
+    if (mode === 'last' && p > prevP) groups.set(key, r);
+    if (mode === 'first' && p < prevP) groups.set(key, r);
+  }
+
+  const fieldNames = [
+    ...(reg.periodic ? ['Период'] : []),
+    ...reg.dimensions.map((d) => d.name),
+    ...reg.resources.map((r) => r.name),
+    ...(reg.attributes ?? []).map((a) => a.name),
+  ];
+  const virtualFields: Field[] = [
+    ...(reg.periodic ? [{ name: 'Период', type: { kind: 'Дата' } as const }] : []),
+    ...reg.dimensions,
+    ...reg.resources,
+    ...(reg.attributes ?? []),
+  ];
+  const outRows: Row[] = [];
+  for (const g of groups.values()) {
+    const row: Row = {};
+    if (reg.periodic) row['Период'] = (g['Период'] as BslValue) ?? UNDEFINED;
+    for (const d of reg.dimensions) row[d.name] = g[d.name] as BslValue;
+    for (const r of reg.resources) row[r.name] = g[r.name] as BslValue;
+    for (const a of reg.attributes ?? []) row[a.name] = g[a.name] as BslValue;
+    outRows.push(row);
+  }
+  return { fieldNames, virtualFields, rows: outRows };
 }
 
 // ── helpers ────────────────────────────────────────────────────────
