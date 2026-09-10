@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
 import type { BeforeMount, OnMount } from '@monaco-editor/react';
 import { SchemaPanel } from './SchemaPanel';
@@ -7,6 +7,8 @@ import { ExamplesModal } from './ExamplesModal';
 import { ParametersPanel } from './ParametersPanel';
 import { loadEmbeddedFixture } from './embedded-fixture';
 import { loadRemoteFixture, readFixtureSource, type FixtureOrigin } from './remote-fixture';
+import { decodeGzQueryParam, decodeQueryParam, parseQueryUrlParams } from './url-params';
+import { ProvenanceBanner } from '../app/components/ProvenanceBanner';
 import type { QueryParamEntry } from '../query/parameters';
 import { toBslValue } from '../query/parameters';
 import { registerSdblLanguage, SDBL_LANGUAGE_ID, SDBL_THEME_ID } from './monaco-lang';
@@ -30,8 +32,11 @@ const STARTER_QUERY = `ВЫБРАТЬ Наименование
 УПОРЯДОЧИТЬ ПО Наименование`;
 
 export function App() {
+  const url = useMemo(() => parseQueryUrlParams(window.location.search), []);
   const [base, setBase] = useState<BaseState>(() => initialBase());
-  const [source, setSource] = useState<string>(() => initialSource());
+  const [source, setSource] = useState<string>(() => initialSource(url));
+  const [urlNote, setUrlNote] = useState<string | null>(() => (url.gzq ? null : initialNote(url)));
+  const [showProvenance, setShowProvenance] = useState(url.sourceUrl !== null);
   const [rowset, setRowset] = useState<Rowset | null>(null);
   const [errors, setErrors] = useState<RunError[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -41,6 +46,18 @@ export function App() {
   const editorRef = useRef<CodeEditor | null>(null);
 
   const fixture = base.status === 'готова' ? base.fixture : null;
+
+  // Сжатый запрос (#56): распаковываем после первого рендера — DecompressionStream асинхронен.
+  useEffect(() => {
+    if (!url.gzq) return;
+    let живо = true;
+    decodeGzQueryParam(url.gzq).then((r) => {
+      if (!живо) return;
+      if (r.text !== null && r.text !== '') setSource(r.text);
+      setUrlNote(r.error);
+    });
+    return () => { живо = false; };
+  }, [url.gzq]);
 
   // База по ссылке (#55): грузим после первого рендера, чтобы читатель
   // видел, что происходит, а не пустой экран.
@@ -139,7 +156,7 @@ export function App() {
   }, []);
 
   return (
-    <div className="qs-app">
+    <div className={'qs-app' + (url.embed ? ' qs-app--embed' : '')}>
       <header className="qs-header">
         <div className="qs-header__brand">
           <span className="qs-header__logo">BSLexicon</span>
@@ -154,7 +171,7 @@ export function App() {
         <div className="qs-header__actions">
           <button
             type="button"
-            className="qs-btn qs-btn--secondary"
+            className="qs-btn qs-btn--secondary qs-header__examples"
             onClick={() => setExamplesOpen(true)}
             title="Галерея демо-запросов"
           >
@@ -166,6 +183,16 @@ export function App() {
         </div>
       </header>
 
+      {showProvenance && url.sourceUrl && (
+        <ProvenanceBanner
+          sourceUrl={url.sourceUrl}
+          title={url.title}
+          onClose={() => setShowProvenance(false)}
+        />
+      )}
+      {urlNote && (
+        <div className="qs-base-banner qs-base-banner--error" role="alert">⚠ {urlNote}</div>
+      )}
       {base.status === 'сломалась' && (
         <div className="qs-base-banner qs-base-banner--error" role="alert">
           <span>⚠ {base.error}</span>
@@ -280,24 +307,18 @@ function shortUrl(raw: string): string {
   }
 }
 
-function initialSource(): string {
-  const params = new URLSearchParams(window.location.search);
-  const q = params.get('q');
-  if (q) {
-    try {
-      return decodeBase64(q);
-    } catch {
-      /* игнорируем битый параметр */
-    }
+/** Что показать в редакторе на старте: запрос из ссылки или стартовый. */
+function initialSource(url: ReturnType<typeof parseQueryUrlParams>): string {
+  if (url.gzq) return ''; // распакуется через мгновение, пустой редактор честнее чужого запроса
+  if (url.q) {
+    const r = decodeQueryParam(url.q);
+    return r.text === null || r.text === '' ? STARTER_QUERY : r.text;
   }
   return STARTER_QUERY;
 }
 
-function decodeBase64(raw: string): string {
-  const std = raw.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = std + '='.repeat((4 - (std.length % 4)) % 4);
-  const bin = atob(padded);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
+/** Ошибка разбора `?q` — её показывают сразу, а не молча подсовывают стартовый запрос. */
+function initialNote(url: ReturnType<typeof parseQueryUrlParams>): string | null {
+  return url.q ? decodeQueryParam(url.q).error : null;
 }
+

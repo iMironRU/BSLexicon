@@ -625,3 +625,16 @@
   font-size: 11px;
   opacity: 0.75;
 }
+
+/* Встроенный режим (#56): в iframe книги остаётся только рабочее место.
+   Провенанс-баннер намеренно живёт и здесь — он объясняет, откуда запрос. */
+.qs-app--embed .qs-header__brand,
+.qs-app--embed .qs-header__nav,
+.qs-app--embed .qs-header__examples,
+.qs-app--embed .help__footer {
+  display: none;
+}
+
+.qs-app--embed .qs-header {
+  padding: 6px 12px;
+}
