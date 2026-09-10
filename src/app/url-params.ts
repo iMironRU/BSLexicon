@@ -12,10 +12,20 @@ export interface ParsedUrlParams {
   embed: boolean;
 }
 
-export function parseSearchParams(search: string): ParsedUrlParams {
+/** Часть контракта, общая для тренажёра и песочницы запросов: откуда пришли и как показывать. */
+export interface BookParams {
+  sourceUrl: string | null;
+  title: string | null;
+  embed: boolean;
+}
+
+/**
+ * `?source`, `?title`, `?embed` — одинаково для всех тренажёров.
+ * Не-http источник игнорируется молча: подсунутый `javascript:` не должен
+ * попасть в `href`.
+ */
+export function parseBookParams(search: string): BookParams {
   const p = new URLSearchParams(search);
-  const gzcode = p.get('gzcode') || null;
-  const code = p.get('code') || null;
   const sourceRaw = p.get('source') || null;
   const title = p.get('title') || null;
   const embedRaw = p.get('embed');
@@ -30,9 +40,16 @@ export function parseSearchParams(search: string): ParsedUrlParams {
     }
   }
 
-  const embed = embedRaw !== null && embedRaw !== '0' && embedRaw !== 'false';
+  return { sourceUrl, title, embed: embedRaw !== null && embedRaw !== '0' && embedRaw !== 'false' };
+}
 
-  return { gzcode, code, sourceUrl, title, embed };
+export function parseSearchParams(search: string): ParsedUrlParams {
+  const p = new URLSearchParams(search);
+  return {
+    gzcode: p.get('gzcode') || null,
+    code: p.get('code') || null,
+    ...parseBookParams(search),
+  };
 }
 
 /** Декодирует URL-safe base64 → UTF-8 строку. Бросает исключение при невалидных данных. */
@@ -55,8 +72,10 @@ export async function decompressGzip(raw: string): Promise<string> {
 
   const ds = new DecompressionStream('gzip');
   const writer = ds.writable.getWriter();
-  writer.write(bytes);
-  writer.close();
+  // Битые данные роняют обе стороны потока. Ошибку читателя ловит
+  // вызывающий, а отказ писателя иначе всплыл бы как unhandled rejection.
+  void writer.write(bytes).catch(() => {});
+  void writer.close().catch(() => {});
 
   const chunks: Uint8Array[] = [];
   const reader = ds.readable.getReader();
