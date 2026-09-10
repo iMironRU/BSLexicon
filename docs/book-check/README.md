@@ -13,7 +13,9 @@ Exit-code `0` — ошибок нет, `1` — есть.
 
 ## В CI книги (GitHub Actions)
 
-Пример workflow, который автор может положить в свой репо книги как `.github/workflows/book-check.yml`:
+Используй composite action — он сам делает checkout BSLexicon,
+npm ci и запуск скрипта. Автор книги кладёт в свой репо
+`.github/workflows/book-check.yml`:
 
 ```yaml
 name: book-check
@@ -28,27 +30,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/checkout@v4
-        with:
-          repository: iMironRU/BSLexicon
-          path: bslexicon
-          ref: main
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Install BSLexicon deps
-        run: npm ci
-        working-directory: bslexicon
-
-      - name: Run book-check
-        run: npx tsx scripts/book-check.ts $GITHUB_WORKSPACE
-        working-directory: bslexicon
+      - uses: iMironRU/BSLexicon/.github/actions/book-check@main
 ```
 
+Входы (все опциональны):
+
+| input | по умолчанию | что |
+|---|---|---|
+| `path` | `.` | путь к корню репо книги внутри workspace |
+| `bslexicon-ref` | `main` | ветка/тег/SHA BSLexicon для запуска — используй тег на релизах книги, чтобы CI не ломался при изменениях песочницы |
+| `node-version` | `24` | версия Node |
+
 Скрипт печатает список findings; если хоть один `error` — CI падает.
+
+### Пример: закрепить версию песочницы
+
+```yaml
+- uses: iMironRU/BSLexicon/.github/actions/book-check@main
+  with:
+    bslexicon-ref: v1.2.0
+```
+
+### Пример: книга в подпапке monorepo
+
+```yaml
+- uses: iMironRU/BSLexicon/.github/actions/book-check@main
+  with:
+    path: books/reading-queries
+```
 
 ## Что проверяется
 

@@ -1,0 +1,51 @@
+# Композитный action для валидации репо книги — BSLexicon (#62).
+#
+# Автор книги подключает одним шагом; action сам делает checkout
+# BSLexicon, npm ci, прогон `book-check.ts`. Пример использования
+# смотри в docs/book-check/README.md.
+name: 'BSLexicon book-check'
+description: 'Валидирует book.yaml, .nb.json и .query-task.yaml — гоняет starter каждой задачи-запроса через интерпретатор.'
+branding:
+  icon: 'book-open'
+  color: 'green'
+
+inputs:
+  path:
+    description: 'Путь к корню репо книги (относительно workspace)'
+    required: false
+    default: '.'
+  bslexicon-ref:
+    description: 'Ветка/тег/SHA BSLexicon для запуска'
+    required: false
+    default: 'main'
+  node-version:
+    description: 'Версия Node для установки BSLexicon-зависимостей'
+    required: false
+    default: '24'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout BSLexicon
+      uses: actions/checkout@v4
+      with:
+        repository: iMironRU/BSLexicon
+        ref: ${{ inputs.bslexicon-ref }}
+        path: __bslexicon
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+        cache-dependency-path: __bslexicon/package-lock.json
+
+    - name: Install BSLexicon deps
+      shell: bash
+      working-directory: __bslexicon
+      run: npm ci
+
+    - name: Run book-check
+      shell: bash
+      working-directory: __bslexicon
+      run: npx tsx scripts/book-check.ts ${{ github.workspace }}/${{ inputs.path }}
