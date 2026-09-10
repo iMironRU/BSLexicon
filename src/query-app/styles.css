@@ -463,6 +463,15 @@
   text-align: right;
 }
 
+/* Итог-строки ИТОГИ ПО (issue #45) */
+.qs-row--total {
+  font-weight: 600;
+  background: #232527;
+}
+.qs-row--total-1 { color: #dcdcaa; }
+.qs-row--total-2 { color: #d7a25f; }
+.qs-row--total-3 { color: #c48232; }
+
 /* Modal — галерея примеров */
 .qs-modal__backdrop {
   position: fixed;

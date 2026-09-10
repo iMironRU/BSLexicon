@@ -75,11 +75,14 @@ export function ResultTable({ rowset, errors, warnings = [], fixture }: ResultTa
             </tr>
           </thead>
           <tbody>
-            {rowset.rows.map((row, ri) => (
-              <tr key={ri}>
-                {row.map((v, ci) => <Cell key={ci} value={v} fixture={fixture} showRaw={showRaw} />)}
-              </tr>
-            ))}
+            {rowset.rows.map((row, ri) => {
+              const level = rowset.rowLevels?.[ri] ?? 0;
+              return (
+                <tr key={ri} className={level > 0 ? `qs-row--total qs-row--total-${level}` : ''}>
+                  {row.map((v, ci) => <Cell key={ci} value={v} fixture={fixture} showRaw={showRaw} />)}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
