@@ -42,11 +42,11 @@ import {
   SelectQueryContext,
   SubqueryContext,
   TableContext,
-  TotalByContext,
   UnaryExpressionContext,
   VirtualTableContext,
 } from './parser/generated/SDBLParser';
 import { materializeVirtual, type VirtualMethod } from './virtual-tables';
+import { aggregateFuncOf, applyTotals } from './totals';
 import type { Field } from './types';
 import { extractParamName } from './parameters';
 
@@ -105,7 +105,14 @@ export function runQuery(source: string, fx: Fixture, options: RunOptions = {}):
 
 // ── Дерево ──────────────────────────────────────────────────────────
 
-interface ExecResult { rowset: Rowset; warnings: string[]; }
+interface ExecResult {
+  rowset: Rowset;
+  warnings: string[];
+  /** Колонки-агрегаты списка выборки — нужны ИТОГИ без списка функций. */
+  aggregates?: { index: number; func: string }[];
+  /** Был ли СГРУППИРОВАТЬ ПО — от этого зависит сложение уже посчитанного. */
+  grouped?: boolean;
+}
 
 function execPackage(pkg: QueryPackageContext, fx: Fixture, options: RunOptions): ExecResult {
   const queries = pkg.queries();
@@ -154,9 +161,27 @@ function execSelectQuery(node: SelectQueryContext, fx: Fixture, options: RunOpti
   // ПОМЕСТИТЬ ВТ_Имя обрабатывается на уровне пакета — execPackage
   // положит результат в ctx.tempTables (см. #46).
 
-  const { rowset, warnings } = execQuery(main, fx, options, node._totals);
+  const { rowset, warnings, aggregates, grouped } = execQuery(main, fx, options);
   finalizeSubquery(sub, rowset, warnings, fx, options, node._orders);
-  // ИТОГИ ПО обрабатывается внутри execQuery — здесь ничего не делаем.
+
+  // ИТОГИ ПО — последним шагом, поверх отсортированного результата: итоговая
+  // строка встаёт над своими подробностями, общий итог — первым (#45).
+  if (node._totals) {
+    const extra = new Set<string>();
+    const { rows, levels } = applyTotals({
+      columns: rowset.columns,
+      rows: rowset.rows,
+      aggregates: aggregates ?? [],
+      grouped: grouped ?? false,
+      nameOf: defaultAliasFromExpr,
+      warn: (m) => extra.add(m),
+      fail: (m) => { throw new QueryRuntimeError(m); },
+    }, node._totals);
+    rowset.rows = rows;
+    rowset.rowLevels = levels;
+    return { rowset, warnings: [...warnings, ...extra] };
+  }
+
   return { rowset, warnings };
 }
 
@@ -262,7 +287,7 @@ interface QueryCtx {
 /** Одна «строка-снимок»: алиас → Row исходной таблицы. */
 type Snap = Map<string, Row>;
 
-function execQuery(q: QueryContext, fx: Fixture, options: RunOptions, totalBy?: TotalByContext | null): ExecResult {
+function execQuery(q: QueryContext, fx: Fixture, options: RunOptions): ExecResult {
   const params = new Map<string, BslValue>();
   for (const [k, v] of Object.entries(options.parameters ?? {})) params.set(k, v);
   const ctx: QueryCtx = {
@@ -312,111 +337,26 @@ function execQuery(q: QueryContext, fx: Fixture, options: RunOptions, totalBy?: 
   const columnNames = columnSpecs.map((c) => c.name);
   const rowset: Rowset = { columns: columnNames, rows: detailRows };
 
-  // ИТОГИ ПО (issue #45): считаем субтотал-строки, добавляем в rowset,
-  // помечаем через rowLevels для UI. Для MVP выкладываем итоги ПОСЛЕ
-  // детальных строк — интерпозиция потребует стабильной сортировки.
-  if (totalBy) {
-    const totals = computeTotals(totalBy, filtered, columnSpecs, ctx);
-    rowset.rows = [...detailRows, ...totals.rows];
-    rowset.rowLevels = [
-      ...detailRows.map(() => 0),
-      ...totals.levels,
-    ];
-  }
-
-  return { rowset, warnings: [...ctx.warnings] };
+  return {
+    rowset,
+    warnings: [...ctx.warnings],
+    aggregates: aggregateColumns(columnSpecs),
+    grouped: groupExprs.length > 0 || hasAgg,
+  };
 }
 
-/**
- * ИТОГИ ПО group1[, group2, …] — генерируем итоговые строки: для каждого
- * префикса группировок собираем подмножество source snap'ов и заново
- * считаем агрегаты. Возвращаем строки + уровень (1 — самый внешний).
- */
-function computeTotals(
-  totalBy: TotalByContext,
-  filtered: Snap[],
-  columnSpecs: ColumnSpec[],
-  ctx: QueryCtx,
-): { rows: BslValue[][]; levels: number[] } {
-  const groups = totalBy.totalsGroup();
-  const groupExprs: (ExpressionContext | null)[] = [];
-  const groupNames: (string | null)[] = [];
-  for (const g of groups) {
-    if (g.OVERALL()) {
-      groupExprs.push(null);
-      groupNames.push(null);
-      continue;
-    }
-    const e = g.expression();
-    groupExprs.push(e ?? null);
-    groupNames.push(e ? e.getText() : null);
-  }
-
-  const outRows: BslValue[][] = [];
-  const outLevels: number[] = [];
-
-  for (let level = 0; level < groupExprs.length; level += 1) {
-    const isOverall = groupExprs[level] === null;
-    const groupsMap = new Map<string, { keyVals: BslValue[]; bucket: Snap[] }>();
-
-    for (const s of filtered) {
-      let key = '';
-      const keyVals: BslValue[] = [];
-      if (isOverall) {
-        key = '__overall__';
-      } else {
-        for (let l = 0; l <= level; l += 1) {
-          const e = groupExprs[l];
-          if (!e) { keyVals.push(NULL); continue; }
-          const v = evalNode(e, s, ctx, null);
-          keyVals.push(v);
-          key += rowKey(v) + '|';
-        }
-      }
-      let entry = groupsMap.get(key);
-      if (!entry) { entry = { keyVals, bucket: [] }; groupsMap.set(key, entry); }
-      entry.bucket.push(s);
-    }
-
-    for (const { keyVals, bucket } of groupsMap.values()) {
-      const row = columnSpecs.map((c) => evalTotalColumn(c, bucket, ctx, keyVals, groupNames, isOverall));
-      outRows.push(row);
-      outLevels.push(level + 1);
-    }
-  }
-
-  return { rows: outRows, levels: outLevels };
+/** Колонки выборки, которые сами по себе агрегат: их и складывают ИТОГИ без списка функций. */
+function aggregateColumns(specs: ColumnSpec[]): { index: number; func: string }[] {
+  const out: { index: number; func: string }[] = [];
+  specs.forEach((c, index) => {
+    if (c.kind !== 'expr') return;
+    const func = aggregateFuncOf(c.expr.getText());
+    if (func) out.push({ index, func });
+  });
+  return out;
 }
 
-/**
- * Считает значение колонки в итоговой строке:
- *  - агрегаты — на подмножестве bucket;
- *  - колонки, совпадающие с группировкой — берём значение из keyVals;
- *  - остальные — NULL (в 1С там висит «прочерк»).
- */
-function evalTotalColumn(
-  c: ColumnSpec,
-  bucket: Snap[],
-  ctx: QueryCtx,
-  keyVals: BslValue[],
-  groupNames: (string | null)[],
-  isOverall: boolean,
-): BslValue {
-  if (c.kind === 'expr') {
-    if (containsAggregate(c.expr)) {
-      return evalNode(c.expr, bucket[0] ?? new Map(), ctx, bucket);
-    }
-    if (!isOverall) {
-      const text = c.expr.getText();
-      for (let i = 0; i < keyVals.length; i += 1) {
-        if (groupNames[i] === text) return keyVals[i];
-      }
-    }
-    return NULL;
-  }
-  // c.kind === 'field': `Т.*` в ИТОГИ обычно не выводят содержимого — NULL.
-  return NULL;
-}
+
 
 /** Универсальный eval итоговой колонки: раскрытая `*` → прямое чтение поля, иначе expr. */
 function evalOutputColumn(c: ColumnSpec, snap: Snap, ctx: QueryCtx, bucket: Snap[] | null): BslValue {
@@ -680,12 +620,42 @@ function collectVirtualParams(
       values.push(UNDEFINED);
       continue;
     }
+    if (looksLikeCondition(expr.getText())) {
+      throw new QueryRuntimeError(
+        `Условие отбора в виртуальной таблице стоит последним параметром. ` +
+        `Для ${method} это ${conditionIdx + 1}-й: ${signatureHint(method)}. ` +
+        `Пропущенные параметры оставляют пустыми: ${exampleHint(method)}`,
+      );
+    }
     values.push(evalNode(expr, new Map(), ctx, null));
   }
   return { values, condition };
 }
 
 const VT_INTERNAL_ALIAS = '__vt__';
+
+/** Похоже ли выражение на условие отбора, а не на значение параметра. */
+function looksLikeCondition(text: string): boolean {
+  return /(<>|>=|<=|=|>|<)|\bПОДОБНО\b|\bМЕЖДУ\b|\bЕСТЬ\b|\bВ\s+ИЕРАРХИИ\b/i.test(text);
+}
+
+function signatureHint(method: VirtualMethod): string {
+  switch (method) {
+    case 'Обороты': return 'Обороты(Начало, Конец, Периодичность, Условие)';
+    case 'ОстаткиИОбороты': return 'ОстаткиИОбороты(Начало, Конец, Периодичность, Условие)';
+    default: return `${method}(Период, Условие)`;
+  }
+}
+
+function exampleHint(method: VirtualMethod): string {
+  switch (method) {
+    case 'Обороты':
+    case 'ОстаткиИОбороты':
+      return `${method}(&Начало, &Конец, , Склад = &Склад)`;
+    default:
+      return `${method}(, Склад = &Склад)`;
+  }
+}
 
 function applyJoin(left: Snap[], j: JoinPartContext, ctx: QueryCtx): Snap[] {
   const rightSrc = j._source ?? j.dataSource();
