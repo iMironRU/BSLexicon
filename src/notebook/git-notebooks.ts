@@ -59,6 +59,8 @@ interface StoredCell {
   query_task?: QueryTaskSpec;
   /** Snapshot query-task для файла-решения (аналог task_snapshot). */
   query_task_snapshot?: QueryTaskSpec;
+  /** Ячейка заморожена автором (issue #60). */
+  frozen?: boolean;
 }
 interface StoredNotebook {
   v: 1;
@@ -145,25 +147,24 @@ export function serializeNotebook(nb: Notebook): string {
   const payload: StoredNotebook = {
     v: 1,
     cells: nb.cells.map((c) => {
+      let cell: StoredCell;
       if (c.type === 'task') {
-        const cell: StoredCell = { t: 'task', s: c.source, task: c.task };
+        cell = { t: 'task', s: c.source, task: c.task };
         if (c.ref) cell.ref = c.ref;
         if (c.explanation) cell.explanation = c.explanation;
-        return cell;
-      }
-      if (c.type === 'query') {
-        const cell: StoredCell = { t: 'query', s: c.source, schema: c.schema, data: c.data };
+      } else if (c.type === 'query') {
+        cell = { t: 'query', s: c.source, schema: c.schema, data: c.data };
         if (c.ref) cell.ref = c.ref;
         if (c.parameters?.length) cell.parameters = c.parameters;
-        return cell;
-      }
-      if (c.type === 'query-task') {
-        const cell: StoredCell = { t: 'query-task', s: c.source, query_task: c.task };
+      } else if (c.type === 'query-task') {
+        cell = { t: 'query-task', s: c.source, query_task: c.task };
         if (c.ref) cell.ref = c.ref;
         if (c.explanation) cell.explanation = c.explanation;
-        return cell;
+      } else {
+        cell = { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
       }
-      return { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
+      if (c.frozen) cell.frozen = true;
+      return cell;
     }),
   };
   return JSON.stringify(payload, null, 2);
@@ -202,6 +203,7 @@ export function parseAnyFile(text: string): ParsedFile {
   }
   const isSolution = parsed.role === 'solution';
   const cells: Cell[] = parsed.cells.map((c) => {
+    let cell: Cell;
     if (c.t === 'task') {
       // Для решения источник spec — task_snapshot; для урока — task или fallback.
       const spec: TaskSpec = c.task_snapshot ?? c.task ?? {
@@ -209,13 +211,11 @@ export function parseAnyFile(text: string): ParsedFile {
         starter: '',
         tests: [{ kind: 'stdout', expect: '' }],
       };
-      const cell: Cell = { id: nextId(), type: 'task', source: c.s, task: spec };
+      cell = { id: nextId(), type: 'task', source: c.s, task: spec };
       if (c.ref && cell.type === 'task') cell.ref = c.ref;
       if (c.explanation && cell.type === 'task') cell.explanation = c.explanation;
-      return cell;
-    }
-    if (c.t === 'query') {
-      const cell: Cell = {
+    } else if (c.t === 'query') {
+      cell = {
         id: nextId(),
         type: 'query',
         source: c.s,
@@ -224,21 +224,22 @@ export function parseAnyFile(text: string): ParsedFile {
       };
       if (c.ref) (cell as { ref?: string }).ref = c.ref;
       if (c.parameters?.length && cell.type === 'query') cell.parameters = c.parameters;
-      return cell;
-    }
-    if (c.t === 'query-task') {
+    } else if (c.t === 'query-task') {
       const spec = c.query_task_snapshot ?? c.query_task;
       if (!spec) {
         // Битая ячейка — не крашим ноутбук, показываем как markdown с текстом ошибки.
         return { id: nextId(), type: 'markdown', source: '⚠ query-task ячейка без спеки — файл повреждён.' };
       }
-      const cell: Cell = { id: nextId(), type: 'query-task', source: c.s, task: spec };
+      cell = { id: nextId(), type: 'query-task', source: c.s, task: spec };
       if (c.ref) (cell as { ref?: string }).ref = c.ref;
       if (c.explanation) (cell as { explanation?: string }).explanation = c.explanation;
-      return cell;
+    } else if (c.t === 'md') {
+      cell = { id: nextId(), type: 'markdown', source: c.s };
+    } else {
+      cell = { id: nextId(), type: 'code', source: c.s };
     }
-    if (c.t === 'md') return { id: nextId(), type: 'markdown', source: c.s };
-    return { id: nextId(), type: 'code', source: c.s };
+    if (c.frozen) (cell as { frozen?: boolean }).frozen = true;
+    return cell;
   });
   const notebook: Notebook = { cells };
   if (isSolution && parsed.source) {

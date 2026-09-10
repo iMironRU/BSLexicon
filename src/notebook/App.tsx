@@ -329,8 +329,10 @@ function NotebookShell() {
           </div>
         )}
 
-        {notebook.cells.map((cell) => (
-          <div key={cell.id} className="nb-cell-slot">
+        {notebook.cells.map((cell) => {
+          const cellReadOnly = readOnly || !!cell.frozen;
+          return (
+          <div key={cell.id} className={'nb-cell-slot' + (cell.frozen ? ' nb-cell-slot--frozen' : '')}>
             {!readOnly && (
               <div className="nb-cell-controls">
                 <button type="button" className="nb-cell-ctl" onClick={() => moveCell(cell.id, -1)} title="Вверх" aria-label="Вверх">↑</button>
@@ -338,8 +340,11 @@ function NotebookShell() {
                 <button type="button" className="nb-cell-ctl nb-cell-ctl--danger" onClick={() => removeCell(cell.id)} title="Удалить" aria-label="Удалить">✕</button>
               </div>
             )}
+            {cell.frozen && (
+              <div className="nb-cell-frozen-mark" title="Ячейка заморожена автором — редактирование запрещено">🔒</div>
+            )}
             {cell.type === 'markdown' && (
-              <MarkdownCell source={cell.source} onChange={(v) => updateCell(cell.id, v)} />
+              <MarkdownCell source={cell.source} onChange={(v) => updateCell(cell.id, v)} readOnly={cellReadOnly} />
             )}
             {cell.type === 'code' && (
               <CodeCell
@@ -348,7 +353,7 @@ function NotebookShell() {
                 catalog={catalog}
                 session={session}
                 sessionEpoch={sessionEpoch}
-                readOnly={readOnly}
+                readOnly={cellReadOnly}
               />
             )}
             {cell.type === 'task' && (
@@ -359,7 +364,7 @@ function NotebookShell() {
                 task={cell.task}
                 taskRef={cell.ref}
                 showRefPlaceholder={!!cell.ref && !nbSource}
-                readOnly={readOnly}
+                readOnly={cellReadOnly}
                 explanation={cell.explanation}
                 onExplanationChange={(v) => updateExplanation(cell.id, v)}
               />
@@ -372,7 +377,7 @@ function NotebookShell() {
                 onChange={(v) => updateCell(cell.id, v)}
                 parameters={cell.parameters}
                 onParametersChange={(v) => updateQueryParameters(cell.id, v)}
-                readOnly={readOnly}
+                readOnly={cellReadOnly}
                 ref={cell.ref}
                 showRefPlaceholder={!!cell.ref && !nbSource}
               />
@@ -384,13 +389,14 @@ function NotebookShell() {
                 task={cell.task}
                 ref={cell.ref}
                 showRefPlaceholder={!!cell.ref && !nbSource}
-                readOnly={readOnly}
+                readOnly={cellReadOnly}
                 explanation={cell.explanation}
                 onExplanationChange={(v) => updateExplanation(cell.id, v)}
               />
             )}
           </div>
-        ))}
+          );
+        })}
 
         {!readOnly && (
           <div className="nb-add">

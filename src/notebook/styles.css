@@ -202,6 +202,24 @@
 
 /* ── ячейка ─────────────────────────────────────────────────── */
 
+.nb-cell-slot--frozen .nb-cell {
+  border-left: 3px solid #7a5a20;
+}
+
+.nb-cell-frozen-mark {
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  z-index: 2;
+  background: #2a2114;
+  border: 1px solid #7a5a20;
+  border-radius: 3px;
+  padding: 2px 5px;
+  font-size: 11px;
+  cursor: help;
+  color: #dcb27a;
+}
+
 .nb-cell-slot {
   position: relative;
   margin-bottom: 16px;

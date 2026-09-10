@@ -79,6 +79,25 @@ describe('notebook serialize', () => {
     expect(cell.ref).toBe('datasets/mini-erp');
   });
 
+  it('frozen: round-trip сохраняет флаг на всех типах', async () => {
+    const cells = [
+      { ...newCell('markdown', 'text'), frozen: true },
+      { ...newCell('code', 'X = 1;'), frozen: true },
+      { ...newCell('query'), frozen: true },
+    ];
+    const nb: Notebook = { cells };
+    const decoded = await decodeNotebook(await encodeNotebook(nb));
+    for (const c of decoded.cells) {
+      expect(c.frozen).toBe(true);
+    }
+  });
+
+  it('frozen: незаданный флаг → не появляется в decode', async () => {
+    const nb: Notebook = { cells: [newCell('code', 'X = 1;')] };
+    const decoded = await decodeNotebook(await encodeNotebook(nb));
+    expect(decoded.cells[0].frozen).toBeUndefined();
+  });
+
   it('newCell("query") без init — вкладывает mini-erp по умолчанию', () => {
     const c = newCell('query');
     expect(c.type).toBe('query');

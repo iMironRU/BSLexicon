@@ -4,6 +4,8 @@ import { renderMarkdown } from './markdown';
 interface MarkdownCellProps {
   source: string;
   onChange: (next: string) => void;
+  /** Просмотр решения / замороженная ячейка (#60): режим редактирования недоступен. */
+  readOnly?: boolean;
 }
 
 /**
@@ -14,8 +16,9 @@ interface MarkdownCellProps {
  * без явной кнопки «Сохранить» — источник и так синхронизируется на
  * каждом keystroke через onChange.
  */
-export function MarkdownCell({ source, onChange }: MarkdownCellProps) {
+export function MarkdownCell({ source, onChange, readOnly }: MarkdownCellProps) {
   const [editing, setEditing] = useState(false);
+  const canEdit = !readOnly;
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -48,18 +51,20 @@ export function MarkdownCell({ source, onChange }: MarkdownCellProps) {
   return (
     <div className="nb-cell nb-cell--md">
       <div className="nb-cell__gutter">
-        <button
-          type="button"
-          className="nb-cell__md-toggle"
-          onClick={() => setEditing((v) => !v)}
-          title={editing ? 'Готово (Esc)' : 'Редактировать'}
-          aria-label={editing ? 'Готово' : 'Редактировать'}
-        >
-          {editing ? '✓' : '✎'}
-        </button>
+        {canEdit && (
+          <button
+            type="button"
+            className="nb-cell__md-toggle"
+            onClick={() => setEditing((v) => !v)}
+            title={editing ? 'Готово (Esc)' : 'Редактировать'}
+            aria-label={editing ? 'Готово' : 'Редактировать'}
+          >
+            {editing ? '✓' : '✎'}
+          </button>
+        )}
       </div>
       <div className="nb-cell__body">
-        {editing ? (
+        {editing && canEdit ? (
           <textarea
             ref={textareaRef}
             className="nb-cell__md-input"
@@ -71,17 +76,17 @@ export function MarkdownCell({ source, onChange }: MarkdownCellProps) {
           />
         ) : (
           <div
-            className="nb-cell__md-view"
-            onClick={() => setEditing(true)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter') setEditing(true); }}
-            title="Клик — редактировать"
+            className={'nb-cell__md-view' + (canEdit ? '' : ' nb-cell__md-view--frozen')}
+            onClick={canEdit ? () => setEditing(true) : undefined}
+            role={canEdit ? 'button' : undefined}
+            tabIndex={canEdit ? 0 : undefined}
+            onKeyDown={canEdit ? (e) => { if (e.key === 'Enter') setEditing(true); } : undefined}
+            title={canEdit ? 'Клик — редактировать' : undefined}
           >
             {source.trim() ? (
               renderMarkdown(source)
             ) : (
-              <p className="nb-cell__md-empty">— пустая markdown-ячейка, кликни для редактирования —</p>
+              <p className="nb-cell__md-empty">— пустая markdown-ячейка{canEdit ? ', кликни для редактирования' : ''} —</p>
             )}
           </div>
         )}

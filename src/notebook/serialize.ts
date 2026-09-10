@@ -18,6 +18,8 @@ import dataYaml from '../../examples/query-demo/mini-erp.data.yaml?raw';
 interface SerializedCellBase {
   t: 'md' | 'code' | 'task' | 'query' | 'query-task';
   s: string;
+  /** Ячейка заморожена автором (issue #60). */
+  frozen?: boolean;
 }
 interface SerializedTaskCell extends SerializedCellBase {
   t: 'task';
@@ -218,21 +220,26 @@ export async function encodeNotebook(nb: Notebook): Promise<string> {
         const cell: SerializedTaskCell = { t: 'task', s: c.source, task: c.task };
         if (c.ref) cell.ref = c.ref;
         if (c.explanation) cell.explanation = c.explanation;
+        if (c.frozen) cell.frozen = true;
         return cell;
       }
       if (c.type === 'query') {
         const cell: SerializedQueryCell = { t: 'query', s: c.source, schema: c.schema, data: c.data };
         if (c.ref) cell.ref = c.ref;
         if (c.parameters?.length) cell.parameters = c.parameters;
+        if (c.frozen) cell.frozen = true;
         return cell;
       }
       if (c.type === 'query-task') {
         const cell: SerializedQueryTaskCell = { t: 'query-task', s: c.source, task: c.task };
         if (c.ref) cell.ref = c.ref;
         if (c.explanation) cell.explanation = c.explanation;
+        if (c.frozen) cell.frozen = true;
         return cell;
       }
-      return { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
+      const base: SerializedCellBase = { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
+      if (c.frozen) base.frozen = true;
+      return base;
     }),
   };
   const json = JSON.stringify(payload);
@@ -296,40 +303,39 @@ export async function decodeNotebook(raw: string): Promise<Notebook> {
   }
   return {
     cells: payload.cells.map((c) => {
+      let created: Cell;
       if (c.t === 'task') {
         const withTask = c as SerializedTaskCell;
         // Осторожно: спека может быть недоделанной, если старый URL или ручная правка.
         // Fallback на DEFAULT — чтобы не крашить весь ноутбук из-за одной битой ячейки.
         const task: TaskSpec = withTask.task ?? DEFAULT_TASK;
-        const created = newCell('task', withTask.s, task);
+        created = newCell('task', withTask.s, task);
         if (withTask.ref && created.type === 'task') created.ref = withTask.ref;
         if (withTask.explanation && created.type === 'task') created.explanation = withTask.explanation;
-        return created;
-      }
-      if (c.t === 'query') {
+      } else if (c.t === 'query') {
         const withQuery = c as SerializedQueryCell;
         // Схема/данные обязательны в сериализации, но старый URL или ручная
         // правка могут привести к пустым — fallback на встроенный mini-erp.
-        const cell = newCell('query', {
+        created = newCell('query', {
           source: withQuery.s,
           schema: withQuery.schema || undefined,
           data: withQuery.data || undefined,
           ref: withQuery.ref,
         });
-        if (withQuery.parameters?.length && cell.type === 'query') {
-          cell.parameters = withQuery.parameters;
+        if (withQuery.parameters?.length && created.type === 'query') {
+          created.parameters = withQuery.parameters;
         }
-        return cell;
-      }
-      if (c.t === 'query-task') {
+      } else if (c.t === 'query-task') {
         const withQt = c as SerializedQueryTaskCell;
         const task = withQt.task ?? DEFAULT_QUERY_TASK;
-        const created = newCell('query-task', withQt.s, task);
+        created = newCell('query-task', withQt.s, task);
         if (withQt.ref && created.type === 'query-task') created.ref = withQt.ref;
         if (withQt.explanation && created.type === 'query-task') created.explanation = withQt.explanation;
-        return created;
+      } else {
+        created = newCell(c.t === 'md' ? 'markdown' : 'code', c.s);
       }
-      return newCell(c.t === 'md' ? 'markdown' : 'code', c.s);
+      if (c.frozen) (created as { frozen?: boolean }).frozen = true;
+      return created;
     }),
   };
 }

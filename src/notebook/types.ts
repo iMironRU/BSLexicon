@@ -21,12 +21,18 @@ export interface MarkdownCellData {
   id: string;
   type: 'markdown';
   source: string;
+  /**
+   * Ячейка «заморожена» автором: ученик не может её редактировать (issue #60).
+   * Ставится в спеке автора, в UI отображается замочком в gutter.
+   */
+  frozen?: boolean;
 }
 
 export interface CodeCellData {
   id: string;
   type: 'code';
   source: string;
+  frozen?: boolean;
 }
 
 export interface TaskCellData {
@@ -55,6 +61,7 @@ export interface TaskCellData {
    * видит и код, и объяснение — знает угадал или понял.
    */
   explanation?: string;
+  frozen?: boolean;
 }
 
 /**
@@ -81,6 +88,7 @@ export interface QueryCellData {
    * как их вводит пользователь.
    */
   parameters?: import('../query/parameters').QueryParamEntry[];
+  frozen?: boolean;
 }
 
 /**
@@ -98,6 +106,7 @@ export interface QueryTaskCellData {
   ref?: string;
   /** «Объясни своё решение» — тот же паттерн, что у обычной задачи (#33). */
   explanation?: string;
+  frozen?: boolean;
 }
 
 export type Cell = MarkdownCellData | CodeCellData | TaskCellData | QueryCellData | QueryTaskCellData;
