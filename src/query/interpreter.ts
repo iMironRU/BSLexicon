@@ -1324,8 +1324,14 @@ function evalColumn(node: ColumnContext, snap: Snap, ctx: QueryCtx): BslValue {
     for (const row of snap.values()) {
       if (names[0] in (row as Row)) return (row as Row)[names[0]] as BslValue;
     }
-    // Не нашли ни в одном — предупреждаем педагога, что скорее всего опечатка
-    if (snap.size > 0) ctx.warnings.add(`Поле «${names[0]}» не найдено ни в одном источнике`);
+    // В источнике поле объявлено, но в снимке его нет — типичная строка без пары
+    // в ЛЕВОМ СОЕДИНЕНИИ: правая сторона пуста, читаем поле → NULL, но без
+    // предупреждения (#73). Ошибочная опечатка — только если ни в одном источнике
+    // поле вообще не объявлено.
+    if (snap.size > 0) {
+      if (isDeclaredInAnySource(ctx, names[0])) return NULL;
+      ctx.warnings.add(`Поле «${names[0]}» не найдено ни в одном источнике`);
+    }
     return UNDEFINED;
   }
   // Первый — алиас источника, остальные — путь.
@@ -1367,6 +1373,12 @@ function evalColumn(node: ColumnContext, snap: Snap, ctx: QueryCtx): BslValue {
   for (let i = 0; i < path.length; i += 1) {
     if (!cur) return UNDEFINED;
     if (!(path[i] in (cur as Row))) {
+      // Строка без пары в ЛЕВОМ СОЕДИНЕНИИ (#73): правый источник в снимке
+      // присутствует, но Row пустой — читаем объявленное поле как NULL, без
+      // ложного предупреждения. Работает для подзапросов и виртуальных таблиц
+      // (их колонки лежат в ctx.virtualFields), обычных таблиц (в схеме) и
+      // для промежуточной точки после разыменования (фолбэк на схему цели).
+      if (isDeclaredForAlias(ctx, alias, tableRef, path[i], i === 0)) return NULL;
       ctx.warnings.add(`Поле «${path[i]}» не найдено в «${tableRef ?? alias}»`);
       return UNDEFINED;
     }
@@ -1386,6 +1398,40 @@ function evalColumn(node: ColumnContext, snap: Snap, ctx: QueryCtx): BslValue {
     firstStep = false;
   }
   return UNDEFINED;
+}
+
+/**
+ * `Поле` объявлено в источнике под данным алиасом (виртуальные / табличные
+ * колонки, либо схема реальной таблицы). Нужно для #73: у строки без пары
+ * в ЛЕВОМ СОЕДИНЕНИИ в Snap лежит пустой Row правого источника — читаем
+ * поле → NULL без предупреждения.
+ *
+ * `useVirtualFields` — для первого шага пути (i=0) смотрим virtualFields
+ * по алиасу; для промежуточной точки (после разыменования) алиас уже не
+ * соответствует источнику, там опираемся только на схему цели (`tableRef`).
+ */
+function isDeclaredForAlias(ctx: QueryCtx, alias: string, tableRef: string | undefined, name: string, useVirtualFields: boolean): boolean {
+  if (useVirtualFields) {
+    const virt = ctx.virtualFields.get(alias);
+    if (virt?.some((f) => f.name === name)) return true;
+  }
+  if (tableRef) {
+    const t = ctx.fx.tables.get(tableRef)?.table;
+    if (t && fieldsOf(t).some((f) => f.name === name)) return true;
+  }
+  return false;
+}
+
+/** Поле объявлено хотя бы в одном источнике снимка — по всем алиасам. */
+function isDeclaredInAnySource(ctx: QueryCtx, name: string): boolean {
+  for (const fields of ctx.virtualFields.values()) {
+    if (fields.some((f) => f.name === name)) return true;
+  }
+  for (const tableRef of ctx.sources.values()) {
+    const t = ctx.fx.tables.get(tableRef)?.table;
+    if (t && fieldsOf(t).some((f) => f.name === name)) return true;
+  }
+  return false;
 }
 
 /** Ищет тип-ссылку в переопределённых полях источника (табличная часть, виртуальная таблица). */
