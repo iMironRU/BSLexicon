@@ -88,15 +88,14 @@ export function newCell(
   }
   if (type === 'query') {
     const init = (typeof sourceOrInit === 'object' && sourceOrInit) ? sourceOrInit : {};
-    const cell: Cell = {
+    return {
       id: nextId(),
       type: 'query',
       source: init.source ?? DEFAULT_QUERY_SOURCE,
       schema: init.schema ?? schemaYaml,
       data: init.data ?? dataYaml,
+      ...(init.ref && { ref: init.ref }),
     };
-    if (init.ref) (cell as { ref?: string }).ref = init.ref;
-    return cell;
   }
   if (type === 'query-task') {
     const t = (taskSpec as QueryTaskSpec | undefined) ?? STARTER_QUERY_TASK;
