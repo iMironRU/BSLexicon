@@ -12,6 +12,7 @@
  */
 
 import { load as yamlLoad } from 'js-yaml';
+import { errorMessage } from '../app/error-message';
 import type { TaskTest } from '../judge/types';
 import type { TaskSpec } from './types';
 
@@ -29,7 +30,7 @@ export function parseTaskYaml(text: string): TaskLoadResult {
   try {
     parsed = yamlLoad(text);
   } catch (e) {
-    return { ok: false, error: `Битый YAML: ${(e as Error).message}` };
+    return { ok: false, error: `Битый YAML: ${errorMessage(e)}` };
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return { ok: false, error: 'Файл должен быть YAML-объектом' };

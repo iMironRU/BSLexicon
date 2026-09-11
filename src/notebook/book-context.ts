@@ -9,6 +9,7 @@
  *     с `nb-src` (после resolveNotebookUrl)
  */
 import { parseBookYaml, type Book } from '../book/book-format';
+import { errorMessage } from '../app/error-message';
 
 export interface BookContext {
   book: Book;
@@ -48,7 +49,7 @@ export async function loadBookContext(
     if (idx < 0) return { ok: false, error: 'Текущая глава не найдена в оглавлении книги' };
     return { ok: true, ctx: { book, bookSrcUrl, chapterIndex: idx, chapter: book.chapters[idx] } };
   } catch (e) {
-    return { ok: false, error: (e as Error).message };
+    return { ok: false, error: errorMessage(e) };
   }
 }
 

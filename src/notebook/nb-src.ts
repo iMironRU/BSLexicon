@@ -15,6 +15,7 @@
  */
 
 import type { Notebook, Cell, TaskSpec } from './types';
+import { errorMessage } from '../app/error-message';
 import { parseTaskYaml } from './task-loader';
 import { parseAnyFile, type SolutionMeta } from './git-notebooks';
 import { parseQueryTaskYaml, type QueryTaskSpec } from '../query/task-format';
@@ -121,7 +122,7 @@ export async function fetchNotebookFromSrc(
   try {
     parsed = parseAnyFile(text);
   } catch (e) {
-    throw new Error(`Битый .nb.json: ${(e as Error).message}`);
+    throw new Error(`Битый .nb.json: ${errorMessage(e)}`);
   }
   const notebook: Notebook = parsed.notebook;
 
@@ -155,7 +156,7 @@ export async function fetchNotebookFromSrc(
         if (!parsed.ok) throw new Error(parsed.error);
         return { idx, spec: parsed.spec };
       } catch (e) {
-        refWarnings.push(`${ref}: ${(e as Error).message}`);
+        refWarnings.push(`${ref}: ${errorMessage(e)}`);
         return { idx, spec: null };
       }
     })());
@@ -192,7 +193,7 @@ export async function fetchNotebookFromSrc(
         const [schema, data] = await Promise.all([sr.text(), dr.text()]);
         return { idx, schema, data };
       } catch (e) {
-        refWarnings.push(`${ref}: ${(e as Error).message}`);
+        refWarnings.push(`${ref}: ${errorMessage(e)}`);
         return { idx, schema: null, data: null };
       }
     })());
@@ -220,7 +221,7 @@ export async function fetchNotebookFromSrc(
         if (!parsed.ok) throw new Error(parsed.error);
         return { idx, spec: parsed.value };
       } catch (e) {
-        refWarnings.push(`${ref}: ${(e as Error).message}`);
+        refWarnings.push(`${ref}: ${errorMessage(e)}`);
         return { idx, spec: null };
       }
     })());

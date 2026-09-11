@@ -10,6 +10,7 @@
  */
 import { useEffect, useState } from 'react';
 import { parseBookYaml, type Book, type BookChapter } from './book-format';
+import { errorMessage } from '../app/error-message';
 import { renderMarkdown } from '../app/markdown';
 
 type State =
@@ -36,7 +37,7 @@ export function BookApp() {
         if (!parsed.ok) throw new Error(parsed.error);
         setState({ kind: 'ok', src, book: parsed.value });
       })
-      .catch((e) => setState({ kind: 'error', src, message: (e as Error).message }));
+      .catch((e) => setState({ kind: 'error', src, message: errorMessage(e) }));
   }, []);
 
   return (

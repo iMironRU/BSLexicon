@@ -14,6 +14,7 @@
  * Также экспорт/импорт JSON-файлом — для переноса между устройствами.
  */
 
+import { errorMessage } from './error-message';
 import { loadJson, loadString, removeKey, saveJson, saveString } from './local-store';
 
 const KEY_DRAFT = 'bslexicon:trainer:draft';
@@ -111,7 +112,7 @@ export function importAll(
   try {
     parsed = JSON.parse(json);
   } catch (e) {
-    return { added: 0, skipped: 0, error: (e as Error).message };
+    return { added: 0, skipped: 0, error: errorMessage(e) };
   }
 
   const incoming = normalizeImport(parsed);

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { errorMessage } from '../error-message';
 import type { GitConfig } from '../git-config';
 import { GitApiError } from '../git-storage';
 import { syncPull, syncPush } from '../git-sync';
@@ -97,7 +98,7 @@ export function SnippetsMenu({ currentCode, onLoad, gitCfg }: SnippetsMenuProps)
       await syncPush(gitCfg, listSnippets());
       toast.show(`↑ Отправлено в ${gitCfg.owner}/${gitCfg.repo}`);
     } catch (e) {
-      const m = e instanceof GitApiError ? e.message : (e as Error).message;
+      const m = e instanceof GitApiError ? e.message : errorMessage(e);
       toast.show(`Ошибка push: ${m}`, 'error');
     } finally {
       setSyncing(false);
@@ -117,7 +118,7 @@ export function SnippetsMenu({ currentCode, onLoad, gitCfg }: SnippetsMenuProps)
       setItems(listSnippets());
       toast.show(`↓ Загружено из ${gitCfg.owner}/${gitCfg.repo}: ${result.added} шт.`);
     } catch (e) {
-      const m = e instanceof GitApiError ? e.message : (e as Error).message;
+      const m = e instanceof GitApiError ? e.message : errorMessage(e);
       toast.show(`Ошибка pull: ${m}`, 'error');
     } finally {
       setSyncing(false);

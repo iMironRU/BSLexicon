@@ -19,6 +19,7 @@
  * ```
  */
 import { load as yamlLoad } from 'js-yaml';
+import { errorMessage } from '../app/error-message';
 import { err, getStrNonEmpty as getStr, isObj, type Result } from '../app/parse-helpers';
 
 export interface BookChapter {
@@ -47,7 +48,7 @@ export function parseBookYaml(text: string): ParseResult<Book> {
   try {
     raw = yamlLoad(text);
   } catch (e) {
-    return err(`YAML: ${(e as Error).message}`);
+    return err(`YAML: ${errorMessage(e)}`);
   }
   if (!isObj(raw)) return err('Файл книги должен быть YAML-объектом');
   const o = raw as Record<string, unknown>;

@@ -8,6 +8,7 @@
  * Модуль чистый: сеть приходит параметром `fetchImpl`, хранилище —
  * параметром `store`. Поэтому он проверяется тестами без браузера.
  */
+import { errorMessage } from '../app/error-message';
 import { buildFixture, type Fixture } from '../query/fixture';
 import { parseDataYaml, parseSchemaYaml, validateFixture } from '../query/schema-loader';
 
@@ -97,7 +98,7 @@ async function fetchText(
   try {
     res = await opts.fetchImpl(url);
   } catch (e) {
-    return { ok: false, error: `Не удалось загрузить ${what}: ${(e as Error).message}` };
+    return { ok: false, error: `Не удалось загрузить ${what}: ${errorMessage(e)}` };
   }
   if (!res.ok) return { ok: false, error: `Не удалось загрузить ${what}: ответ ${res.status}` };
 

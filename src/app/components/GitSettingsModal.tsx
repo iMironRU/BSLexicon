@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { errorMessage } from '../error-message';
 import {
   clearGitConfig,
   loadGitConfig,
@@ -84,7 +85,7 @@ export function GitSettingsModal({ onClose, onConnected }: GitSettingsModalProps
       setStatus({ kind: 'ok', info });
       onConnected();
     } catch (e) {
-      const msg = e instanceof GitApiError ? e.message : (e as Error).message;
+      const msg = e instanceof GitApiError ? e.message : errorMessage(e);
       setStatus({ kind: 'error', message: msg });
     }
   };
