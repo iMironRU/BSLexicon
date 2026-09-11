@@ -8,6 +8,8 @@
  * остальными настройками.
  */
 
+import { loadJson, removeKey, saveJson } from './local-store';
+
 const KEY = 'bslexicon:git:config';
 
 export interface GitConfig {
@@ -27,15 +29,8 @@ export interface GitConfig {
 }
 
 export function loadGitConfig(): GitConfig | null {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isConfig(parsed)) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
+  const parsed = loadJson<unknown>(KEY);
+  return isConfig(parsed) ? parsed : null;
 }
 
 export function saveGitConfig(cfg: GitConfig): void {
@@ -46,19 +41,11 @@ export function saveGitConfig(cfg: GitConfig): void {
     path: normalizePath(cfg.path),
     token: cfg.token.trim(),
   };
-  try {
-    localStorage.setItem(KEY, JSON.stringify(normalized));
-  } catch {
-    // storage недоступен — молча
-  }
+  saveJson(KEY, normalized);
 }
 
 export function clearGitConfig(): void {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    // ignore
-  }
+  removeKey(KEY);
 }
 
 export function normalizePath(p: string): string {

@@ -1,3 +1,4 @@
+import { loadJson, saveJson } from '../app/local-store';
 import type { SyntaxEntry } from '../app/reference/types';
 
 /**
@@ -122,26 +123,17 @@ interface Persisted {
 }
 
 export function loadTarget(): Target {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return defaultTarget();
-    const p = JSON.parse(raw) as Persisted;
-    return {
-      version: typeof p.version === 'string' ? p.version : null,
-      contexts: new Set(Array.isArray(p.contexts) ? p.contexts.filter(isContextKey) : []),
-    };
-  } catch {
-    return defaultTarget();
-  }
+  const p = loadJson<Persisted>(KEY);
+  if (!p) return defaultTarget();
+  return {
+    version: typeof p.version === 'string' ? p.version : null,
+    contexts: new Set(Array.isArray(p.contexts) ? p.contexts.filter(isContextKey) : []),
+  };
 }
 
 export function saveTarget(t: Target): void {
-  try {
-    const payload: Persisted = { version: t.version, contexts: [...t.contexts] };
-    localStorage.setItem(KEY, JSON.stringify(payload));
-  } catch {
-    // storage недоступен — игнорируем
-  }
+  const payload: Persisted = { version: t.version, contexts: [...t.contexts] };
+  saveJson(KEY, payload);
 }
 
 export function defaultTarget(): Target {
