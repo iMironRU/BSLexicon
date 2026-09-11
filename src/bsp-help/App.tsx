@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { errorMessage } from '../app/error-message';
 import { BASE_URL, HELP_URL, LANDING_URL } from '../app/urls';
-import type { BspHooksJson, BspModule, BspProcedure, BspSubsystem } from './types';
+import type { BspHooksJson, BspModule, BspParam, BspProcedure, BspSubsystem } from './types';
 import { HelpFooter } from '../help/HelpFooter';
 
 interface Selection {
@@ -151,12 +151,41 @@ function ProcedureCard({ sub, mod, proc, license }: {
         </section>
       )}
 
+      {proc.params.some((p) => p.type || p.description) && (
+        <section className="bsp-card__section">
+          <h3>Параметры</h3>
+          <dl className="bsp-card__params">
+            {proc.params.map((p) => (
+              <ProcParam key={p.name} param={p} />
+            ))}
+          </dl>
+        </section>
+      )}
+
       <p className="bsp-card__attribution">
         Фрагмент шапки процедуры из модуля <code>{mod.name}</code>, БСП. {license.holder}, лицензия{' '}
         <a href={license.url} target="_blank" rel="noreferrer">{license.spdx}</a>. Приведён в сокращении.
       </p>
     </article>
   );
+}
+
+function ProcParam({ param }: { param: BspParam }): JSX.Element {
+  return (
+    <>
+      <dt className="bsp-card__param-name">
+        <code>{param.name}</code>
+        {param.type && <span className="bsp-card__param-type">{cleanType(param.type)}</span>}
+      </dt>
+      <dd className="bsp-card__param-desc">{param.description || <em>без описания в шапке</em>}</dd>
+    </>
+  );
+}
+
+/** Секция «Параметры:» в БСП пишет тип с трейлингом `:` перед вложенными
+ *  полями структуры. Для карточки этот двоеточник — визуальный шум. */
+function cleanType(t: string): string {
+  return t.replace(/:$/, '').trim();
 }
 
 function firstParagraph(text: string): string {

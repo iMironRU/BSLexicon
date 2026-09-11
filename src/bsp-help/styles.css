@@ -212,6 +212,46 @@
   color: var(--text);
 }
 
+.bsp-card__params {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(180px, auto) 1fr;
+  gap: 0.35rem 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.bsp-card__param-name {
+  margin: 0;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+}
+
+.bsp-card__param-name code {
+  font-family: var(--font-mono);
+  color: var(--yellow);
+  font-size: 0.88rem;
+}
+
+.bsp-card__param-type {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.bsp-card__param-desc {
+  margin: 0;
+  color: var(--text);
+}
+
+.bsp-card__param-desc em {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .bsp-card__attribution {
   margin-top: 2rem;
   padding-top: 0.75rem;

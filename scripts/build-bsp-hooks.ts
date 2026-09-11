@@ -17,8 +17,9 @@
  * пометка при сокращении. Атрибуция ставится компонентом в UI, здесь
  * в JSON закладываются данные (source: module + procedure).
  *
- * Фаза A — только пилотные подсистемы из PHASE_A_ALLOWLIST. Фаза B
- * расширит список.
+ * Топ-10 подсистем БСП в `PHASE_B_ALLOWLIST` — покрывает 90% случаев,
+ * с которыми сталкивается 1С-разработчик. Расширение — редактируется
+ * allowlist, скрипт перезапускается.
  */
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -31,9 +32,38 @@ const BSP_UNPACK_DIR = process.env.BSP_UNPACK_DIR
 const BSP_KATALOG_YAML = process.env.BSP_KATALOG_YAML
   ?? join(homedir(), 'Documents/me-books/1c/1c-bsp/reference/katalog.yaml');
 
-/** Фаза A: одна подсистема, чтобы проверить контракт. */
-const PHASE_A_ALLOWLIST = new Set<string>([
-  'Базовая функциональность',
+/**
+ * Топ-10 подсистем БСП, с которыми разработчики сталкиваются чаще всего.
+ * Для части подсистем `признаки_объявление` в katalog.yaml перечисляют
+ * не модули, а объекты (владельцы, настройки-паттерны), — тогда pipeline
+ * добавляет `дополнительно` явно. Модуль перекрёстно проверяется, что
+ * существует в выгрузке; отсутствующее — пропускается с warning'ом.
+ */
+interface AllowlistEntry {
+  /** Дополнительные `*Переопределяемый` модули поверх katalog. */
+  дополнительно?: string[];
+}
+const PHASE_B_ALLOWLIST = new Map<string, AllowlistEntry>([
+  ['Базовая функциональность', {}],
+  ['Варианты отчетов', {}],
+  ['Дополнительные отчеты и обработки', {}],
+  ['Контактная информация', {}],
+  ['Обмен данными', {}],
+  ['Печать', { дополнительно: [
+    'УправлениеПечатьюПереопределяемый',
+    'УправлениеПечатьюКлиентПереопределяемый',
+    'УправлениеПечатьюМультиязычностьПереопределяемый',
+  ] }],
+  ['Пользователи', {}],
+  ['Работа с файлами', { дополнительно: [
+    'РаботаСФайламиПереопределяемый',
+    'РаботаСФайламиКлиентПереопределяемый',
+  ] }],
+  ['Управление доступом', { дополнительно: ['УправлениеДоступомПереопределяемый'] }],
+  // Электронная подпись — в 3.1.12 переопределяемых модулей нет,
+  // всё расширение через реквизиты объектов. Оставим для полноты
+  // (в JSON будет пустая подсистема — UI её скроет).
+  ['Электронная подпись', {}],
 ]);
 
 const OUT = resolve('public/reference/bsp-hooks.json');
@@ -285,12 +315,15 @@ function escapeRegExp(s: string): string {
 
 // ── Сборка одной подсистемы ──────────────────────────────────────
 
-function buildSubsystem(entry: KatalogEntry, allModules: string[]): BspSubsystem | null {
+function buildSubsystem(entry: KatalogEntry, extraModules: string[], allModules: string[]): BspSubsystem | null {
   const declared = entry.признаки_объявление ?? [];
-  const moduleNames = declared
+  const fromKatalog = declared
     .map((n) => resolveModuleName(n, allModules))
     .filter((n): n is string => n !== null)
     .filter((n) => n.endsWith('Переопределяемый'));
+  const fromExtras = extraModules.filter((n) => allModules.includes(n));
+  // Дедуп + сохранение порядка (сначала katalog, потом extras).
+  const moduleNames = [...new Set([...fromKatalog, ...fromExtras])];
 
   if (moduleNames.length === 0) return null;
 
@@ -335,8 +368,9 @@ function main(): void {
 
   const subsystems: BspSubsystem[] = [];
   for (const entry of katalog.подсистемы) {
-    if (!PHASE_A_ALLOWLIST.has(entry.имя)) continue;
-    const s = buildSubsystem(entry, allModules);
+    const extra = PHASE_B_ALLOWLIST.get(entry.имя);
+    if (extra === undefined) continue;
+    const s = buildSubsystem(entry, extra.дополнительно ?? [], allModules);
     if (s) subsystems.push(s);
   }
 
