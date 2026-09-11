@@ -647,3 +647,7 @@
 .qs-app--embed .qs-header {
   padding: 6px 12px;
 }
+
+.qs-cell__total-mark {
+  opacity: 0.7;
+}

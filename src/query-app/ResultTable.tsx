@@ -78,8 +78,10 @@ export function ResultTable({ rowset, errors, warnings = [], fixture }: ResultTa
             {rowset.rows.map((row, ri) => {
               const level = rowset.rowLevels?.[ri] ?? 0;
               return (
-                <tr key={ri} className={level > 0 ? `qs-row--total qs-row--total-${level}` : ''}>
-                  {row.map((v, ci) => <Cell key={ci} value={v} fixture={fixture} showRaw={showRaw} />)}
+                <tr key={ri} className={level > 0 ? `qs-row--total qs-row--total-${Math.min(level, 3)}` : ''}>
+                  {row.map((v, ci) => (
+                    <Cell key={ci} value={v} fixture={fixture} showRaw={showRaw} level={ci === 0 ? level : 0} />
+                  ))}
                 </tr>
               );
             })}
@@ -90,7 +92,13 @@ export function ResultTable({ rowset, errors, warnings = [], fixture }: ResultTa
   );
 }
 
-function Cell({ value, fixture, showRaw }: { value: BslValue; fixture: Fixture; showRaw: boolean }) {
+function Cell({ value, fixture, showRaw, level = 0 }: {
+  value: BslValue;
+  fixture: Fixture;
+  showRaw: boolean;
+  /** Уровень итога для первой колонки: 1 — самый внешний. */
+  level?: number;
+}) {
   const p = present(value, fixture);
   const isRef = p.raw !== null;
   const text = showRaw && isRef ? p.raw! : p.display;
@@ -100,7 +108,15 @@ function Cell({ value, fixture, showRaw }: { value: BslValue; fixture: Fixture; 
     isRef ? 'qs-cell--ref' : '',
   ].filter(Boolean).join(' ');
   const title = isRef ? `${p.targetRef ?? '?'} · ${p.raw}` : undefined;
-  return <td className={classes} title={title}>{text}</td>;
+  const style = level > 1 ? { paddingLeft: `${6 + (level - 1) * 12}px` } : undefined;
+  // У общего итога значения контрольной точки нет — подписываем, чтобы
+  // строка не выглядела пустой.
+  const пусто = text === '' || text === 'NULL';
+  return (
+    <td className={classes} title={title} style={style}>
+      {level === 1 && пусто ? <span className="qs-cell__total-mark">Итого</span> : text}
+    </td>
+  );
 }
 
 function plural(n: number, one: string, few: string, many: string): string {
