@@ -42,7 +42,7 @@ export function App() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
-  const [params, setParams] = useState<QueryParamEntry[]>([]);
+  const [params, setParams] = useState<QueryParamEntry[]>(() => url.parameters);
   const editorRef = useRef<CodeEditor | null>(null);
 
   const fixture = base.status === 'готова' ? base.fixture : null;

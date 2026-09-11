@@ -4,9 +4,11 @@ import { gzipSync } from 'node:zlib';
 import {
   decodeGzQueryParam,
   decodeQueryParam,
+  encodeParamsToUrl,
   encodeQueryParam,
   parseQueryUrlParams,
 } from '../src/query-app/url-params';
+import type { QueryParamEntry } from '../src/query/parameters';
 
 const ЗАПРОС = 'ВЫБРАТЬ Наименование\nИЗ Справочник.Товары\nГДЕ НЕ ЭтоГруппа';
 
@@ -20,7 +22,7 @@ function gz(text: string): string {
 
 describe('разбор параметров', () => {
   it('пустая строка — ничего не задано', () => {
-    expect(parseQueryUrlParams('')).toEqual({ q: null, gzq: null, sourceUrl: null, title: null, embed: false });
+    expect(parseQueryUrlParams('')).toEqual({ q: null, gzq: null, parameters: [], sourceUrl: null, title: null, embed: false });
   });
 
   it('q, source, title, embed', () => {
@@ -79,5 +81,75 @@ describe('запрос из ссылки', () => {
     const r = decodeQueryParam(encodeQueryParam(огромный));
     expect(r.text).toBe(огромный);
     expect(r.error).toMatch(/слишком большой/i);
+  });
+});
+
+describe('значения параметров запроса из ссылки (p.Имя=…)', () => {
+  function buildSearch(entries: QueryParamEntry[]): string {
+    const usp = new URLSearchParams();
+    for (const [k, v] of encodeParamsToUrl(entries)) usp.append(k, v);
+    return '?' + usp.toString();
+  }
+
+  it('пустая ссылка — пустой массив параметров', () => {
+    expect(parseQueryUrlParams('?q=x').parameters).toEqual([]);
+  });
+
+  it('строковый параметр', () => {
+    const entries: QueryParamEntry[] = [{ name: 'Товар', value: { kind: 'Строка', value: 'Молоток' } }];
+    expect(parseQueryUrlParams(buildSearch(entries)).parameters).toEqual(entries);
+  });
+
+  it('дата, число, булево — round-trip', () => {
+    const entries: QueryParamEntry[] = [
+      { name: 'НаДату', value: { kind: 'Дата', value: '2024-01-15T00:00:00' } },
+      { name: 'Порог', value: { kind: 'Число', value: 100 } },
+      { name: 'ТолькоПродажи', value: { kind: 'Булево', value: true } },
+    ];
+    expect(parseQueryUrlParams(buildSearch(entries)).parameters).toEqual(entries);
+  });
+
+  it('ссылка (kind=Ссылка) round-trip с refs и id', () => {
+    const entries: QueryParamEntry[] = [
+      { name: 'Склад', value: { kind: 'Ссылка', refs: 'Справочник.Склады', value: 's_main' } },
+    ];
+    expect(parseQueryUrlParams(buildSearch(entries)).parameters).toEqual(entries);
+  });
+
+  it('NULL параметр через null-строку', () => {
+    expect(parseQueryUrlParams('?p.НетДаты=null').parameters).toEqual([
+      { name: 'НетДаты', value: { kind: 'NULL' } },
+    ]);
+  });
+
+  it('битое значение — параметр появляется как NULL (без падения)', () => {
+    expect(parseQueryUrlParams('?p.X=мусор:без:префикса').parameters).toEqual([
+      { name: 'X', value: { kind: 'NULL' } },
+    ]);
+  });
+
+  it('дубликат имени — берём последнее', () => {
+    const s = '?p.A=n:1&p.A=n:2';
+    expect(parseQueryUrlParams(s).parameters).toEqual([{ name: 'A', value: { kind: 'Число', value: 2 } }]);
+  });
+
+  it('порядок сохраняется', () => {
+    const s = '?p.Второй=n:2&p.Первый=n:1';
+    expect(parseQueryUrlParams(s).parameters.map((e) => e.name)).toEqual(['Второй', 'Первый']);
+  });
+
+  it('пустое имя после префикса игнорируется', () => {
+    expect(parseQueryUrlParams('?p.=n:1').parameters).toEqual([]);
+  });
+
+  it('живёт рядом с q, source, title, embed', () => {
+    const p = parseQueryUrlParams(
+      `?q=${encodeQueryParam(ЗАПРОС)}&p.Склад=r:${encodeURIComponent('Справочник.Склады')}:s_main&source=${encodeURIComponent('https://example.com/x')}&embed=1`,
+    );
+    expect(p.parameters).toEqual([
+      { name: 'Склад', value: { kind: 'Ссылка', refs: 'Справочник.Склады', value: 's_main' } },
+    ]);
+    expect(decodeQueryParam(p.q!).text).toBe(ЗАПРОС);
+    expect(p.embed).toBe(true);
   });
 });
