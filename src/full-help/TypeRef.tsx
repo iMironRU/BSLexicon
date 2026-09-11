@@ -11,6 +11,8 @@
  * `… или …` — каждая часть линкуется независимо.
  */
 
+import { HELP_URL } from '../app/urls';
+
 interface TypeRefProps {
   type: string | null | undefined;
   knownOwners: ReadonlySet<string>;
@@ -37,7 +39,7 @@ const CURATED_TYPES = new Set([
 
 function curatedTypeHref(type: string): string {
   // /help/ всегда абсолютным путём — он другой Vite-entry.
-  return `${import.meta.env.BASE_URL}help/#/type/${encodeURIComponent(type)}`;
+  return `${HELP_URL}#/type/${encodeURIComponent(type)}`;
 }
 
 function resolveTemplated(type: string, knownOwners: ReadonlySet<string>): string | null {

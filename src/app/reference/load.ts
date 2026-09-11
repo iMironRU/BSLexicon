@@ -1,3 +1,4 @@
+import { BASE_URL } from '../urls';
 import type { SyntaxEntry } from './types';
 
 /**
@@ -8,7 +9,7 @@ let cache: Promise<SyntaxEntry[]> | null = null;
 
 export function loadReference(): Promise<SyntaxEntry[]> {
   if (!cache) {
-    const url = `${import.meta.env.BASE_URL}reference/syntax-help.json`;
+    const url = `${BASE_URL}reference/syntax-help.json`;
     cache = fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error(`Не удалось загрузить справочник (${r.status})`);

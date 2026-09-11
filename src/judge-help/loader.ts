@@ -19,7 +19,7 @@ export interface JudgeIndex {
   books: BookIndexEntry[];
 }
 
-const BASE = import.meta.env.BASE_URL;
+import { BASE_URL as BASE } from '../app/urls';
 
 let indexCache: Promise<JudgeIndex> | null = null;
 const bookCache = new Map<string, Promise<TasksFile>>();

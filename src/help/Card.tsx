@@ -3,6 +3,7 @@ import type { Catalog, CatalogEntry, CatalogExample, CatalogParam } from '@core/
 import { builtinIds, methodIds, methodTypeOf, propertyIds } from '@core/index';
 import type { SyntaxEntry } from '../app/reference/types';
 import { encodeCodeParam } from '../app/url-params';
+import { HELP_FULL_URL, TRAINER_URL } from '../app/urls';
 import { formatHash } from './router';
 import { TableOfContents } from './TableOfContents';
 import { ALL_CONTEXTS, CONTEXT_LABELS, verdict } from './target';
@@ -236,7 +237,7 @@ function TypeLink({ catalog, typeName }: { catalog: Catalog; typeName: string })
   // Если страницы там нет — пользователь увидит «не нашёл запись» — это
   // приемлемая цена за надёжную линковку 84% типов.
   if (typeName && !typeName.startsWith('<') && /[А-Яа-я]/.test(typeName)) {
-    const url = `${import.meta.env.BASE_URL}help/full/#/owner/${encodeURIComponent(typeName)}`;
+    const url = `${HELP_FULL_URL}#/owner/${encodeURIComponent(typeName)}`;
     return (
       <a className="typeLink" href={url} title="Открыть в полном синтакс-помощнике">
         {typeName}
@@ -305,7 +306,7 @@ function Examples({ examples }: { examples: CatalogExample[] }) {
           )}
           <a
             className="example__open"
-            href={`${import.meta.env.BASE_URL}trainer/?code=${encodeCodeParam(ex.code)}`}
+            href={`${TRAINER_URL}?code=${encodeCodeParam(ex.code)}`}
             target="_self"
             title="Открыть код в тренажёре"
           >

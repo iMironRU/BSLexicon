@@ -10,6 +10,7 @@
  */
 import { parseBookYaml, type Book } from '../book/book-format';
 import { errorMessage } from '../app/error-message';
+import { NOTEBOOK_URL } from '../app/urls';
 
 export interface BookContext {
   book: Book;
@@ -68,7 +69,7 @@ export function resolveNotebookUrl(bookYamlUrl: string, notebook: string): strin
 }
 
 /** Собирает URL notebook-страницы для указанной главы. */
-export function chapterHref(baseUrl: string, bookSrcUrl: string, book: Book, chapterIndex: number): string {
+export function chapterHref(bookSrcUrl: string, book: Book, chapterIndex: number): string {
   const ch = book.chapters[chapterIndex];
   const nbUrl = resolveNotebookUrl(bookSrcUrl, ch.notebook);
   const params = new URLSearchParams({
@@ -76,5 +77,5 @@ export function chapterHref(baseUrl: string, bookSrcUrl: string, book: Book, cha
     'book-src': bookSrcUrl,
     chapter: String(chapterIndex),
   });
-  return `${baseUrl}notebook/?${params.toString()}`;
+  return `${NOTEBOOK_URL}?${params.toString()}`;
 }

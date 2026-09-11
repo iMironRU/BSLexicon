@@ -1,3 +1,4 @@
+import { BASE_URL } from '../app/urls';
 import type { SyntaxEntry } from '../app/reference/types';
 
 /**
@@ -23,7 +24,7 @@ const progressSubs = new Set<ProgressFn>();
 export function loadFullReference(onProgress?: ProgressFn): Promise<FullReference> {
   if (onProgress) progressSubs.add(onProgress);
   if (!cache) {
-    const url = `${import.meta.env.BASE_URL}reference/syntax-help-full.json`;
+    const url = `${BASE_URL}reference/syntax-help-full.json`;
     cache = fetchWithProgress(url, (l, t) => {
       for (const fn of progressSubs) fn(l, t);
     })

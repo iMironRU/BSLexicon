@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { errorMessage } from '../app/error-message';
+import { BASE_URL, HELP_URL, LANDING_URL } from '../app/urls';
 import type { BspHooksJson, BspModule, BspProcedure, BspSubsystem } from './types';
 import { HelpFooter } from '../help/HelpFooter';
 
@@ -15,7 +16,7 @@ export function App(): JSX.Element {
   const [sel, setSel] = useState<Selection | null>(null);
 
   useEffect(() => {
-    const url = `${import.meta.env.BASE_URL}reference/bsp-hooks.json`;
+    const url = `${BASE_URL}reference/bsp-hooks.json`;
     fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
@@ -40,9 +41,9 @@ export function App(): JSX.Element {
   return (
     <div className="bsp-shell">
       <header className="bsp-header">
-        <a href={`${import.meta.env.BASE_URL}`} className="bsp-home">← BSLexicon</a>
+        <a href={LANDING_URL} className="bsp-home">← BSLexicon</a>
         <h1>Хуки БСП <span className="bsp-version">{data.bspVersion}</span></h1>
-        <a href={`${import.meta.env.BASE_URL}help/`} className="bsp-help-link">/help/</a>
+        <a href={HELP_URL} className="bsp-help-link">/help/</a>
       </header>
 
       <AttributionBanner data={data} />

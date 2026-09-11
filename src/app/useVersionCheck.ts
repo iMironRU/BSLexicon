@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { BASE_URL } from './urls';
 
 /**
  * Следит, не появилась ли на хостинге новая сборка (открытая вкладка могла не
@@ -17,7 +18,7 @@ export function useVersionCheck(): boolean {
 
     const check = async (): Promise<void> => {
       try {
-        const url = `${import.meta.env.BASE_URL}version.json?t=${Date.now()}`;
+        const url = `${BASE_URL}version.json?t=${Date.now()}`;
         const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) return;
         const data = (await res.json()) as { sha?: string };

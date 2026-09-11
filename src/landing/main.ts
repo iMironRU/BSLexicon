@@ -6,6 +6,8 @@
  *   2. Показывает git-SHA из build-time define в шапке.
  */
 
+import { TRAINER_URL } from '../app/urls';
+
 // Vite подставит эти константы при сборке (см. vite.config.ts define).
 declare const __BUILD_SHA__: string;
 declare const __BUILD_TIME__: string;
@@ -15,8 +17,7 @@ const params = new URLSearchParams(window.location.search);
 const TRAINER_PARAMS = ['code', 'gzcode', 'title'];
 const hasTrainerParam = TRAINER_PARAMS.some((p) => params.has(p));
 if (hasTrainerParam) {
-  const base = import.meta.env.BASE_URL;
-  window.location.replace(`${base}trainer/${window.location.search}${window.location.hash}`);
+  window.location.replace(`${TRAINER_URL}${window.location.search}${window.location.hash}`);
 }
 
 // 2. Build-badge.

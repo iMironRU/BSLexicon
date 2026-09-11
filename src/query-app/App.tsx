@@ -9,6 +9,7 @@ import { loadEmbeddedFixture } from './embedded-fixture';
 import { loadRemoteFixture, readFixtureSource, type FixtureOrigin } from './remote-fixture';
 import { decodeGzQueryParam, decodeQueryParam, parseQueryUrlParams } from './url-params';
 import { ProvenanceBanner } from '../app/components/ProvenanceBanner';
+import { HELP_URL, LANDING_URL, NOTEBOOK_URL, TRAINER_URL } from '../app/urls';
 import type { QueryParamEntry } from '../query/parameters';
 import { buildParamMap } from '../query/parameters';
 import { registerSdblLanguage, SDBL_LANGUAGE_ID, SDBL_THEME_ID } from './monaco-lang';
@@ -161,10 +162,10 @@ export function App() {
           <span className="qs-header__sub">песочница запросов</span>
         </div>
         <nav className="qs-header__nav">
-          <a href={import.meta.env.BASE_URL} title="К режимам">↑ Режимы</a>
-          <a href={`${import.meta.env.BASE_URL}trainer/`} title="Тренажёр BSL">Тренажёр</a>
-          <a href={`${import.meta.env.BASE_URL}notebook/`} title="Ноутбук">Ноутбук</a>
-          <a href={`${import.meta.env.BASE_URL}help/`} title="Справочник">Справочник</a>
+          <a href={LANDING_URL} title="К режимам">↑ Режимы</a>
+          <a href={TRAINER_URL} title="Тренажёр BSL">Тренажёр</a>
+          <a href={NOTEBOOK_URL} title="Ноутбук">Ноутбук</a>
+          <a href={HELP_URL} title="Справочник">Справочник</a>
         </nav>
         <div className="qs-header__actions">
           <button

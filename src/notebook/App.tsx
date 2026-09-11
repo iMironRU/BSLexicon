@@ -15,6 +15,7 @@ import type { SolutionMeta } from './git-notebooks';
 import { pushSolution, suggestSolutionName } from './git-solutions';
 import { errorMessage } from '../app/error-message';
 import { GitApiError } from '../app/git-storage';
+import { BOOK_URL, HELP_JUDGE_URL, HELP_URL, LANDING_URL, QUERY_URL, TRAINER_URL } from '../app/urls';
 import type { Cell, Notebook } from './types';
 import { loadCatalog } from '../app/catalog';
 import { loadGitConfig } from '../app/git-config';
@@ -245,11 +246,11 @@ function NotebookShell() {
           <span className="nb-header__sub">ноутбук BSL</span>
         </div>
         <nav className="nb-header__nav">
-          <a href={import.meta.env.BASE_URL} title="К режимам">↑ Режимы</a>
-          <a href={`${import.meta.env.BASE_URL}trainer/`} title="Тренажёр">Тренажёр</a>
-          <a href={`${import.meta.env.BASE_URL}query/`} title="Песочница запросов">Запросы</a>
-          <a href={`${import.meta.env.BASE_URL}help/`} title="Справочник">Справочник</a>
-          <a href={`${import.meta.env.BASE_URL}help/judge/`} title="Задачи">Задачник</a>
+          <a href={LANDING_URL} title="К режимам">↑ Режимы</a>
+          <a href={TRAINER_URL} title="Тренажёр">Тренажёр</a>
+          <a href={QUERY_URL} title="Песочница запросов">Запросы</a>
+          <a href={HELP_URL} title="Справочник">Справочник</a>
+          <a href={HELP_JUDGE_URL} title="Задачи">Задачник</a>
         </nav>
         <div className="nb-header__actions">
           {readOnly && (
@@ -331,7 +332,7 @@ function NotebookShell() {
             {bookCtx.chapterIndex > 0 ? (
               <a
                 className="nb-chapter-banner__link"
-                href={chapterHref(import.meta.env.BASE_URL, bookCtx.bookSrcUrl, bookCtx.book, bookCtx.chapterIndex - 1)}
+                href={chapterHref(bookCtx.bookSrcUrl, bookCtx.book, bookCtx.chapterIndex - 1)}
                 title={bookCtx.book.chapters[bookCtx.chapterIndex - 1].title}
               >
                 ← {bookCtx.book.chapters[bookCtx.chapterIndex - 1].title}
@@ -341,7 +342,7 @@ function NotebookShell() {
             )}
             <a
               className="nb-chapter-banner__toc"
-              href={`${import.meta.env.BASE_URL}book/?src=${encodeURIComponent(bookCtx.bookSrcUrl)}`}
+              href={`${BOOK_URL}?src=${encodeURIComponent(bookCtx.bookSrcUrl)}`}
               title="Оглавление книги"
             >
               📚 Оглавление
@@ -349,7 +350,7 @@ function NotebookShell() {
             {bookCtx.chapterIndex < bookCtx.book.chapters.length - 1 ? (
               <a
                 className="nb-chapter-banner__link"
-                href={chapterHref(import.meta.env.BASE_URL, bookCtx.bookSrcUrl, bookCtx.book, bookCtx.chapterIndex + 1)}
+                href={chapterHref(bookCtx.bookSrcUrl, bookCtx.book, bookCtx.chapterIndex + 1)}
                 title={bookCtx.book.chapters[bookCtx.chapterIndex + 1].title}
               >
                 {bookCtx.book.chapters[bookCtx.chapterIndex + 1].title} →

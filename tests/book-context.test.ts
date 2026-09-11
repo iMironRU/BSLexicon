@@ -87,8 +87,9 @@ describe('chapterHref', () => {
       mockFetch(BOOK_YAML),
     );
     if (!res.ok) throw new Error(res.error);
-    const href = chapterHref('/BSLexicon/', BOOK_URL, res.ctx.book, 1);
-    expect(href).toContain('/BSLexicon/notebook/');
+    const href = chapterHref(BOOK_URL, res.ctx.book, 1);
+    // vitest env: BASE_URL из vite.config.ts не подставляется, дефолт '/'
+    expect(href).toContain('notebook/');
     expect(decodeURIComponent(href)).toContain('nb-src=https://raw.githubusercontent.com/x/y/main/notebooks/02-basics.nb.json');
     expect(decodeURIComponent(href)).toContain('book-src=https://raw.githubusercontent.com/x/y/main/book.yaml');
     expect(href).toContain('chapter=1');

@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { parseBookYaml, type Book, type BookChapter } from './book-format';
 import { errorMessage } from '../app/error-message';
 import { renderMarkdown } from '../app/markdown';
+import { HELP_URL, LANDING_URL, NOTEBOOK_URL, TRAINER_URL } from '../app/urls';
 
 type State =
   | { kind: 'idle' }
@@ -43,15 +44,15 @@ export function BookApp() {
   return (
     <div className="book-app">
       <header className="book-header">
-        <a className="book-logo" href={import.meta.env.BASE_URL} title="К режимам">
+        <a className="book-logo" href={LANDING_URL} title="К режимам">
           BSLexicon
         </a>
         <span className="book-tagline">книга</span>
         <nav className="book-nav">
-          <a href={import.meta.env.BASE_URL}>↑ Режимы</a>
-          <a href={`${import.meta.env.BASE_URL}trainer/`}>Тренажёр</a>
-          <a href={`${import.meta.env.BASE_URL}notebook/`}>Ноутбук</a>
-          <a href={`${import.meta.env.BASE_URL}help/`}>Справочник</a>
+          <a href={LANDING_URL}>↑ Режимы</a>
+          <a href={TRAINER_URL}>Тренажёр</a>
+          <a href={NOTEBOOK_URL}>Ноутбук</a>
+          <a href={HELP_URL}>Справочник</a>
         </nav>
       </header>
 
@@ -140,13 +141,12 @@ function HowTo() {
  */
 function openChapterHref(bookYamlUrl: string, chapter: BookChapter, chapterIndex: number): string {
   const notebookRawUrl = resolveNotebookUrl(bookYamlUrl, chapter.notebook);
-  const base = import.meta.env.BASE_URL;
   const params = new URLSearchParams({
     'nb-src': notebookRawUrl,
     'book-src': bookYamlUrl,
     chapter: String(chapterIndex),
   });
-  return `${base}notebook/?${params.toString()}`;
+  return `${NOTEBOOK_URL}?${params.toString()}`;
 }
 
 /** notebook path в book.yaml — относительно директории самого book.yaml. */

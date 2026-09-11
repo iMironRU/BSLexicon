@@ -19,7 +19,7 @@ export interface AvailabilityIndex {
   types: Record<string, IndexEntry>;
 }
 
-const BASE = import.meta.env.BASE_URL;
+import { BASE_URL as BASE } from '../urls';
 let cache: Promise<AvailabilityIndex> | null = null;
 
 export function loadAvailabilityIndex(): Promise<AvailabilityIndex> {
