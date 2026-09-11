@@ -97,41 +97,50 @@ export interface DecodeDefaults {
 }
 
 export function fromStored(c: StoredCell, idGen: () => string, defaults: DecodeDefaults): Cell {
-  let cell: Cell;
+  const id = idGen();
+  const frozen = c.frozen ? { frozen: true } : {};
+
   if (c.t === 'task') {
     // Solution-файлы держат spec в task_snapshot; урок — в task; битые — DEFAULT.
     const spec: TaskSpec = c.task_snapshot ?? c.task ?? defaults.task;
-    cell = { id: idGen(), type: 'task', source: c.s, task: spec };
-    if (c.ref) cell.ref = c.ref;
-    if (c.explanation) cell.explanation = c.explanation;
-  } else if (c.t === 'query') {
-    cell = {
-      id: idGen(),
-      type: 'query',
-      source: c.s,
+    return {
+      id, type: 'task', source: c.s, task: spec,
+      ...(c.ref && { ref: c.ref }),
+      ...(c.explanation && { explanation: c.explanation }),
+      ...frozen,
+    };
+  }
+  if (c.t === 'query') {
+    return {
+      id, type: 'query', source: c.s,
       schema: c.schema ?? defaults.querySchema,
       data: c.data ?? defaults.queryData,
+      ...(c.ref && { ref: c.ref }),
+      ...(c.parameters?.length && { parameters: c.parameters }),
+      ...(c.autorun && { autorun: true }),
+      ...frozen,
     };
-    if (c.ref) cell.ref = c.ref;
-    if (c.parameters?.length) cell.parameters = c.parameters;
-  } else if (c.t === 'query-task') {
+  }
+  if (c.t === 'query-task') {
     // Обратная совместимость: старый serialize.ts клал spec в `task`,
     // draft/git — в `query_task`. Snapshot побеждает всё для solution.
     const spec: QueryTaskSpec = (c.query_task_snapshot as QueryTaskSpec | undefined)
       ?? c.query_task
       ?? (c.task as unknown as QueryTaskSpec | undefined)
       ?? defaults.queryTask;
-    cell = { id: idGen(), type: 'query-task', source: c.s, task: spec };
-    if (c.ref) cell.ref = c.ref;
-    if (c.explanation) cell.explanation = c.explanation;
-  } else if (c.t === 'md') {
-    cell = { id: idGen(), type: 'markdown', source: c.s };
-  } else {
-    cell = { id: idGen(), type: 'code', source: c.s };
+    return {
+      id, type: 'query-task', source: c.s, task: spec,
+      ...(c.ref && { ref: c.ref }),
+      ...(c.explanation && { explanation: c.explanation }),
+      ...frozen,
+    };
   }
-  if (c.frozen) (cell as { frozen?: boolean }).frozen = true;
-  if (c.autorun && (cell.type === 'code' || cell.type === 'query')) {
-    (cell as { autorun?: boolean }).autorun = true;
+  if (c.t === 'md') {
+    return { id, type: 'markdown', source: c.s, ...frozen };
   }
-  return cell;
+  return {
+    id, type: 'code', source: c.s,
+    ...(c.autorun && { autorun: true }),
+    ...frozen,
+  };
 }

@@ -2,7 +2,6 @@
  * Тесты виртуальных таблиц регистра сведений (#47): СрезПоследних, СрезПервых.
  */
 import { describe, expect, it } from 'vitest';
-import { runQuery } from '../src/query/interpreter';
 import { loadMiniErpFixture, runOk } from './fixtures/mini-erp';
 
 const fx = loadMiniErpFixture();

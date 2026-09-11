@@ -254,7 +254,7 @@ export function validateFixture(schema: Schema, data: Data): Result<null> {
 
 // ── helpers ────────────────────────────────────────────────────────
 
-type PlainObj = Record<string, unknown>;
+type PlainObj = { [k: string]: unknown };
 
 function cmpTables(a: Table, b: Table): number {
   const ka = KIND_ORDER.indexOf(a.kind);
