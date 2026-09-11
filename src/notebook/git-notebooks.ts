@@ -9,13 +9,18 @@
  * `path` в GitConfig — учитывается: если педагог задал в настройках
  * git-connect подпапку (например `bslexicon/`), то `notebooks/` резолвится
  * относительно неё: `bslexicon/notebooks/`.
+ *
+ * Сериализация ячеек — через `cell-codec.ts` (общий с draft и URL). Здесь
+ * добавлены solution-специфичные поля (`role`, `source`, snapshot spec
+ * для task/query-task) — они не входят в canonical StoredCell, потому
+ * что живут только в файлах-решениях этого модуля.
  */
 
 import { listDirectory, readFile, writeFile } from '../app/git-storage';
 import type { GitConfig } from '../app/git-config';
-import type { Cell, Notebook, TaskSpec } from './types';
-import type { QueryTaskSpec } from '../query/task-format';
-import type { QueryParamEntry } from '../query/parameters';
+import type { Cell, Notebook } from './types';
+import { fromStored, toStored, type DecodeDefaults, type StoredCell } from './cell-codec';
+import { DEFAULT_QUERY_TASK, DEFAULT_TASK, EMPTY_QUERY_DATA, EMPTY_QUERY_SCHEMA } from './cell-defaults';
 
 const NOTEBOOKS_SUBDIR = 'notebooks';
 const NB_EXT = '.nb.json';
@@ -41,29 +46,6 @@ export interface LoadedNotebook {
   name: string;
 }
 
-interface StoredCell {
-  t: 'md' | 'code' | 'task' | 'query' | 'query-task';
-  s: string;
-  task?: TaskSpec;
-  ref?: string;
-  /** Только для файла-решения (#31): spec на момент открытия. */
-  task_snapshot?: TaskSpec;
-  /** Объяснение решения ученика (#33). */
-  explanation?: string;
-  /** Query-ячейка (#42): YAML схемы и данных прямо в файле. */
-  schema?: string;
-  data?: string;
-  /** Значения параметров &Имя (issue #53). */
-  parameters?: QueryParamEntry[];
-  /** Query-задача (#43): полная спека query-task. */
-  query_task?: QueryTaskSpec;
-  /** Snapshot query-task для файла-решения (аналог task_snapshot). */
-  query_task_snapshot?: QueryTaskSpec;
-  /** Ячейка заморожена автором (issue #60). */
-  frozen?: boolean;
-  /** Auto-run (issue #70) — только для code и query. */
-  autorun?: boolean;
-}
 interface StoredNotebook {
   v: 1;
   /** Для файлов-решений — 'solution'. Отсутствует у обычных уроков. */
@@ -146,30 +128,7 @@ export async function saveNotebook(
  * для task-ячеек (#28).
  */
 export function serializeNotebook(nb: Notebook): string {
-  const payload: StoredNotebook = {
-    v: 1,
-    cells: nb.cells.map((c) => {
-      let cell: StoredCell;
-      if (c.type === 'task') {
-        cell = { t: 'task', s: c.source, task: c.task };
-        if (c.ref) cell.ref = c.ref;
-        if (c.explanation) cell.explanation = c.explanation;
-      } else if (c.type === 'query') {
-        cell = { t: 'query', s: c.source, schema: c.schema, data: c.data };
-        if (c.ref) cell.ref = c.ref;
-        if (c.parameters?.length) cell.parameters = c.parameters;
-      } else if (c.type === 'query-task') {
-        cell = { t: 'query-task', s: c.source, query_task: c.task };
-        if (c.ref) cell.ref = c.ref;
-        if (c.explanation) cell.explanation = c.explanation;
-      } else {
-        cell = { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
-      }
-      if (c.frozen) cell.frozen = true;
-      if ((c.type === 'code' || c.type === 'query') && c.autorun) cell.autorun = true;
-      return cell;
-    }),
-  };
+  const payload: StoredNotebook = { v: 1, cells: nb.cells.map(toStored) };
   return JSON.stringify(payload, null, 2);
 }
 
@@ -178,6 +137,13 @@ function nextId(): string {
   idCounter += 1;
   return `g${idCounter}`;
 }
+
+const DECODE_DEFAULTS: DecodeDefaults = {
+  task: DEFAULT_TASK,
+  queryTask: DEFAULT_QUERY_TASK,
+  querySchema: EMPTY_QUERY_SCHEMA,
+  queryData: EMPTY_QUERY_DATA,
+};
 
 export interface SolutionMeta {
   /** owner/repo педагога. */
@@ -194,8 +160,9 @@ export type ParsedFile =
 /**
  * Универсальный парсер `.nb.json` — определяет вид файла (урок vs решение
  * ученика). Решение имеет `role: 'solution'` и корневой `source`; в
- * task-cell вместо `task` там `task_snapshot`. См. `docs/education/README.md`
- * §4.3 и #31.
+ * task-cell вместо `task` там `task_snapshot` (аналогично `query_task`).
+ * cell-codec.ts принимает и то, и другое: snapshot побеждает у него в
+ * fromStored, если он есть. См. `docs/education/README.md` §4.3 и #31.
  *
  * Кидает при битом JSON / неверной схеме.
  */
@@ -205,48 +172,17 @@ export function parseAnyFile(text: string): ParsedFile {
     throw new Error('Не поддерживаемая схема ноутбука (не v: 1)');
   }
   const isSolution = parsed.role === 'solution';
-  const cells: Cell[] = parsed.cells.map((c) => {
-    let cell: Cell;
-    if (c.t === 'task') {
-      // Для решения источник spec — task_snapshot; для урока — task или fallback.
-      const spec: TaskSpec = c.task_snapshot ?? c.task ?? {
-        statement: '## Задача',
-        starter: '',
-        tests: [{ kind: 'stdout', expect: '' }],
-      };
-      cell = { id: nextId(), type: 'task', source: c.s, task: spec };
-      if (c.ref && cell.type === 'task') cell.ref = c.ref;
-      if (c.explanation && cell.type === 'task') cell.explanation = c.explanation;
-    } else if (c.t === 'query') {
-      cell = {
-        id: nextId(),
-        type: 'query',
-        source: c.s,
-        schema: c.schema ?? '',
-        data: c.data ?? '',
-      };
-      if (c.ref) (cell as { ref?: string }).ref = c.ref;
-      if (c.parameters?.length && cell.type === 'query') cell.parameters = c.parameters;
-    } else if (c.t === 'query-task') {
-      const spec = c.query_task_snapshot ?? c.query_task;
-      if (!spec) {
-        // Битая ячейка — не крашим ноутбук, показываем как markdown с текстом ошибки.
-        return { id: nextId(), type: 'markdown', source: '⚠ query-task ячейка без спеки — файл повреждён.' };
-      }
-      cell = { id: nextId(), type: 'query-task', source: c.s, task: spec };
-      if (c.ref) (cell as { ref?: string }).ref = c.ref;
-      if (c.explanation) (cell as { explanation?: string }).explanation = c.explanation;
-    } else if (c.t === 'md') {
-      cell = { id: nextId(), type: 'markdown', source: c.s };
-    } else {
-      cell = { id: nextId(), type: 'code', source: c.s };
+  const cells: Cell[] = [];
+  for (const c of parsed.cells) {
+    // Битая query-task ячейка без spec — не крашим ноутбук, показываем как
+    // markdown с текстом ошибки. Это специфика git-файлов: educator мог
+    // руками поправить spec неправильно и мы всё равно должны открыться.
+    if (c.t === 'query-task' && !c.query_task && !c.query_task_snapshot && !c.task) {
+      cells.push({ id: nextId(), type: 'markdown', source: '⚠ query-task ячейка без спеки — файл повреждён.' });
+      continue;
     }
-    if (c.frozen) (cell as { frozen?: boolean }).frozen = true;
-    if (c.autorun && (cell.type === 'code' || cell.type === 'query')) {
-      (cell as { autorun?: boolean }).autorun = true;
-    }
-    return cell;
-  });
+    cells.push(fromStored(c, nextId, DECODE_DEFAULTS));
+  }
   const notebook: Notebook = { cells };
   if (isSolution && parsed.source) {
     return { kind: 'solution', notebook, solutionMeta: parsed.source };

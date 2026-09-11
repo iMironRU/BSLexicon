@@ -9,34 +9,19 @@
  * а parsing нужен на каждой инициализации — простая строка быстрее.
  * URL-shareable форма (gzip+base64) — отдельно в serialize.ts.
  *
- * Хранит все типы ячеек и расширения (frozen, autorun, parameters,
- * spec для task/query-task) — без них author-режим #27 терял бы
- * правки после перезагрузки.
+ * Сериализация ячеек — через `cell-codec.ts` (общий для draft / URL / git),
+ * тут остаётся только обёртка над localStorage и defaults.
  *
  * Battery: если localStorage недоступен (Safari Private, кросс-домен
  * блокировка) — вся логика превращается в no-op, ноутбук продолжает
  * работать без сохранения. Никаких исключений.
  */
 
-import type { Cell, Notebook, TaskSpec } from './types';
-import type { QueryTaskSpec } from '../query/task-format';
-import type { QueryParamEntry } from '../query/parameters';
+import type { Cell, Notebook } from './types';
+import { fromStored, toStored, type DecodeDefaults, type StoredCell } from './cell-codec';
+import { DEFAULT_QUERY_TASK, DEFAULT_TASK, EMPTY_QUERY_DATA, EMPTY_QUERY_SCHEMA } from './cell-defaults';
 
 const KEY = 'bslexicon:notebook:draft';
-
-interface StoredCell {
-  t: 'md' | 'code' | 'task' | 'query' | 'query-task';
-  s: string;
-  task?: TaskSpec;
-  ref?: string;
-  explanation?: string;
-  frozen?: boolean;
-  autorun?: boolean;
-  schema?: string;
-  data?: string;
-  parameters?: QueryParamEntry[];
-  query_task?: QueryTaskSpec;
-}
 
 interface StoredNotebook {
   v: 1;
@@ -49,36 +34,16 @@ function nextId(): string {
   return `d${idCounter}`;
 }
 
+const DEFAULTS: DecodeDefaults = {
+  task: DEFAULT_TASK,
+  queryTask: DEFAULT_QUERY_TASK,
+  querySchema: EMPTY_QUERY_SCHEMA,
+  queryData: EMPTY_QUERY_DATA,
+};
+
 export function saveDraft(nb: Notebook): void {
   try {
-    const payload: StoredNotebook = {
-      v: 1,
-      cells: nb.cells.map((c) => {
-        const base: StoredCell = { t: 'md', s: c.source };
-        if (c.type === 'markdown') base.t = 'md';
-        else if (c.type === 'code') base.t = 'code';
-        else if (c.type === 'task') {
-          base.t = 'task';
-          base.task = c.task;
-          if (c.ref) base.ref = c.ref;
-          if (c.explanation) base.explanation = c.explanation;
-        } else if (c.type === 'query') {
-          base.t = 'query';
-          base.schema = c.schema;
-          base.data = c.data;
-          if (c.ref) base.ref = c.ref;
-          if (c.parameters?.length) base.parameters = c.parameters;
-        } else if (c.type === 'query-task') {
-          base.t = 'query-task';
-          base.query_task = c.task;
-          if (c.ref) base.ref = c.ref;
-          if (c.explanation) base.explanation = c.explanation;
-        }
-        if (c.frozen) base.frozen = true;
-        if ((c.type === 'code' || c.type === 'query') && c.autorun) base.autorun = true;
-        return base;
-      }),
-    };
+    const payload: StoredNotebook = { v: 1, cells: nb.cells.map(toStored) };
     localStorage.setItem(KEY, JSON.stringify(payload));
   } catch {
     /* storage недоступен — молча игнорируем */
@@ -96,31 +61,7 @@ export function loadDraft(): Notebook | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredNotebook;
     if (parsed.v !== 1 || !Array.isArray(parsed.cells)) return null;
-    const cells: Cell[] = parsed.cells.map((c) => {
-      let cell: Cell;
-      if (c.t === 'task' && c.task) {
-        cell = { id: nextId(), type: 'task', source: c.s, task: c.task };
-        if (c.ref) cell.ref = c.ref;
-        if (c.explanation) cell.explanation = c.explanation;
-      } else if (c.t === 'query') {
-        cell = { id: nextId(), type: 'query', source: c.s, schema: c.schema ?? '', data: c.data ?? '' };
-        if (c.ref) cell.ref = c.ref;
-        if (c.parameters?.length) cell.parameters = c.parameters;
-      } else if (c.t === 'query-task' && c.query_task) {
-        cell = { id: nextId(), type: 'query-task', source: c.s, task: c.query_task };
-        if (c.ref) cell.ref = c.ref;
-        if (c.explanation) cell.explanation = c.explanation;
-      } else if (c.t === 'md') {
-        cell = { id: nextId(), type: 'markdown', source: c.s };
-      } else {
-        cell = { id: nextId(), type: 'code', source: c.s };
-      }
-      if (c.frozen) (cell as { frozen?: boolean }).frozen = true;
-      if (c.autorun && (cell.type === 'code' || cell.type === 'query')) {
-        (cell as { autorun?: boolean }).autorun = true;
-      }
-      return cell;
-    });
+    const cells: Cell[] = parsed.cells.map((c) => fromStored(c, nextId, DEFAULTS));
     return { cells };
   } catch {
     return null;

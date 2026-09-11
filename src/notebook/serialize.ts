@@ -8,81 +8,28 @@
  *
  * `id` ячейки — чисто клиентский (для React key), в сериализацию не
  * попадает: генерируем свежий при decode.
+ *
+ * Сериализация ячеек — через `cell-codec.ts` (общий с draft и git),
+ * тут остаются URL-специфичные вещи: gzip, base64, схема пакета
+ * `{v: 1, cells}`, и «фабричные» функции создания ячеек / стартового
+ * ноутбука.
  */
 import type { Cell, Notebook, TaskSpec } from './types';
 import type { QueryTaskSpec } from '../query/task-format';
-import type { QueryParamEntry } from '../query/parameters';
+import { fromStored, toStored, type DecodeDefaults, type StoredCell } from './cell-codec';
+import { DEFAULT_TASK } from './cell-defaults';
+// mini-ERP как стартовые схема/данные — Vite-only импорт (?raw). Скрипты
+// под tsx (book-check и т.п.) не должны цепляться за serialize.ts.
 import schemaYaml from '../../examples/query-demo/mini-erp.schema.yaml?raw';
 import dataYaml from '../../examples/query-demo/mini-erp.data.yaml?raw';
-
-interface SerializedCellBase {
-  t: 'md' | 'code' | 'task' | 'query' | 'query-task';
-  s: string;
-  /** Ячейка заморожена автором (issue #60). */
-  frozen?: boolean;
-  /** Auto-run (issue #70) — только для code и query. */
-  autorun?: boolean;
-}
-interface SerializedTaskCell extends SerializedCellBase {
-  t: 'task';
-  /** Спека задачи прямо внутри ячейки — иммутабельна для ученика. */
-  task: TaskSpec;
-  /**
-   * Опциональная ссылка на `.task.yaml` в репо педагога (см. #28
-   * учебной платформы). Резолвится при открытии через `?nb-src=`.
-   */
-  ref?: string;
-  /** «Объясни своё решение своими словами» (#33). */
-  explanation?: string;
-}
-interface SerializedQueryCell extends SerializedCellBase {
-  t: 'query';
-  /** YAML схемы — inline или подгружается через ref. */
-  schema: string;
-  /** YAML данных. */
-  data: string;
-  /** Опциональная ссылка на пару .schema.yaml/.data.yaml (без расширения). */
-  ref?: string;
-  /** Значения параметров &Имя. */
-  parameters?: QueryParamEntry[];
-}
-interface SerializedQueryTaskCell extends SerializedCellBase {
-  t: 'query-task';
-  /** Полная спека задачи. */
-  task: QueryTaskSpec;
-  /** Опциональная ссылка на `.query-task.yaml`. */
-  ref?: string;
-  explanation?: string;
-}
-type SerializedCell =
-  | SerializedCellBase
-  | SerializedTaskCell
-  | SerializedQueryCell
-  | SerializedQueryTaskCell;
-
-interface SerializedNotebook {
-  v: 1;
-  cells: SerializedCell[];
-}
-
-let idCounter = 0;
-function nextId(): string {
-  idCounter += 1;
-  return `c${idCounter}`;
-}
-
-const DEFAULT_TASK: TaskSpec = {
-  statement: '## Задача\n\nНапиши код, который выводит `Сообщить("привет")`.',
-  starter: '// напиши решение здесь\n',
-  tests: [{ kind: 'stdout', expect: 'привет' }],
-};
 
 const DEFAULT_QUERY_SOURCE = `ВЫБРАТЬ Наименование
 ИЗ Справочник.Номенклатура
 ГДЕ ПометкаУдаления = ЛОЖЬ
 УПОРЯДОЧИТЬ ПО Наименование`;
 
-const DEFAULT_QUERY_TASK: QueryTaskSpec = {
+/** Полновесная task-спека для стартового «объясни задачу и проверь». */
+const STARTER_QUERY_TASK: QueryTaskSpec = {
   title: 'Первая задача-запрос',
   statement: '## Все склады\n\nВыведи **Наименование** всех складов из мини-ERP.',
   starter: 'ВЫБРАТЬ ...\nИЗ Справочник.Склады',
@@ -95,6 +42,17 @@ const DEFAULT_QUERY_TASK: QueryTaskSpec = {
   },
   hints: ['Тебе нужны один столбец и одна таблица — никаких соединений.'],
 };
+
+interface SerializedNotebook {
+  v: 1;
+  cells: StoredCell[];
+}
+
+let idCounter = 0;
+function nextId(): string {
+  idCounter += 1;
+  return `c${idCounter}`;
+}
 
 /**
  * Стартовая схема+данные для новой query-ячейки — «мини-ERP» из
@@ -140,7 +98,7 @@ export function newCell(
     return cell;
   }
   if (type === 'query-task') {
-    const t = (taskSpec as QueryTaskSpec | undefined) ?? DEFAULT_QUERY_TASK;
+    const t = (taskSpec as QueryTaskSpec | undefined) ?? STARTER_QUERY_TASK;
     const src = typeof sourceOrInit === 'string' ? sourceOrInit : '';
     return { id: nextId(), type: 'query-task', source: src || t.starter, task: t };
   }
@@ -215,37 +173,7 @@ export function starterNotebook(): Notebook {
  * Асинхронно из-за `CompressionStream` (нативный API браузера).
  */
 export async function encodeNotebook(nb: Notebook): Promise<string> {
-  const payload: SerializedNotebook = {
-    v: 1,
-    cells: nb.cells.map((c) => {
-      if (c.type === 'task') {
-        const cell: SerializedTaskCell = { t: 'task', s: c.source, task: c.task };
-        if (c.ref) cell.ref = c.ref;
-        if (c.explanation) cell.explanation = c.explanation;
-        if (c.frozen) cell.frozen = true;
-        return cell;
-      }
-      if (c.type === 'query') {
-        const cell: SerializedQueryCell = { t: 'query', s: c.source, schema: c.schema, data: c.data };
-        if (c.ref) cell.ref = c.ref;
-        if (c.parameters?.length) cell.parameters = c.parameters;
-        if (c.frozen) cell.frozen = true;
-        if (c.autorun) cell.autorun = true;
-        return cell;
-      }
-      if (c.type === 'query-task') {
-        const cell: SerializedQueryTaskCell = { t: 'query-task', s: c.source, task: c.task };
-        if (c.ref) cell.ref = c.ref;
-        if (c.explanation) cell.explanation = c.explanation;
-        if (c.frozen) cell.frozen = true;
-        return cell;
-      }
-      const base: SerializedCellBase = { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
-      if (c.frozen) base.frozen = true;
-      if (c.type === 'code' && c.autorun) base.autorun = true;
-      return base;
-    }),
-  };
+  const payload: SerializedNotebook = { v: 1, cells: nb.cells.map(toStored) };
   const json = JSON.stringify(payload);
   const bytes = new TextEncoder().encode(json);
 
@@ -270,6 +198,13 @@ export async function encodeNotebook(nb: Notebook): Promise<string> {
   for (const b of merged) bin += String.fromCharCode(b);
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
+
+const DECODE_DEFAULTS: DecodeDefaults = {
+  task: DEFAULT_TASK,
+  queryTask: STARTER_QUERY_TASK,
+  querySchema: schemaYaml,
+  queryData: dataYaml,
+};
 
 /**
  * Декодирует `?nb=` в объект `Notebook`. Кидает исключение, если параметр
@@ -306,43 +241,6 @@ export async function decodeNotebook(raw: string): Promise<Notebook> {
     throw new Error('Unsupported notebook schema');
   }
   return {
-    cells: payload.cells.map((c) => {
-      let created: Cell;
-      if (c.t === 'task') {
-        const withTask = c as SerializedTaskCell;
-        // Осторожно: спека может быть недоделанной, если старый URL или ручная правка.
-        // Fallback на DEFAULT — чтобы не крашить весь ноутбук из-за одной битой ячейки.
-        const task: TaskSpec = withTask.task ?? DEFAULT_TASK;
-        created = newCell('task', withTask.s, task);
-        if (withTask.ref && created.type === 'task') created.ref = withTask.ref;
-        if (withTask.explanation && created.type === 'task') created.explanation = withTask.explanation;
-      } else if (c.t === 'query') {
-        const withQuery = c as SerializedQueryCell;
-        // Схема/данные обязательны в сериализации, но старый URL или ручная
-        // правка могут привести к пустым — fallback на встроенный mini-erp.
-        created = newCell('query', {
-          source: withQuery.s,
-          schema: withQuery.schema || undefined,
-          data: withQuery.data || undefined,
-          ref: withQuery.ref,
-        });
-        if (withQuery.parameters?.length && created.type === 'query') {
-          created.parameters = withQuery.parameters;
-        }
-      } else if (c.t === 'query-task') {
-        const withQt = c as SerializedQueryTaskCell;
-        const task = withQt.task ?? DEFAULT_QUERY_TASK;
-        created = newCell('query-task', withQt.s, task);
-        if (withQt.ref && created.type === 'query-task') created.ref = withQt.ref;
-        if (withQt.explanation && created.type === 'query-task') created.explanation = withQt.explanation;
-      } else {
-        created = newCell(c.t === 'md' ? 'markdown' : 'code', c.s);
-      }
-      if (c.frozen) (created as { frozen?: boolean }).frozen = true;
-      if (c.autorun && (created.type === 'code' || created.type === 'query')) {
-        (created as { autorun?: boolean }).autorun = true;
-      }
-      return created;
-    }),
+    cells: payload.cells.map((c) => fromStored(c, nextId, DECODE_DEFAULTS)),
   };
 }
