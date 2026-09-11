@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Catalog } from '@core/index';
+import { errorMessage } from '../error-message';
 import { loadReference } from '../reference/load';
 import type { SyntaxEntry } from '../reference/types';
 
@@ -49,7 +50,7 @@ export function ReferencePanel({ catalog, onClose }: ReferencePanelProps) {
     let alive = true;
     loadReference()
       .then((data) => alive && setEntries(data))
-      .catch((e: unknown) => alive && setError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => alive && setError(errorMessage(e)));
     return () => {
       alive = false;
     };

@@ -13,6 +13,7 @@ import { loadBookContext, chapterHref, type BookContext } from './book-context';
 import { initialMode, setModeInUrl, withStudentMode, type NotebookMode } from './mode';
 import type { SolutionMeta } from './git-notebooks';
 import { pushSolution, suggestSolutionName } from './git-solutions';
+import { errorMessage } from '../app/error-message';
 import { GitApiError } from '../app/git-storage';
 import type { Cell, Notebook } from './types';
 import { loadCatalog } from '../app/catalog';
@@ -77,7 +78,7 @@ function NotebookShell() {
           }
         })
         .catch((e) => {
-          setLoadError(`Загрузка из репо: ${e instanceof Error ? e.message : String(e)}`);
+          setLoadError(`Загрузка из репо: ${errorMessage(e)}`);
           setNotebook(loadDraft() ?? starterNotebook());
         });
       if (bookSrcParam) {
@@ -220,7 +221,7 @@ function NotebookShell() {
       if (e instanceof GitApiError) {
         toast.show(`GitHub ${e.status}: ${e.message}`, 'error');
       } else {
-        toast.show(`Не удалось сохранить: ${e instanceof Error ? e.message : String(e)}`, 'error');
+        toast.show(`Не удалось сохранить: ${errorMessage(e)}`, 'error');
       }
     }
   }, [notebook, nbSource, gitCfg, toast]);

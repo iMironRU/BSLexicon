@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { errorMessage } from '../app/error-message';
 import type { GitConfig } from '../app/git-config';
 import { GitApiError } from '../app/git-storage';
 import {
@@ -173,7 +174,7 @@ export function NotebooksPanel({
 
 function errText(e: unknown): string {
   if (e instanceof GitApiError) return `GitHub ${e.status}: ${e.message}`;
-  return e instanceof Error ? e.message : String(e);
+  return errorMessage(e);
 }
 
 function formatSize(bytes: number): string {

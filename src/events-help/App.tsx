@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { errorMessage } from '../app/error-message';
 import { useHashRoute } from '../app/hash-route';
 import type { SyntaxEntry } from '../app/reference/types';
 import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
@@ -89,7 +90,7 @@ export function App() {
       setProgress(total ? loaded / total : null);
     })
       .then((d) => alive && setEntries(d.entries))
-      .catch((e: unknown) => alive && setError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => alive && setError(errorMessage(e)));
     return () => {
       alive = false;
     };

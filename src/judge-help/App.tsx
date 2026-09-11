@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { errorMessage } from '../app/error-message';
 import { useHashRoute } from '../app/hash-route';
 import { HelpFooter } from '../help/HelpFooter';
 import { Loader } from '../help/Loader';
@@ -48,7 +49,7 @@ export function App() {
     let alive = true;
     loadJudgeIndex()
       .then((i) => alive && setIndex(i))
-      .catch((e: unknown) => alive && setIndexError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => alive && setIndexError(errorMessage(e)));
     return () => {
       alive = false;
     };
@@ -174,7 +175,7 @@ function TaskPageRoute({
     setLoadError(null);
     loadBookTasks(bookId)
       .then((f) => alive && setFile(f))
-      .catch((e: unknown) => alive && setLoadError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) => alive && setLoadError(errorMessage(e)));
     return () => {
       alive = false;
     };
