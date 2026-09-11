@@ -25,6 +25,17 @@ import type { QueryTaskSpec } from '../query/task-format';
 import type { QueryParamEntry } from '../query/parameters';
 
 /**
+ * Каноничная форма пакета ячеек — `{v: 1, cells}`. draft.ts,
+ * serialize.ts и git-notebooks.ts все три вокруг него; git-notebooks
+ * ещё дописывает `role`/`source` для solution-файлов, но заворачивает
+ * этот же StoredNotebook.
+ */
+export interface StoredNotebook {
+  v: 1;
+  cells: StoredCell[];
+}
+
+/**
  * Каноничная форма ячейки в persistent-хранилищах. Плюс поля snapshot —
  * их пишет только git-notebooks для solution-файлов, остальные обёртки
  * их игнорируют.

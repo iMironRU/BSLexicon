@@ -17,7 +17,7 @@
 import type { Cell, Notebook, TaskSpec } from './types';
 import type { QueryTaskSpec } from '../query/task-format';
 import { compressGzip, decompressGzip } from '../app/url-params';
-import { fromStored, toStored, type DecodeDefaults, type StoredCell } from './cell-codec';
+import { fromStored, toStored, type DecodeDefaults, type StoredNotebook } from './cell-codec';
 import { DEFAULT_TASK } from './cell-defaults';
 // mini-ERP как стартовые схема/данные — Vite-only импорт (?raw). Скрипты
 // под tsx (book-check и т.п.) не должны цепляться за serialize.ts.
@@ -44,10 +44,6 @@ const STARTER_QUERY_TASK: QueryTaskSpec = {
   hints: ['Тебе нужны один столбец и одна таблица — никаких соединений.'],
 };
 
-interface SerializedNotebook {
-  v: 1;
-  cells: StoredCell[];
-}
 
 let idCounter = 0;
 function nextId(): string {
@@ -173,7 +169,7 @@ export function starterNotebook(): Notebook {
  * Асинхронно из-за `CompressionStream` (нативный API браузера).
  */
 export async function encodeNotebook(nb: Notebook): Promise<string> {
-  const payload: SerializedNotebook = { v: 1, cells: nb.cells.map(toStored) };
+  const payload: StoredNotebook = { v: 1, cells: nb.cells.map(toStored) };
   return compressGzip(JSON.stringify(payload));
 }
 
@@ -191,7 +187,7 @@ const DECODE_DEFAULTS: DecodeDefaults = {
  */
 export async function decodeNotebook(raw: string): Promise<Notebook> {
   const json = await decompressGzip(raw);
-  const payload = JSON.parse(json) as SerializedNotebook;
+  const payload = JSON.parse(json) as StoredNotebook;
   if (payload.v !== 1 || !Array.isArray(payload.cells)) {
     throw new Error('Unsupported notebook schema');
   }

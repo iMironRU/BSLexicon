@@ -19,15 +19,10 @@
 
 import type { Cell, Notebook } from './types';
 import { loadJson, removeKey, saveJson } from '../app/local-store';
-import { fromStored, toStored, type DecodeDefaults, type StoredCell } from './cell-codec';
+import { fromStored, toStored, type DecodeDefaults, type StoredNotebook } from './cell-codec';
 import { DEFAULT_QUERY_TASK, DEFAULT_TASK, EMPTY_QUERY_DATA, EMPTY_QUERY_SCHEMA } from './cell-defaults';
 
 const KEY = 'bslexicon:notebook:draft';
-
-interface StoredNotebook {
-  v: 1;
-  cells: StoredCell[];
-}
 
 let idCounter = 0;
 function nextId(): string {
