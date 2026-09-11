@@ -14,10 +14,10 @@
  * педагога. Педагог держит `tasks/`+`notebooks/` в публичном.
  */
 
-import type { Notebook, Cell } from './types';
+import type { Notebook, Cell, TaskSpec } from './types';
 import { parseTaskYaml } from './task-loader';
 import { parseAnyFile, type SolutionMeta } from './git-notebooks';
-import { parseQueryTaskYaml } from '../query/task-format';
+import { parseQueryTaskYaml, type QueryTaskSpec } from '../query/task-format';
 
 const RAW_HOST = 'https://raw.githubusercontent.com';
 const API_HOST = 'https://api.github.com';
@@ -141,12 +141,11 @@ export async function fetchNotebookFromSrc(
 
   // 2. Резолвим ref в task-ячейках параллельно.
   const refWarnings: string[] = [];
-  const refCells = notebook.cells
-    .map((c, idx) => ({ c, idx }))
-    .filter(({ c }) => c.type === 'task' && c.ref);
-  const resolved = await Promise.all(
-    refCells.map(async ({ c, idx }) => {
-      const ref = (c as { ref?: string }).ref!;
+  const refPromises: Promise<{ idx: number; spec: TaskSpec | null }>[] = [];
+  for (const [idx, cell] of notebook.cells.entries()) {
+    if (cell.type !== 'task' || !cell.ref) continue;
+    const ref = cell.ref;
+    refPromises.push((async () => {
       try {
         const yr = await fetchFn(resolveRefUrl(source, ref));
         if (yr.status === 404) throw new Error(`не найден`);
@@ -159,8 +158,9 @@ export async function fetchNotebookFromSrc(
         refWarnings.push(`${ref}: ${(e as Error).message}`);
         return { idx, spec: null };
       }
-    }),
-  );
+    })());
+  }
+  const resolved = await Promise.all(refPromises);
   const cells: Cell[] = notebook.cells.slice();
   for (const { idx, spec } of resolved) {
     const cell = cells[idx];
@@ -171,19 +171,18 @@ export async function fetchNotebookFromSrc(
     // и «откуда пришла» (ref). Для TaskCell приоритет: если spec подтянут
     // (task заполнен) — рендерим как inline; placeholder про ref больше
     // не показываем (спрятан ниже в App при наличии подтянутого spec).
-    cells[idx] = { ...cell, task: spec } as Cell;
+    cells[idx] = { ...cell, task: spec };
   }
 
   // 2b. Резолвим ref в query-ячейках. Ref без расширения → пара .schema.yaml +
   // .data.yaml. Если что-то одно из пары не подгрузилось, оба поля
   // сохраняем как inline (обычно inline — это `mini-erp`, дефолт),
   // и добавляем warning; ячейка работает на дефолте.
-  const queryCells = cells
-    .map((c, idx) => ({ c, idx }))
-    .filter(({ c }) => c.type === 'query' && c.ref);
-  const queryResolved = await Promise.all(
-    queryCells.map(async ({ idx, c }) => {
-      const ref = (c as { ref?: string }).ref!;
+  const queryPromises: Promise<{ idx: number; schema: string | null; data: string | null }>[] = [];
+  for (const [idx, cell] of cells.entries()) {
+    if (cell.type !== 'query' || !cell.ref) continue;
+    const ref = cell.ref;
+    queryPromises.push((async () => {
       const schemaUrl = resolveRefUrl(source, `${ref}.schema.yaml`);
       const dataUrl = resolveRefUrl(source, `${ref}.data.yaml`);
       try {
@@ -196,22 +195,22 @@ export async function fetchNotebookFromSrc(
         refWarnings.push(`${ref}: ${(e as Error).message}`);
         return { idx, schema: null, data: null };
       }
-    }),
-  );
+    })());
+  }
+  const queryResolved = await Promise.all(queryPromises);
   for (const { idx, schema, data } of queryResolved) {
     if (schema === null || data === null) continue;
     const cell = cells[idx];
     if (cell.type !== 'query') continue;
-    cells[idx] = { ...cell, schema, data } as Cell;
+    cells[idx] = { ...cell, schema, data };
   }
 
   // 2c. Резолвим ref в query-task ячейках. Ref → `<ref>.query-task.yaml`.
-  const queryTaskCells = cells
-    .map((c, idx) => ({ c, idx }))
-    .filter(({ c }) => c.type === 'query-task' && c.ref);
-  const queryTaskResolved = await Promise.all(
-    queryTaskCells.map(async ({ idx, c }) => {
-      const ref = (c as { ref?: string }).ref!;
+  const queryTaskPromises: Promise<{ idx: number; spec: QueryTaskSpec | null }>[] = [];
+  for (const [idx, cell] of cells.entries()) {
+    if (cell.type !== 'query-task' || !cell.ref) continue;
+    const ref = cell.ref;
+    queryTaskPromises.push((async () => {
       const url = resolveRefUrl(source, `${ref}.query-task.yaml`);
       try {
         const r = await fetchFn(url);
@@ -224,13 +223,14 @@ export async function fetchNotebookFromSrc(
         refWarnings.push(`${ref}: ${(e as Error).message}`);
         return { idx, spec: null };
       }
-    }),
-  );
+    })());
+  }
+  const queryTaskResolved = await Promise.all(queryTaskPromises);
   for (const { idx, spec } of queryTaskResolved) {
     if (!spec) continue;
     const cell = cells[idx];
     if (cell.type !== 'query-task') continue;
-    cells[idx] = { ...cell, task: spec } as Cell;
+    cells[idx] = { ...cell, task: spec };
   }
 
   // 3. SHA ветки (best-effort, без токена). Rate-limit публичного API

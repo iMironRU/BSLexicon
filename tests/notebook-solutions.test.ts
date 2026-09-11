@@ -81,6 +81,48 @@ describe('serializeSolution', () => {
     expect(parsed.cells[0].task_snapshot).toBeUndefined();
     expect(parsed.cells[1].task_snapshot).toBeUndefined();
   });
+
+  it('query-ячейка сохраняет source/schema/data (раньше молча превращалась в code)', () => {
+    const nb: Notebook = {
+      cells: [{
+        id: 'q', type: 'query',
+        source: 'ВЫБРАТЬ Наименование ИЗ Справочник.Склады',
+        schema: 'version: 1\ntables: []\n',
+        data: 'version: 1\nrecords: {}\n',
+        ref: 'datasets/mini-erp',
+      }],
+    };
+    const parsed = JSON.parse(serializeSolution(nb, { repo: 'r', sha: null, nb_path: 'p', branch: 'main' }));
+    expect(parsed.cells[0].t).toBe('query');
+    expect(parsed.cells[0].s).toContain('ВЫБРАТЬ');
+    expect(parsed.cells[0].schema).toContain('tables: []');
+    expect(parsed.cells[0].data).toContain('records: {}');
+    expect(parsed.cells[0].ref).toBe('datasets/mini-erp');
+  });
+
+  it('query-task-ячейка сохраняет спеку как query_task_snapshot', () => {
+    const nb: Notebook = {
+      cells: [{
+        id: 'qt', type: 'query-task', source: 'ВЫБРАТЬ 1',
+        task: {
+          statement: 'Задача-запрос',
+          starter: 'ВЫБРАТЬ ...',
+          schema: 'version: 1\ntables: []\n',
+          data: 'version: 1\nrecords: {}\n',
+          expected: { kind: 'unordered', columns: ['x'], rows: [[1]] },
+        },
+        ref: 'datasets/q1',
+      }],
+    };
+    const parsed = JSON.parse(serializeSolution(nb, { repo: 'r', sha: null, nb_path: 'p', branch: 'main' }));
+    const cell = parsed.cells[0];
+    expect(cell.t).toBe('query-task');
+    expect(cell.s).toBe('ВЫБРАТЬ 1');
+    expect(cell.ref).toBe('datasets/q1');
+    expect(cell.query_task_snapshot?.expected?.columns).toEqual(['x']);
+    // Живого `query_task` в снапшоте нет — только snapshot.
+    expect(cell.query_task).toBeUndefined();
+  });
 });
 
 describe('solutionPath / solutionRawUrl', () => {

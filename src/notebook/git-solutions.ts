@@ -16,8 +16,9 @@
 
 import { writeFile } from '../app/git-storage';
 import type { GitConfig } from '../app/git-config';
-import type { Notebook, TaskSpec } from './types';
+import type { Notebook } from './types';
 import type { NbSource } from './nb-src';
+import { toStored, type StoredCell } from './cell-codec';
 
 const SOLUTIONS_SUBDIR = 'solutions';
 const NB_EXT = '.nb.json';
@@ -33,43 +34,44 @@ export interface SolutionSource {
   branch: string;
 }
 
-interface StoredSolutionCell {
-  t: 'md' | 'code' | 'task';
-  s: string;
-  /** Ссылка на `.task.yaml` в репо педагога (относительно корня). */
-  ref?: string;
-  /** Snapshot spec на момент открытия — источник истины для прогонки. */
-  task_snapshot?: TaskSpec;
-  /** Объяснение решения ученика своими словами (#33). */
-  explanation?: string;
-}
-
 interface StoredSolution {
   v: 1;
   /** Метка «это файл-решение, а не файл-урок» — педагогу для детекта в #32. */
   role: 'solution';
   source: SolutionSource;
-  cells: StoredSolutionCell[];
+  cells: StoredCell[];
 }
 
-/** Собрать snapshot текущего ноутбука для сдачи. */
+/**
+ * Превращает каноничный `StoredCell` в snapshot-форму для solution:
+ * `task` → `task_snapshot`, `query_task` → `query_task_snapshot`. Именно
+ * snapshot гоняем при прогонке ученика, чтобы «моё решение перестало
+ * проходить» не случалось после правки педагогом `.task.yaml`.
+ */
+function toSolutionCell(cell: StoredCell): StoredCell {
+  if (cell.t === 'task' && cell.task) {
+    const { task, ...rest } = cell;
+    return { ...rest, task_snapshot: task };
+  }
+  if (cell.t === 'query-task' && cell.query_task) {
+    const { query_task, ...rest } = cell;
+    return { ...rest, query_task_snapshot: query_task };
+  }
+  return cell;
+}
+
+/**
+ * Собрать snapshot текущего ноутбука для сдачи. Все типы ячеек
+ * (markdown / code / task / query / query-task) сериализуются
+ * канонически через cell-codec — раньше query и query-task в файле-
+ * решении молча превращались в code, теряя схему/spec.
+ */
 export function serializeSolution(nb: Notebook, source: SolutionSource): string {
   const payload: StoredSolution = {
     v: 1,
     role: 'solution',
     source,
-    cells: nb.cells.map((c) => {
-      if (c.type === 'task') {
-        return {
-          t: 'task',
-          s: c.source,
-          ...(c.ref ? { ref: c.ref } : {}),
-          ...(c.explanation ? { explanation: c.explanation } : {}),
-          task_snapshot: c.task,
-        };
-      }
-      return { t: c.type === 'markdown' ? 'md' : 'code', s: c.source };
-    }),
+    cells: nb.cells.map(toStored).map(toSolutionCell),
   };
   return JSON.stringify(payload, null, 2);
 }
