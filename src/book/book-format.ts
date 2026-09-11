@@ -19,6 +19,7 @@
  * ```
  */
 import { load as yamlLoad } from 'js-yaml';
+import { err, getStrNonEmpty as getStr, isObj, type Result } from '../app/parse-helpers';
 
 export interface BookChapter {
   title: string;
@@ -37,7 +38,8 @@ export interface Book {
   chapters: BookChapter[];
 }
 
-export type ParseResult<T> = { ok: true; value: T } | { ok: false; error: string };
+/** Ре-экспорт: старые тесты и вызовы ждут ParseResult из этого модуля. */
+export type ParseResult<T> = Result<T>;
 
 /** Разбирает YAML в объект `Book`. Никогда не бросает — вернёт ошибку. */
 export function parseBookYaml(text: string): ParseResult<Book> {
@@ -82,15 +84,3 @@ export function parseBookYaml(text: string): ParseResult<Book> {
   return { ok: true, value: book };
 }
 
-function getStr(o: Record<string, unknown>, key: string): string | null {
-  const v = o[key];
-  return typeof v === 'string' && v.trim() !== '' ? v : null;
-}
-
-function isObj(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
-
-function err<T>(msg: string): ParseResult<T> {
-  return { ok: false, error: msg };
-}

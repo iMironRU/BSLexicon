@@ -5,6 +5,7 @@
  * ошибку.
  */
 import { load as yamlLoad } from 'js-yaml';
+import { err, isObj, ok, type Result } from '../app/parse-helpers';
 import type {
   AccumRegister,
   CatalogTable,
@@ -19,7 +20,8 @@ import type {
   TabularSection,
 } from './types';
 
-export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
+/** Ре-экспорт: старые consumers ждут `Result` из этого модуля. */
+export type { Result };
 
 const KIND_ORDER: Table['kind'][] = ['Справочник', 'Документ', 'РегистрНакопления', 'РегистрСведений'];
 
@@ -252,14 +254,7 @@ export function validateFixture(schema: Schema, data: Data): Result<null> {
 
 // ── helpers ────────────────────────────────────────────────────────
 
-type PlainObj = { [k: string]: unknown };
-
-function isObj(v: unknown): v is PlainObj {
-  return !!v && typeof v === 'object' && !Array.isArray(v);
-}
-
-function ok<T>(value: T): { ok: true; value: T } { return { ok: true, value }; }
-function err(error: string): { ok: false; error: string } { return { ok: false, error }; }
+type PlainObj = Record<string, unknown>;
 
 function cmpTables(a: Table, b: Table): number {
   const ka = KIND_ORDER.indexOf(a.kind);

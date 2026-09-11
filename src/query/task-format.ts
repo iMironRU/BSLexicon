@@ -41,7 +41,7 @@
  */
 import type { BslValue } from '@core/index';
 import { load as yamlLoad } from 'js-yaml';
-import type { Result } from './schema-loader';
+import { err, getStr, isObj, type Result } from '../app/parse-helpers';
 import type { QueryParamEntry, QueryParamValue } from './parameters';
 
 /** Строгий по колонкам эталон; строки — либо строго упорядочены, либо мультимножество. */
@@ -191,15 +191,3 @@ function coerceValue(v: unknown): BslValue {
   return JSON.stringify(v);
 }
 
-function getStr(o: Record<string, unknown>, key: string): string | null {
-  const v = o[key];
-  return typeof v === 'string' ? v : null;
-}
-
-function isObj(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
-
-function err<T>(msg: string): Result<T> {
-  return { ok: false, error: msg };
-}
