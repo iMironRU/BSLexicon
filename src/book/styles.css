@@ -66,7 +66,7 @@ pre {
   gap: 14px;
 }
 .book-nav a {
-  color: #9cdcfe;
+  color: var(--blue);
   font-size: 13px;
 }
 .book-nav a:hover { text-decoration: underline; }
@@ -86,7 +86,7 @@ pre {
   text-align: center;
   color: var(--book-muted);
 }
-.book-error h2 { color: #f48771; }
+.book-error h2 { color: var(--coral); }
 
 /* HowTo */
 .book-howto {

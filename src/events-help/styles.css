@@ -101,8 +101,8 @@
 
 .events__phase-title--pre   { color: #f4a261; }   /* Перед */
 .events__phase-title--on    { color: #2a9d8f; }   /* При */
-.events__phase-title--post  { color: #4ec9b0; }   /* После */
-.events__phase-title--handle { color: #f48771; }  /* Обработка */
+.events__phase-title--post  { color: var(--teal); }   /* После */
+.events__phase-title--handle { color: var(--coral); }  /* Обработка */
 .events__phase-title--other { color: var(--fg-dim); }
 
 .events__phase-n {

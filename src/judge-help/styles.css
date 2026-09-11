@@ -268,7 +268,7 @@
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
 .judge__results--pass h2 { color: var(--accent); }
-.judge__results--fail h2 { color: var(--error, #f48771); }
+.judge__results--fail h2 { color: var(--error); }
 .judge__results--error h2 { color: #f4a261; }
 
 .judge__test-list { list-style: none; padding: 0; margin: 0; }
@@ -280,7 +280,7 @@
 .judge__test-head { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .judge__test-mark { font-size: 16px; width: 18px; }
 .judge__test--pass .judge__test-mark { color: var(--accent); }
-.judge__test--fail .judge__test-mark { color: var(--error, #f48771); }
+.judge__test--fail .judge__test-mark { color: var(--error); }
 .judge__test--error .judge__test-mark { color: #f4a261; }
 .judge__test-name { color: var(--fg); }
 .judge__test--pass .judge__test-name { color: var(--fg-dim); }
@@ -306,7 +306,7 @@
 }
 .judge__test-detail div { margin: 4px 0; }
 .judge__test-error {
-  color: var(--error, #f48771);
+  color: var(--error);
   font-family: var(--mono, monospace);
 }
 

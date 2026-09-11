@@ -14,8 +14,8 @@
   align-items: baseline;
   gap: 1rem;
   padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid #333;
-  background: #252526;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
 }
 
 .bsp-header h1 {
@@ -27,14 +27,14 @@
 
 .bsp-version {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--muted);
   font-weight: normal;
   margin-left: 0.5rem;
 }
 
 .bsp-home,
 .bsp-help-link {
-  color: #4ec9b0;
+  color: var(--teal);
   text-decoration: none;
   font-size: 0.9rem;
 }
@@ -45,17 +45,17 @@
 }
 
 .bsp-attribution {
-  background: #2d2d2d;
-  border-bottom: 1px solid #333;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
   padding: 0.5rem 1.25rem;
   margin: 0;
   font-size: 0.82rem;
-  color: #b0b0b0;
+  color: var(--muted);
   line-height: 1.4;
 }
 
 .bsp-attribution a {
-  color: #4ec9b0;
+  color: var(--teal);
 }
 
 .bsp-body {
@@ -67,8 +67,8 @@
 .bsp-sidebar {
   width: 340px;
   overflow-y: auto;
-  border-right: 1px solid #333;
-  background: #202020;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
   padding: 0.75rem 0.5rem;
   font-size: 0.9rem;
 }
@@ -78,12 +78,12 @@
   cursor: pointer;
   padding: 0.35rem 0.5rem;
   border-radius: 3px;
-  color: #ddd;
+  color: var(--text);
 }
 
 .bsp-sub > summary:hover,
 .bsp-mod > summary:hover {
-  background: #2a2a2a;
+  background: var(--panel-2);
 }
 
 .bsp-sub {
@@ -93,12 +93,12 @@
 .bsp-mod {
   margin: 0.15rem 0 0.15rem 0.85rem;
   padding-left: 0.4rem;
-  border-left: 1px solid #333;
+  border-left: 1px solid var(--border);
 }
 
 .bsp-mod > summary {
   font-size: 0.85rem;
-  color: #c0c0c0;
+  color: var(--muted);
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -113,14 +113,15 @@
   letter-spacing: 0.02em;
 }
 
+/* Специфические плашки Клиент/Сервер: свои оттенки, чтобы читались рядом */
 .bsp-side--client {
-  background: #294d4a;
-  color: #7fd7c4;
+  background: color-mix(in srgb, var(--teal) 22%, var(--panel-2));
+  color: var(--teal);
 }
 
 .bsp-side--server {
-  background: #3a3d55;
-  color: #a9b8f5;
+  background: color-mix(in srgb, var(--blue) 22%, var(--panel-2));
+  color: var(--blue);
 }
 
 .bsp-proc-list {
@@ -137,19 +138,19 @@
   border: none;
   padding: 0.25rem 0.4rem;
   border-radius: 3px;
-  color: #ccc;
+  color: var(--text);
   cursor: pointer;
   font-size: 0.85rem;
   font-family: inherit;
 }
 
 .bsp-proc-btn:hover {
-  background: #2a2a2a;
+  background: var(--panel-2);
 }
 
 .bsp-proc-btn--active {
-  background: #094771;
-  color: #fff;
+  background: var(--accent-run);
+  color: var(--text);
 }
 
 .bsp-main {
@@ -164,7 +165,7 @@
 
 .bsp-card__crumbs {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--muted);
   margin-bottom: 0.5rem;
 }
 
@@ -172,13 +173,13 @@
   font-size: 1.5rem;
   font-weight: 500;
   margin: 0 0 0.8rem 0;
-  color: #dcdcaa;
-  font-family: 'Menlo', monospace;
+  color: var(--yellow);
+  font-family: var(--font-mono);
 }
 
 .bsp-card__signature {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 0.75rem 1rem;
   overflow-x: auto;
@@ -188,8 +189,8 @@
 }
 
 .bsp-card__signature code {
-  font-family: 'Menlo', monospace;
-  color: #ddd;
+  font-family: var(--font-mono);
+  color: var(--text);
 }
 
 .bsp-card__section {
@@ -199,7 +200,7 @@
 .bsp-card__section h3 {
   font-size: 1rem;
   font-weight: 500;
-  color: #4ec9b0;
+  color: var(--teal);
   margin: 0 0 0.4rem 0;
 }
 
@@ -208,35 +209,35 @@
   font-size: 0.92rem;
   line-height: 1.55;
   margin: 0;
-  color: #d5d5d5;
+  color: var(--text);
 }
 
 .bsp-card__attribution {
   margin-top: 2rem;
   padding-top: 0.75rem;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border);
   font-size: 0.78rem;
-  color: #888;
+  color: var(--muted);
   line-height: 1.5;
 }
 
 .bsp-card__attribution code {
-  font-family: 'Menlo', monospace;
-  color: #a0a0a0;
+  font-family: var(--font-mono);
+  color: var(--muted);
 }
 
 .bsp-card__attribution a {
-  color: #4ec9b0;
+  color: var(--teal);
 }
 
 .bsp-loading,
 .bsp-error {
   padding: 1.5rem;
-  color: #888;
+  color: var(--muted);
 }
 
 .bsp-error {
-  color: #f48771;
+  color: var(--coral);
 }
 
 @media (max-width: 720px) {
@@ -247,6 +248,6 @@
     width: 100%;
     max-height: 40vh;
     border-right: none;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--border);
   }
 }
