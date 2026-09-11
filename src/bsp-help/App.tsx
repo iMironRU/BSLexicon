@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { errorMessage } from '../app/error-message';
 import type { BspHooksJson, BspModule, BspProcedure, BspSubsystem } from './types';
 import { HelpFooter } from '../help/HelpFooter';
 
@@ -28,7 +29,7 @@ export function App(): JSX.Element {
         const p = m?.procedures[0];
         if (s && m && p) setSel({ subsystem: s.name, module: m.name, procedure: p.name });
       })
-      .catch((e) => setError(String(e)));
+      .catch((e) => setError(errorMessage(e)));
   }, []);
 
   const active = useMemo(() => findActive(data, sel), [data, sel]);

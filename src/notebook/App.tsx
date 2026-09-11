@@ -93,7 +93,7 @@ function NotebookShell() {
       decodeNotebook(nbParam)
         .then((nb) => setNotebook(nb))
         .catch((e) => {
-          setLoadError(String(e));
+          setLoadError(errorMessage(e));
           setNotebook(loadDraft() ?? starterNotebook());
         });
       return;
