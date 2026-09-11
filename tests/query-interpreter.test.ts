@@ -1,27 +1,10 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
-import { buildFixture, type Fixture } from '../src/query/fixture';
+import { describe, expect, it } from 'vitest';
 import { runQuery } from '../src/query/interpreter';
-import { parseDataYaml, parseSchemaYaml } from '../src/query/schema-loader';
+import { loadMiniErpFixture, runOk } from './fixtures/mini-erp';
 
-let fx: Fixture;
-
-beforeAll(() => {
-  const schemaYaml = readFileSync(join(__dirname, '../examples/query-demo/mini-erp.schema.yaml'), 'utf8');
-  const dataYaml = readFileSync(join(__dirname, '../examples/query-demo/mini-erp.data.yaml'), 'utf8');
-  const s = parseSchemaYaml(schemaYaml);
-  const d = parseDataYaml(dataYaml);
-  if (!s.ok || !d.ok) throw new Error('demo fixtures broken');
-  fx = buildFixture(s.value, d.value);
-});
-
+const fx = loadMiniErpFixture();
 /** Утилита: прогон запроса, ожидаем ok, возвращаем rowset. */
-function run(source: string) {
-  const r = runQuery(source, fx);
-  if (!r.ok) throw new Error(`Ошибки:\n${r.errors.map((e) => `[${e.stage}] ${e.message}`).join('\n')}\nЗапрос:\n${source}`);
-  return r.rowset;
-}
+const run = (source: string) => runOk(source, fx);
 
 describe('ВЫБРАТЬ *', () => {
   it('раскрывается в поля таблицы', () => {

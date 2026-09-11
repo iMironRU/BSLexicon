@@ -1,21 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
-import { buildFixture, type Fixture } from '../src/query/fixture';
-import { parseDataYaml, parseSchemaYaml } from '../src/query/schema-loader';
+import { describe, expect, it } from 'vitest';
 import { present } from '../src/query-app/presentation';
 import { NULL, UNDEFINED } from '../src/core/interpreter/values';
+import { loadMiniErpFixture } from './fixtures/mini-erp';
 
-let fx: Fixture;
-
-beforeAll(() => {
-  const schemaYaml = readFileSync(join(__dirname, '../examples/query-demo/mini-erp.schema.yaml'), 'utf8');
-  const dataYaml = readFileSync(join(__dirname, '../examples/query-demo/mini-erp.data.yaml'), 'utf8');
-  const s = parseSchemaYaml(schemaYaml);
-  const d = parseDataYaml(dataYaml);
-  if (!s.ok || !d.ok) throw new Error('demo fixtures broken');
-  fx = buildFixture(s.value, d.value);
-});
+const fx = loadMiniErpFixture();
 
 describe('present() — представление ссылок', () => {
   it('справочник → Наименование, raw и targetRef заполнены', () => {

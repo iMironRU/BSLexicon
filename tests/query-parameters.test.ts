@@ -1,21 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
-import { buildFixture, type Fixture } from '../src/query/fixture';
+import { describe, expect, it } from 'vitest';
 import { runQuery } from '../src/query/interpreter';
-import { parseDataYaml, parseSchemaYaml } from '../src/query/schema-loader';
 import { extractParameterNames, parseParamValue, serializeParamValue, toBslValue, type QueryParamValue } from '../src/query/parameters';
 import { parseQueryTaskYaml } from '../src/query/task-format';
 import { runQueryTask } from '../src/query/task-runner';
+import { loadMiniErpFixture } from './fixtures/mini-erp';
 
-let fx: Fixture;
-
-beforeAll(() => {
-  const s = parseSchemaYaml(readFileSync(join(__dirname, '../examples/query-demo/mini-erp.schema.yaml'), 'utf8'));
-  const d = parseDataYaml(readFileSync(join(__dirname, '../examples/query-demo/mini-erp.data.yaml'), 'utf8'));
-  if (!s.ok || !d.ok) throw new Error('demo fixtures broken');
-  fx = buildFixture(s.value, d.value);
-});
+const fx = loadMiniErpFixture();
 
 describe('extractParameterNames', () => {
   it('собирает все имена параметров без дублей и в порядке встречи', () => {

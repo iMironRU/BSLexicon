@@ -2,28 +2,13 @@
  * Регрессионные тесты по багам #68–#73 песочницы запросов.
  * Изначально красные — фиксируем поведение, потом чиним.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { NULL } from '@core/interpreter/values';
-import { buildFixture, type Fixture } from '../src/query/fixture';
 import { runQuery } from '../src/query/interpreter';
-import { parseDataYaml, parseSchemaYaml } from '../src/query/schema-loader';
+import { loadMiniErpFixture, runOk } from './fixtures/mini-erp';
 
-let fx: Fixture;
-
-beforeAll(() => {
-  const s = parseSchemaYaml(readFileSync(join(__dirname, '../examples/query-demo/mini-erp.schema.yaml'), 'utf8'));
-  const d = parseDataYaml(readFileSync(join(__dirname, '../examples/query-demo/mini-erp.data.yaml'), 'utf8'));
-  if (!s.ok || !d.ok) throw new Error('demo fixtures broken');
-  fx = buildFixture(s.value, d.value);
-});
-
-function ok(source: string) {
-  const r = runQuery(source, fx);
-  if (!r.ok) throw new Error(`Ошибки:\n${r.errors.map((e) => `[${e.stage}] ${e.message}`).join('\n')}\nЗапрос:\n${source}`);
-  return r.rowset;
-}
+const fx = loadMiniErpFixture();
+const ok = (source: string) => runOk(source, fx);
 
 describe('#72 — унарные + и − перед выражением', () => {
   it('−Поле возвращает отрицательное значение поля', () => {
