@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { errorMessage } from '../app/error-message';
 import { useHashRoute } from '../app/hash-route';
+import { HELP_URL, LANDING_URL, TRAINER_URL } from '../app/urls';
 import { HelpFooter } from '../help/HelpFooter';
 import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
@@ -13,10 +14,6 @@ import { findTask, loadBookTasks, loadJudgeIndex, type JudgeIndex } from './load
 import { getProgress, loadProgress, markPassed, saveDraft, type ProgressMap } from './progress';
 import { TaskPage } from './TaskPage';
 import { Home } from './Home';
-
-const LANDING_URL = import.meta.env.BASE_URL;
-const TRAINER_URL = `${import.meta.env.BASE_URL}trainer/`;
-const HELP_URL = `${import.meta.env.BASE_URL}help/`;
 
 type Route =
   | { kind: 'home' }

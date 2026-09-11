@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { errorMessage } from '../app/error-message';
 import { useHashRoute } from '../app/hash-route';
+import { HELP_FULL_URL, HELP_URL, LANDING_URL, TRAINER_URL } from '../app/urls';
 import type { SyntaxEntry } from '../app/reference/types';
 import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { entryId, loadFullReference } from '../full-help/loader';
@@ -24,10 +25,7 @@ import {
 } from './events';
 import type { EventGroup, GroupKey, Phase } from './events';
 
-const LANDING_URL = import.meta.env.BASE_URL;
-const TRAINER_URL = `${import.meta.env.BASE_URL}trainer/`;
-const HELP_URL = `${import.meta.env.BASE_URL}help/`;
-const FULL_URL = `${import.meta.env.BASE_URL}help/full/`;
+const FULL_URL = HELP_FULL_URL;
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const HOTKEY_LABEL = IS_MAC ? '⌘K' : 'Ctrl+K';
 

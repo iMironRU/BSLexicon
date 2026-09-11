@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SyntaxEntry } from '../app/reference/types';
 import { errorMessage } from '../app/error-message';
 import { useHashRoute } from '../app/hash-route';
+import { HELP_URL, LANDING_URL, TRAINER_URL } from '../app/urls';
 import { encodeCodeParam } from '../app/url-params';
 import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { SearchOverlay } from './SearchOverlay';
@@ -18,9 +19,6 @@ import { search } from './search';
 import type { FullHit } from './search';
 import { buildTree } from './tree';
 
-const LANDING_URL = import.meta.env.BASE_URL;
-const TRAINER_URL = `${import.meta.env.BASE_URL}trainer/`;
-const HELP_URL = `${import.meta.env.BASE_URL}help/`;
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const HOTKEY_LABEL = IS_MAC ? '⌘K' : 'Ctrl+K';
 

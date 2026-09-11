@@ -7,6 +7,7 @@ import { Card } from './Card';
 import { Home } from './Home';
 import { HelpFooter } from './HelpFooter';
 import { PwaBanners } from '../app/components/PwaBanners';
+import { LANDING_URL, TRAINER_URL } from '../app/urls';
 import { ToastHost } from '../app/toast/toast';
 import { useSwipeToCloseDrawer } from './useSwipeToCloseDrawer';
 import { NavMenu } from './NavMenu';
@@ -17,8 +18,6 @@ import { useHashRoute } from './router';
 import { defaultTarget, loadTarget, saveTarget, versionsFromEntries } from './target';
 import type { Target } from './target';
 
-const LANDING_URL = import.meta.env.BASE_URL; // '/' в dev, '/BSLexicon/' в build
-const TRAINER_URL = `${import.meta.env.BASE_URL}trainer/`;
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 const HOTKEY_LABEL = IS_MAC ? '⌘K' : 'Ctrl+K';
 
