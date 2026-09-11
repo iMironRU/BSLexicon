@@ -142,6 +142,24 @@ describe('значения параметров запроса из ссылки
     expect(parseQueryUrlParams('?p.=n:1').parameters).toEqual([]);
   });
 
+  it('строка со спецсимволами & = + % пробел — round-trip', () => {
+    // encodeURIComponent внутри serializeParamValue + URLSearchParams снаружи
+    // не должны сложиться в двойное кодирование или потерять символы (проверка
+    // по просьбе книжной сессии, у которой в текстах параграфов таких значений
+    // нет, но в чужих сценариях могут появиться).
+    const entries: QueryParamEntry[] = [
+      { name: 'Строка', value: { kind: 'Строка', value: 'a=b&c+d%e ф' } },
+    ];
+    expect(parseQueryUrlParams(buildSearch(entries)).parameters).toEqual(entries);
+  });
+
+  it('NULL через encodeParamsToUrl — round-trip', () => {
+    // Проверка симметрии: то, что пишет наш собственный сериализатор,
+    // всегда должно читаться нашим же парсером.
+    const entries: QueryParamEntry[] = [{ name: 'Пусто', value: { kind: 'NULL' } }];
+    expect(parseQueryUrlParams(buildSearch(entries)).parameters).toEqual(entries);
+  });
+
   it('живёт рядом с q, source, title, embed', () => {
     const p = parseQueryUrlParams(
       `?q=${encodeQueryParam(ЗАПРОС)}&p.Склад=r:${encodeURIComponent('Справочник.Склады')}:s_main&source=${encodeURIComponent('https://example.com/x')}&embed=1`,
