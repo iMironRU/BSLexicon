@@ -49,6 +49,17 @@ export const NULL_PARAM: QueryParamValue = { kind: 'NULL' };
  * невалидные пути — в NULL (интерпретатор всё равно предупредит, если
  * параметр остался неиспользованным).
  */
+/**
+ * Массив параметров → карта имя→BslValue для `runQuery({ parameters })`.
+ * Раньше та же трёхстрочная петля дублировалась в query-app/App.tsx,
+ * notebook/QueryCell.tsx и query/task-runner.ts.
+ */
+export function buildParamMap(entries: readonly QueryParamEntry[] | undefined): { [name: string]: BslValue } {
+  const out: { [name: string]: BslValue } = {};
+  if (entries) for (const p of entries) out[p.name] = toBslValue(p.value);
+  return out;
+}
+
 export function toBslValue(v: QueryParamValue): BslValue {
   switch (v.kind) {
     case 'Строка': return v.value;

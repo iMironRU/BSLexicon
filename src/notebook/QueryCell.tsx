@@ -20,8 +20,7 @@ import { ParametersPanel } from '../query-app/ParametersPanel';
 import { buildFixture, type Fixture } from '../query/fixture';
 import { parseDataYaml, parseSchemaYaml, validateFixture } from '../query/schema-loader';
 import { runQuery, type Rowset, type RunError } from '../query/interpreter';
-import { toBslValue, type QueryParamEntry } from '../query/parameters';
-import type { BslValue } from '@core/index';
+import { buildParamMap, type QueryParamEntry } from '../query/parameters';
 
 interface QueryCellProps {
   source: string;
@@ -64,9 +63,7 @@ export function QueryCell({ source, schema, data, onChange, parameters, onParame
     if (!load.ok) return;
     setRunning(true);
     Promise.resolve().then(() => {
-      const paramMap: { [name: string]: BslValue } = {};
-      for (const p of parameters ?? []) paramMap[p.name] = toBslValue(p.value);
-      const r = runQuery(source, load.fixture, { parameters: paramMap });
+      const r = runQuery(source, load.fixture, { parameters: buildParamMap(parameters) });
       if (r.ok) {
         setRowset(r.rowset);
         setErrors([]);

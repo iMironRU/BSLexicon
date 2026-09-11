@@ -10,7 +10,7 @@ import { loadRemoteFixture, readFixtureSource, type FixtureOrigin } from './remo
 import { decodeGzQueryParam, decodeQueryParam, parseQueryUrlParams } from './url-params';
 import { ProvenanceBanner } from '../app/components/ProvenanceBanner';
 import type { QueryParamEntry } from '../query/parameters';
-import { toBslValue } from '../query/parameters';
+import { buildParamMap } from '../query/parameters';
 import { registerSdblLanguage, SDBL_LANGUAGE_ID, SDBL_THEME_ID } from './monaco-lang';
 import { registerSdblProviders } from './monaco-providers';
 import { runQuery, type Rowset, type RunError } from '../query/interpreter';
@@ -79,9 +79,7 @@ export function App() {
     if (!fixture) return;
     setRunning(true);
     Promise.resolve().then(() => {
-      const paramMap: { [name: string]: import('@core/index').BslValue } = {};
-      for (const p of params) paramMap[p.name] = toBslValue(p.value);
-      const r = runQuery(source, fixture, { parameters: paramMap });
+      const r = runQuery(source, fixture, { parameters: buildParamMap(params) });
       if (r.ok) {
         setRowset(r.rowset);
         setErrors([]);

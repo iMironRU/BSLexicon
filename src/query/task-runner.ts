@@ -20,7 +20,7 @@ import { runQuery } from './interpreter';
 import { buildFixture } from './fixture';
 import { parseDataYaml, parseSchemaYaml, validateFixture } from './schema-loader';
 import type { QueryExpected, QueryTaskSpec } from './task-format';
-import { toBslValue } from './parameters';
+import { buildParamMap } from './parameters';
 
 export type QueryTaskStatus = 'pass' | 'fail' | 'error';
 
@@ -66,9 +66,7 @@ export function runQueryTask(source: string, spec: QueryTaskSpec): QueryTaskResu
   if (!v.ok) return { status: 'error', specError: `Данные не совпадают со схемой: ${v.error}` };
   const fx = buildFixture(s.value, d.value);
 
-  const paramMap: { [name: string]: BslValue } = {};
-  for (const p of spec.parameters ?? []) paramMap[p.name] = toBslValue(p.value);
-  const r = runQuery(source, fx, { parameters: paramMap });
+  const r = runQuery(source, fx, { parameters: buildParamMap(spec.parameters) });
   if (!r.ok) return { status: 'error', errors: r.errors };
 
   const diff = compare(r.rowset, spec.expected);
