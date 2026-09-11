@@ -1,16 +1,46 @@
+/*
+ * Общая палитра и типографика BSLexicon — под лендинг imiron.ru/BSLexicon/.
+ * Голос всех тренажёров, справочника, ноутбука, песочницы, /help/bsp/ —
+ * один: Golos Text для текста, JetBrains Mono для кода, VS Code-совместимая
+ * тёмная гамма, но глубже и холоднее (#0e0f13 вместо #1e1e1e). Токены на
+ * старые имена (--bg, --fg, --bg-panel и т.п.) сохранены как алиасы —
+ * компоненты не переписываем, они наследуют новые значения.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
 :root {
-  --bg: #1e1e1e;
-  --bg-panel: #252526;
-  --bg-header: #333333;
-  --border: #3c3c3c;
-  --fg: #d4d4d4;
-  --fg-dim: #8a8a8a;
-  --accent: #4ec9b0;
+  /* Каноничные (лендинг). */
+  --page-bg: #0e0f13;
+  --panel: #16181f;
+  --panel-2: #1c1f27;
+  --border: #262932;
+  --border-hi: #3a3e49;
+  --text: #e6e7ea;
+  --muted: #7a7d87;
+  --dim: #4a4d55;
+  --teal: #4ec9b0;
+  --teal-dark: #2f8f7c;
+  --yellow: #dcdcaa;
+  --blue: #9cdcfe;
+  --orange: #ce9178;
+  --coral: #f48771;
+  --violet: #c586c0;
+  --font-body: 'Golos Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+  color-scheme: dark;
+
+  /* Legacy-алиасы — прежние имена тренажёров/ноутбука/query/справочника. */
+  --bg: var(--page-bg);
+  --bg-panel: var(--panel);
+  --bg-header: var(--panel-2);
+  --fg: var(--text);
+  --fg-dim: var(--muted);
+  --accent: var(--teal);
   --accent-run: #0e639c;
   --accent-run-hover: #1177bb;
-  --error: #f48771;
-  --mono: 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --error: var(--coral);
+  --mono: var(--font-mono);
+  --sans: var(--font-body);
 }
 
 * {
@@ -25,10 +55,15 @@ body,
 }
 
 body {
-  font-family: var(--sans);
-  color: var(--fg);
-  background: var(--bg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--page-bg);
+  -webkit-font-smoothing: antialiased;
 }
+
+code, pre { font-family: var(--font-mono); }
 
 .app {
   display: flex;

@@ -1,18 +1,8 @@
-/* Палитра и типографика — общие с тренажёром (src/app/styles.css).
-   Дублируем здесь намеренно: вынесение в общий файл — задача этапа 4
-   (рефакторинг), не этого пуша. */
+/* Палитра и типографика единые — берутся из ../app/styles.css. Каждый
+   help-entry импортирует ../app/styles.css первым, потом help/styles.css.
+   Здесь оставляем только специфические для справочника токены. */
 :root {
-  --bg: #1e1e1e;
-  --bg-panel: #252526;
-  --bg-header: #333333;
-  --border: #3c3c3c;
-  --fg: #d4d4d4;
-  --fg-dim: #8a8a8a;
-  --accent: #4ec9b0;
-  --accent-link: #569cd6;
-  --error: #f48771;
-  --mono: 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --accent-link: var(--blue);
 }
 
 * { box-sizing: border-box; }

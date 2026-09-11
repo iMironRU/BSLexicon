@@ -2,22 +2,22 @@
  * Стили страницы /book/ (#61).
  */
 :root {
-  --book-bg: #1e1e1e;
-  --book-panel: #252526;
-  --book-border: #333;
-  --book-text: #d4d4d4;
-  --book-muted: #808080;
-  --book-dim: #4a4a4a;
-  --book-accent: #4ec9b0;
-  --book-yellow: #dcdcaa;
-  color-scheme: dark;
+  /* Токены книги — теперь через общие (см. src/app/styles.css). */
+  --book-bg: var(--page-bg);
+  --book-panel: var(--panel);
+  --book-border: var(--border);
+  --book-text: var(--text);
+  --book-muted: var(--muted);
+  --book-dim: var(--dim);
+  --book-accent: var(--teal);
+  --book-yellow: var(--yellow);
 }
 
 body {
   margin: 0;
   background: var(--book-bg);
   color: var(--book-text);
-  font-family: 'Golos Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.55;
 }
