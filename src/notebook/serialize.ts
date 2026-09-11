@@ -16,6 +16,7 @@
  */
 import type { Cell, Notebook, TaskSpec } from './types';
 import type { QueryTaskSpec } from '../query/task-format';
+import { compressGzip, decompressGzip } from '../app/url-params';
 import { fromStored, toStored, type DecodeDefaults, type StoredCell } from './cell-codec';
 import { DEFAULT_TASK } from './cell-defaults';
 // mini-ERP как стартовые схема/данные — Vite-only импорт (?raw). Скрипты
@@ -174,29 +175,7 @@ export function starterNotebook(): Notebook {
  */
 export async function encodeNotebook(nb: Notebook): Promise<string> {
   const payload: SerializedNotebook = { v: 1, cells: nb.cells.map(toStored) };
-  const json = JSON.stringify(payload);
-  const bytes = new TextEncoder().encode(json);
-
-  const cs = new CompressionStream('gzip');
-  const writer = cs.writable.getWriter();
-  writer.write(bytes);
-  writer.close();
-
-  const chunks: Uint8Array[] = [];
-  const reader = cs.readable.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) chunks.push(value);
-  }
-  const total = chunks.reduce((n, c) => n + c.length, 0);
-  const merged = new Uint8Array(total);
-  let off = 0;
-  for (const c of chunks) { merged.set(c, off); off += c.length; }
-
-  let bin = '';
-  for (const b of merged) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return compressGzip(JSON.stringify(payload));
 }
 
 const DECODE_DEFAULTS: DecodeDefaults = {
@@ -212,30 +191,7 @@ const DECODE_DEFAULTS: DecodeDefaults = {
  * это обработать и показать пользователю понятный fallback.
  */
 export async function decodeNotebook(raw: string): Promise<Notebook> {
-  const std = raw.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = std + '='.repeat((4 - (std.length % 4)) % 4);
-  const binStr = atob(padded);
-  const bytes = new Uint8Array(binStr.length);
-  for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
-
-  const ds = new DecompressionStream('gzip');
-  const writer = ds.writable.getWriter();
-  writer.write(bytes);
-  writer.close();
-
-  const chunks: Uint8Array[] = [];
-  const reader = ds.readable.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) chunks.push(value);
-  }
-  const total = chunks.reduce((n, c) => n + c.length, 0);
-  const merged = new Uint8Array(total);
-  let off = 0;
-  for (const c of chunks) { merged.set(c, off); off += c.length; }
-
-  const json = new TextDecoder().decode(merged);
+  const json = await decompressGzip(raw);
   const payload = JSON.parse(json) as SerializedNotebook;
   if (payload.v !== 1 || !Array.isArray(payload.cells)) {
     throw new Error('Unsupported notebook schema');

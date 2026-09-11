@@ -115,3 +115,32 @@ export function encodeCodeParam(code: string): string {
   for (const b of bytes) binStr += String.fromCharCode(b);
   return btoa(binStr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
+
+/**
+ * Сжимает UTF-8 строку в URL-safe base64(gzip). Симметрично `decompressGzip`.
+ * Используется для `?gzcode`, `?gzq`, `?nb=` — везде, где сырой размер
+ * может съесть URL-лимит браузера.
+ */
+export async function compressGzip(text: string): Promise<string> {
+  const bytes = new TextEncoder().encode(text);
+  const cs = new CompressionStream('gzip');
+  const writer = cs.writable.getWriter();
+  writer.write(bytes);
+  writer.close();
+
+  const chunks: Uint8Array[] = [];
+  const reader = cs.readable.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) chunks.push(value);
+  }
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const merged = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { merged.set(c, off); off += c.length; }
+
+  let bin = '';
+  for (const b of merged) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
