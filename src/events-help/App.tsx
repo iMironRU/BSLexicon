@@ -105,7 +105,7 @@ export function App() {
   );
   const typeHref = useCallback(
     (owner: string) =>
-      `${import.meta.env.BASE_URL}help/full/#/owner/${encodeURIComponent(owner)}`,
+      `${HELP_FULL_URL}#/owner/${encodeURIComponent(owner)}`,
     [],
   );
 

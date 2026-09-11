@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { renderMarkdown } from '../app/markdown';
 import { useToast } from '../app/toast/context';
+import { encodeCodeParam } from '../app/url-params';
+import { TRAINER_URL } from '../app/urls';
 import type { Task, TaskResult } from '../judge/types';
 import type { BookIndexEntry } from './loader';
 
@@ -67,7 +69,7 @@ export function TaskPage({
     setResult(null);
   };
 
-  const trainerUrl = `${import.meta.env.BASE_URL}trainer/?code=${encodeCodeParam(source)}&title=${encodeURIComponent(`${book.title} — ${task.title}`)}`;
+  const trainerUrl = `${TRAINER_URL}?code=${encodeCodeParam(source)}&title=${encodeURIComponent(`${book.title} — ${task.title}`)}`;
 
   return (
     <article className="judge__task">
@@ -209,11 +211,3 @@ function difficultyLabel(d: string): string {
   }
 }
 
-/** Копия encodeCodeParam из src/app/url-params — не тянем весь модуль
- *  ради одной функции. */
-function encodeCodeParam(code: string): string {
-  const bytes = new TextEncoder().encode(code);
-  let bin = '';
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}

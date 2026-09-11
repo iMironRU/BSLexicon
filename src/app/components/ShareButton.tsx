@@ -1,4 +1,5 @@
 import { encodeCodeParam } from '../url-params';
+import { TRAINER_URL } from '../urls';
 import { useToast } from '../toast/context';
 
 interface ShareButtonProps {
@@ -22,11 +23,7 @@ export function ShareButton({ code }: ShareButtonProps) {
   const toast = useToast();
 
   const handleClick = async (): Promise<void> => {
-    const url =
-      window.location.origin +
-      import.meta.env.BASE_URL +
-      'trainer/?code=' +
-      encodeCodeParam(code);
+    const url = `${window.location.origin}${TRAINER_URL}?code=${encodeCodeParam(code)}`;
 
     if (navigator.clipboard?.writeText) {
       try {

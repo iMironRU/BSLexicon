@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Catalog } from '@core/index';
 import { errorMessage } from '../error-message';
 import { loadReference } from '../reference/load';
+import { HELP_URL } from '../urls';
 import type { SyntaxEntry } from '../reference/types';
 
 interface ReferencePanelProps {
@@ -105,7 +106,7 @@ export function ReferencePanel({ catalog, onClose }: ReferencePanelProps) {
         )}
         <a
           className="ref__open-site"
-          href={`${import.meta.env.BASE_URL}help/`}
+          href={HELP_URL}
           title="Открыть как самостоятельный сайт"
         >
           Открыть как сайт →

@@ -8,6 +8,7 @@ import { DebugSession, run } from '@core/index';
 import type { DebugFrame, DebugSnapshot, RunError, RunResult, VariableView } from '@core/index';
 import { loadCatalog } from './catalog';
 import { EXAMPLES } from './examples';
+import { LANDING_URL } from './urls';
 import { loadDraft, saveDraft } from './snippets';
 import { useOnline } from './useOnline';
 import { loadGitConfig } from './git-config';
@@ -204,7 +205,7 @@ export function App() {
         <div className="app__brand">
           <a
             className="app__logo"
-            href={import.meta.env.BASE_URL}
+            href={LANDING_URL}
             title="К стартовой странице со всеми режимами"
           >
             BSLexicon
