@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useHashRoute } from '../app/hash-route';
 import type { SyntaxEntry } from '../app/reference/types';
 import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { entryId, loadFullReference } from '../full-help/loader';
@@ -72,16 +73,6 @@ function formatHash(route: Route): string {
   return `#/${encodeURIComponent(route.id)}`;
 }
 
-function useHashRoute(): Route {
-  const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
-  useEffect(() => {
-    const onChange = (): void => setRoute(parseHash(window.location.hash));
-    window.addEventListener('hashchange', onChange);
-    return () => window.removeEventListener('hashchange', onChange);
-  }, []);
-  return route;
-}
-
 export function App() {
   const [entries, setEntries] = useState<SyntaxEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +80,7 @@ export function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useSwipeToCloseDrawer(sidebarOpen, () => setSidebarOpen(false));
   const [progress, setProgress] = useState<number | null>(null);
-  const route = useHashRoute();
+  const route = useHashRoute(parseHash);
 
   useEffect(() => {
     let alive = true;

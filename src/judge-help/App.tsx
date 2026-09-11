@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useHashRoute } from '../app/hash-route';
 import { HelpFooter } from '../help/HelpFooter';
 import { Loader } from '../help/Loader';
 import { NavMenu } from '../help/NavMenu';
@@ -35,18 +36,8 @@ function parseHash(hash: string): Route {
   return { kind: 'not-found', raw: t };
 }
 
-function useHashRoute(): Route {
-  const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
-  useEffect(() => {
-    const onHash = (): void => setRoute(parseHash(window.location.hash));
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
-  return route;
-}
-
 export function App() {
-  const route = useHashRoute();
+  const route = useHashRoute(parseHash);
   const [index, setIndex] = useState<JudgeIndex | null>(null);
   const [indexError, setIndexError] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressMap>(() => loadProgress());

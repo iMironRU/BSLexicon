@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import type { CatalogKind } from '@core/index';
+import { useHashRoute as useGenericHashRoute } from '../app/hash-route';
 
 /**
  * Hash-роутер справочника. Формат: `#/<kind>/<encodeURIComponent(id)>`.
@@ -47,11 +47,5 @@ export function formatHash(route: Route): string {
 
 /** Подписка на `hashchange`; обновляется синхронно при изменении URL. */
 export function useHashRoute(): Route {
-  const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
-  useEffect(() => {
-    const onChange = (): void => setRoute(parseHash(window.location.hash));
-    window.addEventListener('hashchange', onChange);
-    return () => window.removeEventListener('hashchange', onChange);
-  }, []);
-  return route;
+  return useGenericHashRoute(parseHash);
 }

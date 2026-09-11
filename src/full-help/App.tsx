@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SyntaxEntry } from '../app/reference/types';
+import { useHashRoute } from '../app/hash-route';
 import { encodeCodeParam } from '../app/url-params';
 import { ALL_CONTEXTS, CONTEXT_LABELS } from '../help/target';
 import { SearchOverlay } from './SearchOverlay';
@@ -50,16 +51,6 @@ function formatHash(route: Route): string {
   return `#/${encodeURIComponent(route.id)}`;
 }
 
-function useHashRoute(): Route {
-  const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
-  useEffect(() => {
-    const onChange = (): void => setRoute(parseHash(window.location.hash));
-    window.addEventListener('hashchange', onChange);
-    return () => window.removeEventListener('hashchange', onChange);
-  }, []);
-  return route;
-}
-
 export function App() {
   const [data, setData] = useState<Awaited<ReturnType<typeof loadFullReference>> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +59,7 @@ export function App() {
   useSwipeToCloseDrawer(sidebarOpen, () => setSidebarOpen(false));
   /** Прогресс fetch (0..1) или null — если Content-Length не пришёл. */
   const [progress, setProgress] = useState<number | null>(null);
-  const route = useHashRoute();
+  const route = useHashRoute(parseHash);
 
   useEffect(() => {
     let alive = true;
