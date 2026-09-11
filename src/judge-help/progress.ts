@@ -4,6 +4,8 @@
  * при недоступности storage — работаем без прогресса, но не падаем.
  */
 
+import { loadJson, saveJson } from '../app/local-store';
+
 const KEY = 'bslexicon:judge:progress';
 
 export interface TaskProgress {
@@ -20,17 +22,11 @@ function key(bookId: string, taskId: string): string {
 }
 
 export function loadProgress(): ProgressMap {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') return {};
-    // Best-effort: не валидируем каждый элемент — если кривой, UI просто
-    // не покажет прогресс, но не упадёт.
-    return parsed as ProgressMap;
-  } catch {
-    return {};
-  }
+  const parsed = loadJson<unknown>(KEY);
+  if (!parsed || typeof parsed !== 'object') return {};
+  // Best-effort: не валидируем каждый элемент — если кривой, UI просто
+  // не покажет прогресс, но не упадёт.
+  return parsed as ProgressMap;
 }
 
 export function markPassed(bookId: string, taskId: string, solution: string): ProgressMap {
@@ -56,9 +52,5 @@ export function saveDraft(bookId: string, taskId: string, solution: string): voi
 }
 
 function save(map: ProgressMap): void {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(map));
-  } catch {
-    // ignore — Safari Private / переполнение quota
-  }
+  saveJson(KEY, map);
 }

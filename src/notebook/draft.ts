@@ -18,6 +18,7 @@
  */
 
 import type { Cell, Notebook } from './types';
+import { loadJson, removeKey, saveJson } from '../app/local-store';
 import { fromStored, toStored, type DecodeDefaults, type StoredCell } from './cell-codec';
 import { DEFAULT_QUERY_TASK, DEFAULT_TASK, EMPTY_QUERY_DATA, EMPTY_QUERY_SCHEMA } from './cell-defaults';
 
@@ -42,12 +43,8 @@ const DEFAULTS: DecodeDefaults = {
 };
 
 export function saveDraft(nb: Notebook): void {
-  try {
-    const payload: StoredNotebook = { v: 1, cells: nb.cells.map(toStored) };
-    localStorage.setItem(KEY, JSON.stringify(payload));
-  } catch {
-    /* storage недоступен — молча игнорируем */
-  }
+  const payload: StoredNotebook = { v: 1, cells: nb.cells.map(toStored) };
+  saveJson(KEY, payload);
 }
 
 /**
@@ -56,22 +53,12 @@ export function saveDraft(nb: Notebook): void {
  * чем «пустой экран с ошибкой».
  */
 export function loadDraft(): Notebook | null {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as StoredNotebook;
-    if (parsed.v !== 1 || !Array.isArray(parsed.cells)) return null;
-    const cells: Cell[] = parsed.cells.map((c) => fromStored(c, nextId, DEFAULTS));
-    return { cells };
-  } catch {
-    return null;
-  }
+  const parsed = loadJson<StoredNotebook>(KEY);
+  if (!parsed || parsed.v !== 1 || !Array.isArray(parsed.cells)) return null;
+  const cells: Cell[] = parsed.cells.map((c) => fromStored(c, nextId, DEFAULTS));
+  return { cells };
 }
 
 export function clearDraft(): void {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    /* no-op */
-  }
+  removeKey(KEY);
 }

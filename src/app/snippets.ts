@@ -14,6 +14,8 @@
  * Также экспорт/импорт JSON-файлом — для переноса между устройствами.
  */
 
+import { loadJson, loadString, removeKey, saveJson, saveString } from './local-store';
+
 const KEY_DRAFT = 'bslexicon:trainer:draft';
 const KEY_SNIPPETS = 'bslexicon:trainer:snippets';
 
@@ -33,28 +35,15 @@ interface SnippetsFile {
 // ── Draft (одна ячейка) ──────────────────────────────────────────────
 
 export function loadDraft(): string | null {
-  try {
-    const v = localStorage.getItem(KEY_DRAFT);
-    return typeof v === 'string' ? v : null;
-  } catch {
-    return null;
-  }
+  return loadString(KEY_DRAFT);
 }
 
 export function saveDraft(code: string): void {
-  try {
-    localStorage.setItem(KEY_DRAFT, code);
-  } catch {
-    // storage недоступен — молча игнорируем
-  }
+  saveString(KEY_DRAFT, code);
 }
 
 export function clearDraft(): void {
-  try {
-    localStorage.removeItem(KEY_DRAFT);
-  } catch {
-    // ignore
-  }
+  removeKey(KEY_DRAFT);
 }
 
 // ── Именованные сниппеты (список) ────────────────────────────────────
@@ -149,12 +138,7 @@ export function importAll(
 // ── Служебные ────────────────────────────────────────────────────────
 
 function rawSnippets(): unknown {
-  try {
-    const raw = localStorage.getItem(KEY_SNIPPETS);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+  return loadJson<unknown>(KEY_SNIPPETS);
 }
 
 function parseSnippets(raw: unknown): Snippet[] {
@@ -166,11 +150,7 @@ function parseSnippets(raw: unknown): Snippet[] {
 
 function writeSnippets(items: Snippet[]): void {
   const payload: SnippetsFile = { version: 1, items };
-  try {
-    localStorage.setItem(KEY_SNIPPETS, JSON.stringify(payload));
-  } catch {
-    // storage недоступен (кавычек не хватило, private mode) — тихо
-  }
+  saveJson(KEY_SNIPPETS, payload);
 }
 
 function isSnippet(v: unknown): v is Snippet {
