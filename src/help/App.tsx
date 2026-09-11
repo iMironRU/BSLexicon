@@ -163,6 +163,7 @@ export function App() {
               { label: 'Полный СП', href: `${LANDING_URL}help/full/`, hint: 'Все ~20 тыс. записей платформы' },
               { label: 'События 1С', href: `${LANDING_URL}help/events/`, hint: '670 событий + lifecycle' },
               { label: 'Judge', href: `${LANDING_URL}help/judge/`, hint: 'Задачи из книг серии с чек-поинтами' },
+              { label: 'Хуки БСП', href: `${LANDING_URL}help/bsp/`, hint: 'Переопределяемые модули по подсистемам' },
               { label: '← Тренажёр', href: TRAINER_URL, hint: 'Писать и отлаживать BSL' },
             ]}
           />
