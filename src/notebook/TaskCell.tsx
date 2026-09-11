@@ -6,7 +6,7 @@ import { registerCatalogProviders } from '../app/monaco/providers';
 import { BSL_LANGUAGE_ID, BSL_THEME, registerBslLanguage } from '../app/monaco/language';
 import { runTask } from '../judge/runner';
 import type { Task, TaskResult } from '../judge/types';
-import { renderMarkdown } from './markdown';
+import { renderMarkdown } from '../app/markdown';
 import { TaskEditor } from './TaskEditor';
 import { parseEditableRegions, isSelectionEditable } from './blanks';
 import type { TaskSpec } from './types';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderMarkdown } from '../src/notebook/markdown';
+import { renderMarkdown } from '../src/app/markdown';
 
 /**
  * Проверяем не HTML-строку (её у нас нет — только React-элементы), а

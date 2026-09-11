@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { renderMarkdown } from '../app/markdown';
 import { useToast } from '../app/toast/context';
 import type { Task, TaskResult } from '../judge/types';
 import type { BookIndexEntry } from './loader';
@@ -197,39 +198,6 @@ function TestResults({ result }: { result: TaskResult }) {
   );
 }
 
-/** Минимальный markdown: `**bold**`, backtick-code, простые списки и абзацы. */
-function renderMarkdown(text: string): ReactNode {
-  const paragraphs = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
-  return paragraphs.map((p, i) => {
-    if (p.startsWith('- ')) {
-      const items = p.split('\n').map((l) => l.replace(/^-\s+/, ''));
-      return <ul key={i}>{items.map((li, j) => <li key={j}>{renderInline(li)}</li>)}</ul>;
-    }
-    return <p key={i}>{renderInline(p)}</p>;
-  });
-}
-
-function renderInline(text: string): ReactNode {
-  // Разбиваем по `code` и **bold**. Никакого HTML — только текст.
-  const parts: ReactNode[] = [];
-  const re = /(`[^`]+`|\*\*[^*]+\*\*)/g;
-  let last = 0;
-  let m;
-  let i = 0;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
-    const chunk = m[0];
-    if (chunk.startsWith('`')) {
-      parts.push(<code key={`c${i}`}>{chunk.slice(1, -1)}</code>);
-    } else {
-      parts.push(<b key={`b${i}`}>{chunk.slice(2, -2)}</b>);
-    }
-    last = m.index + chunk.length;
-    i += 1;
-  }
-  if (last < text.length) parts.push(text.slice(last));
-  return parts;
-}
 
 function difficultyLabel(d: string): string {
   switch (d) {

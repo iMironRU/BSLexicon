@@ -13,7 +13,7 @@ import MonacoEditor from '@monaco-editor/react';
 import type { BeforeMount } from '@monaco-editor/react';
 import { registerSdblLanguage, SDBL_LANGUAGE_ID, SDBL_THEME_ID } from '../query-app/monaco-lang';
 import { registerSdblProviders } from '../query-app/monaco-providers';
-import { renderMarkdown } from './markdown';
+import { renderMarkdown } from '../app/markdown';
 import { runQueryTask, type QueryTaskResult } from '../query/task-runner';
 import type { QueryTaskSpec } from '../query/task-format';
 import { parseSchemaYaml } from '../query/schema-loader';

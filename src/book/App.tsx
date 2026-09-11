@@ -10,7 +10,7 @@
  */
 import { useEffect, useState } from 'react';
 import { parseBookYaml, type Book, type BookChapter } from './book-format';
-import { renderMarkdown } from '../notebook/markdown';
+import { renderMarkdown } from '../app/markdown';
 
 type State =
   | { kind: 'idle' }

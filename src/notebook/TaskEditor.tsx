@@ -10,7 +10,7 @@ import MonacoEditor from '@monaco-editor/react';
 import type { BeforeMount } from '@monaco-editor/react';
 import type { Catalog } from '@core/index';
 import { BSL_LANGUAGE_ID, BSL_THEME, registerBslLanguage } from '../app/monaco/language';
-import { renderMarkdown } from './markdown';
+import { renderMarkdown } from '../app/markdown';
 import type { TaskSpec } from './types';
 import type { TaskTest } from '../judge/types';
 

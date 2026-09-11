@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { renderMarkdown } from './markdown';
+import { renderMarkdown } from '../app/markdown';
 
 interface MarkdownCellProps {
   source: string;
