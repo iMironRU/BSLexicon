@@ -146,11 +146,23 @@ export function parseParamValue(s: string): QueryParamValue {
       return Number.isFinite(n) ? { kind: 'Число', value: n } : NULL_PARAM;
     }
     case 'b': return { kind: 'Булево', value: payload === '1' };
-    case 'd': return { kind: 'Дата', value: payload };
+    case 'd': return { kind: 'Дата', value: normalizeDateIso(payload) };
     case 'r': {
       const [refs, val] = payload.split(':');
       return { kind: 'Ссылка', refs: decodeURIComponent(refs ?? ''), value: decodeURIComponent(val ?? '') };
     }
     default: return NULL_PARAM;
   }
+}
+
+/**
+ * Панель параметров и фикстура ждут полный ISO `YYYY-MM-DDTHH:mm:ss` (без TZ).
+ * Ссылка из книги может прийти в сокращённой форме: только день или без секунд.
+ * Дополняем до канонического формата, иначе `<input type="datetime-local">`
+ * молча покажет пустоту.
+ */
+function normalizeDateIso(s: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s}T00:00:00`;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s)) return `${s}:00`;
+  return s;
 }

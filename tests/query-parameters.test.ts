@@ -96,6 +96,18 @@ describe('Сериализация значений параметров', () =>
   it('битый payload → NULL', () => {
     expect(parseParamValue('xxx:yyy')).toEqual({ kind: 'NULL' });
   });
+
+  it('короткая дата в URL → полный ISO (для datetime-local и фикстур)', () => {
+    // Из книги может прийти только день или без секунд — дополняем сами.
+    expect(parseParamValue('d:2025-01-15')).toEqual({
+      kind: 'Дата',
+      value: '2025-01-15T00:00:00',
+    });
+    expect(parseParamValue('d:2025-01-15T14:30')).toEqual({
+      kind: 'Дата',
+      value: '2025-01-15T14:30:00',
+    });
+  });
 });
 
 describe('Query-task: parameters в спеке', () => {
