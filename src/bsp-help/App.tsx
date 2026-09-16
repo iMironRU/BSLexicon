@@ -151,7 +151,7 @@ function ProcedureCard({ sub, mod, proc, license }: {
         </section>
       )}
 
-      {proc.params.some((p) => p.type || p.description) && (
+      {proc.params.some((p) => p.type || p.description || p.fields) && (
         <section className="bsp-card__section">
           <h3>Параметры</h3>
           <dl className="bsp-card__params">
@@ -177,13 +177,27 @@ function ProcParam({ param }: { param: BspParam }): JSX.Element {
         <code>{param.name}</code>
         {param.type && <span className="bsp-card__param-type">{cleanType(param.type)}</span>}
       </dt>
-      <dd className="bsp-card__param-desc">{param.description || <em>без описания в шапке</em>}</dd>
+      <dd className="bsp-card__param-desc">
+        {param.description || (!param.fields && <em>без описания в шапке</em>)}
+        {param.fields && param.fields.length > 0 && (
+          <ul className="bsp-card__fields">
+            {param.fields.map((f) => (
+              <li key={f.name} className="bsp-card__field">
+                <code>{f.name}</code>
+                {f.type && <span className="bsp-card__param-type"> · {cleanType(f.type)}</span>}
+                {f.description && <span className="bsp-card__field-desc"> — {f.description}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </dd>
     </>
   );
 }
 
-/** Секция «Параметры:» в БСП пишет тип с трейлингом `:` перед вложенными
- *  полями структуры. Для карточки этот двоеточник — визуальный шум. */
+/** Старые JSON могли сохранить тип с трейлингом `:` перед вложенными полями
+ *  структуры. Скрипт `build-bsp-hooks.ts` теперь уже отрезает его; правило
+ *  оставляем как страховку на случай пересборки со старым выходом. */
 function cleanType(t: string): string {
   return t.replace(/:$/, '').trim();
 }

@@ -83,6 +83,12 @@ interface BspParam {
   type: string;
   /** Docstring параметра, ужe отрезанный от заголовка. Может быть пустой. */
   description: string;
+  /**
+   * Для параметров-структур: описание вложенных полей (`* Ключ - Тип - …`).
+   * Один уровень вглубь — вложенные структуры разбираются как строка типа,
+   * без рекурсии. Отсутствует для примитивов.
+   */
+  fields?: BspParam[];
 }
 
 interface BspProcedure {
@@ -290,23 +296,55 @@ function enrichParams(proc: BspProcedure): void {
     // Тип — первый токен(ы) до `-` или до конца, если `-` не осталось.
     // Формат в БСП: «<Тип> - <описание>» или «<Тип>» без описания.
     const typeAndDesc = first.split(/\s+[-–—]\s+/);
-    param.type = typeAndDesc[0].trim();
+    const rawType = typeAndDesc[0].trim();
+    param.type = stripTrailingColon(rawType);
     let desc = typeAndDesc.slice(1).join(' - ').trim();
+    const isStruct = rawType.endsWith(':') && /Структура/i.test(rawType);
+    const fields: BspParam[] = [];
+    let current: BspParam | null = null;
 
-    // Собираем продолжение — строки с большим отступом или начинающиеся
-    // на «  * » (вложенные поля структуры мы не берём, только описание
-    // самого параметра).
+    // Собираем продолжение — строки с большим отступом. Для примитивов
+    // это описание. Для параметра-структуры дополнительно вычитываем
+    // вложенные поля (`* Имя - Тип - описание`) и их продолжения.
     for (let i = start + 1; i < lines.length; i += 1) {
       const l = lines[i];
-      if (!/^\s{2,}/.test(l) || /^\s*\*\s+/.test(l)) break;
-      const cont = l.trim();
-      if (!cont) break;
+      const trimmed = l.trim();
+      if (!trimmed) break;
+      if (!/^\s{2,}/.test(l)) break;
       // Следующий именованный параметр — прекращаем.
-      if (proc.params.some((p) => new RegExp(`^${escapeRegExp(p.name)}\\s*[-–—]`).test(cont))) break;
-      desc += ' ' + cont;
+      if (proc.params.some((p) => new RegExp(`^${escapeRegExp(p.name)}\\s*[-–—]`).test(trimmed))) break;
+
+      const fieldMatch = isStruct ? trimmed.match(/^\*\s+([^\s-–—]+)\s*[-–—]\s*(.+)$/) : null;
+      if (fieldMatch) {
+        // Новое поле структуры: закрываем предыдущее и разбираем.
+        if (current) fields.push(current);
+        const [, fname, frest] = fieldMatch;
+        const parts = frest.split(/\s+[-–—]\s+/);
+        current = {
+          name: fname,
+          type: stripTrailingColon(parts[0].trim()),
+          description: parts.slice(1).join(' - ').trim(),
+        };
+        continue;
+      }
+      if (current) {
+        // Продолжение описания текущего поля (перенос строки).
+        if (current.description) current.description += ' ' + trimmed;
+        else current.description = trimmed;
+        continue;
+      }
+      // Продолжение описания самого параметра.
+      desc += (desc ? ' ' : '') + trimmed;
     }
+    if (current) fields.push(current);
     param.description = desc.trim();
+    if (fields.length > 0) param.fields = fields;
   }
+}
+
+/** «Структура:» → «Структура». В шапке двоеточие маркирует вложенный блок. */
+function stripTrailingColon(s: string): string {
+  return s.replace(/:$/, '').trim();
 }
 
 function escapeRegExp(s: string): string {

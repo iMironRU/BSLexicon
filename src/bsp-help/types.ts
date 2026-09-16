@@ -6,6 +6,8 @@ export interface BspParam {
   name: string;
   type: string;
   description: string;
+  /** Вложенные поля структуры («Параметры — Структура: * Отказ — Булево …»). */
+  fields?: BspParam[];
 }
 
 export interface BspProcedure {
