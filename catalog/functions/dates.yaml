@@ -4,7 +4,7 @@
 - id: Дата
   kind: function
   names: { ru: Дата, en: Date }
-  category: Дата
+  category: Даты
   signature: "Дата(Год, Месяц, День, Час, Минута, Секунда): Дата"
   description: >-
     Собирает дату из компонентов. Час, Минута и Секунда необязательны (по
@@ -26,7 +26,7 @@
 - id: ТекущаяДата
   kind: function
   names: { ru: ТекущаяДата, en: CurrentDate }
-  category: Дата
+  category: Даты
   signature: "ТекущаяДата(): Дата"
   description: Возвращает текущую дату и время сеанса.
   returns: { type: Дата }
@@ -34,7 +34,7 @@
 - id: Год
   kind: function
   names: { ru: Год, en: Year }
-  category: Дата
+  category: Даты
   signature: "Год(Дата): Число"
   description: Возвращает год указанной даты.
   params:
@@ -47,7 +47,7 @@
 - id: Месяц
   kind: function
   names: { ru: Месяц, en: Month }
-  category: Дата
+  category: Даты
   signature: "Месяц(Дата): Число"
   description: Возвращает номер месяца (1..12) указанной даты.
   params:
@@ -60,7 +60,7 @@
 - id: День
   kind: function
   names: { ru: День, en: Day }
-  category: Дата
+  category: Даты
   signature: "День(Дата): Число"
   description: Возвращает день месяца (1..31) указанной даты.
   params:
@@ -73,7 +73,7 @@
 - id: Час
   kind: function
   names: { ru: Час, en: Hour }
-  category: Дата
+  category: Даты
   signature: "Час(Дата): Число"
   description: Возвращает час (0..23) указанной даты.
   params:
@@ -86,7 +86,7 @@
 - id: Минута
   kind: function
   names: { ru: Минута, en: Minute }
-  category: Дата
+  category: Даты
   signature: "Минута(Дата): Число"
   description: Возвращает минуту (0..59) указанной даты.
   params:
@@ -96,7 +96,7 @@
 - id: Секунда
   kind: function
   names: { ru: Секунда, en: Second }
-  category: Дата
+  category: Даты
   signature: "Секунда(Дата): Число"
   description: Возвращает секунду (0..59) указанной даты.
   params:
@@ -106,7 +106,7 @@
 - id: НачалоДня
   kind: function
   names: { ru: НачалоДня, en: BegOfDay }
-  category: Дата
+  category: Даты
   signature: "НачалоДня(Дата): Дата"
   description: Возвращает начало суток (00:00:00) указанной даты.
   params:
@@ -119,7 +119,7 @@
 - id: КонецДня
   kind: function
   names: { ru: КонецДня, en: EndOfDay }
-  category: Дата
+  category: Даты
   signature: "КонецДня(Дата): Дата"
   description: Возвращает конец суток (23:59:59) указанной даты.
   params:
@@ -132,7 +132,7 @@
 - id: ДобавитьМесяц
   kind: function
   names: { ru: ДобавитьМесяц, en: AddMonth }
-  category: Дата
+  category: Даты
   signature: "ДобавитьМесяц(Дата, КоличествоМесяцев): Дата"
   description: >-
     Прибавляет к дате указанное число месяцев (может быть отрицательным). День
