@@ -73,6 +73,24 @@
   font-size: 0.9rem;
 }
 
+.bsp-sidebar__filter {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.5rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.88rem;
+}
+
+.bsp-sidebar__filter:focus {
+  outline: none;
+  border-color: var(--teal);
+}
+
 .bsp-sub > summary,
 .bsp-mod > summary {
   cursor: pointer;
@@ -192,6 +210,21 @@
 .bsp-card__signature code {
   font-family: var(--font-mono);
   color: var(--text);
+}
+
+.bsp-card__example {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  white-space: pre;
+  margin: 0;
+  color: var(--text);
+  tab-size: 4;
 }
 
 .bsp-card__section {

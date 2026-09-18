@@ -14,6 +14,7 @@ export function App(): JSX.Element {
   const [data, setData] = useState<BspHooksJson | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sel, setSel] = useState<Selection | null>(null);
+  const [filter, setFilter] = useState('');
 
   useEffect(() => {
     const url = `${BASE_URL}reference/bsp-hooks.json`;
@@ -24,14 +25,32 @@ export function App(): JSX.Element {
       })
       .then((json) => {
         setData(json);
-        // Preselect: первая подсистема → первый модуль → первая процедура.
-        const s = json.subsystems[0];
-        const m = s?.modules[0];
-        const p = m?.procedures[0];
-        if (s && m && p) setSel({ subsystem: s.name, module: m.name, procedure: p.name });
+        // Deep-link из hash приоритетнее дефолта — читатель пришёл по ссылке.
+        const fromHash = parseHash(window.location.hash);
+        const initial = fromHash && findActive(json, fromHash) ? fromHash : defaultSelection(json);
+        if (initial) {
+          setSel(initial);
+          writeHash(initial);
+        }
       })
       .catch((e) => setError(errorMessage(e)));
   }, []);
+
+  // Кнопка «Назад» браузера — hash уже поменялся, синхронизируем sel.
+  useEffect(() => {
+    if (!data) return;
+    const onChange = (): void => {
+      const s = parseHash(window.location.hash);
+      if (s && findActive(data, s)) setSel(s);
+    };
+    window.addEventListener('hashchange', onChange);
+    return () => window.removeEventListener('hashchange', onChange);
+  }, [data]);
+
+  const handleSelect = (s: Selection): void => {
+    setSel(s);
+    writeHash(s);
+  };
 
   const active = useMemo(() => findActive(data, sel), [data, sel]);
 
@@ -50,12 +69,20 @@ export function App(): JSX.Element {
 
       <div className="bsp-body">
         <aside className="bsp-sidebar">
-          {data.subsystems.map((s) => (
+          <input
+            type="search"
+            className="bsp-sidebar__filter"
+            placeholder="Поиск по процедурам…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+          {filterSubsystems(data.subsystems, filter).map((s) => (
             <SubsystemNode
               key={s.name}
               subsystem={s}
               sel={sel}
-              onSelect={setSel}
+              forceOpen={filter !== ''}
+              onSelect={handleSelect}
             />
           ))}
         </aside>
@@ -87,23 +114,25 @@ function AttributionBanner({ data }: { data: BspHooksJson }): JSX.Element {
 interface NodeProps {
   subsystem: BspSubsystem;
   sel: Selection | null;
+  /** При активном поиске раскрываем ветку, даже если она не в текущем sel. */
+  forceOpen: boolean;
   onSelect: (s: Selection) => void;
 }
 
-function SubsystemNode({ subsystem, sel, onSelect }: NodeProps): JSX.Element {
-  const expanded = sel?.subsystem === subsystem.name;
+function SubsystemNode({ subsystem, sel, forceOpen, onSelect }: NodeProps): JSX.Element {
+  const expanded = forceOpen || sel?.subsystem === subsystem.name;
   return (
     <details open={expanded} className="bsp-sub">
       <summary>{subsystem.name}</summary>
       {subsystem.modules.map((m) => (
-        <ModuleNode key={m.name} subsystem={subsystem} module={m} sel={sel} onSelect={onSelect} />
+        <ModuleNode key={m.name} subsystem={subsystem} module={m} sel={sel} forceOpen={forceOpen} onSelect={onSelect} />
       ))}
     </details>
   );
 }
 
-function ModuleNode({ subsystem, module, sel, onSelect }: NodeProps & { module: BspModule }): JSX.Element {
-  const expanded = sel?.subsystem === subsystem.name && sel.module === module.name;
+function ModuleNode({ subsystem, module, sel, forceOpen, onSelect }: NodeProps & { module: BspModule }): JSX.Element {
+  const expanded = forceOpen || (sel?.subsystem === subsystem.name && sel.module === module.name);
   return (
     <details open={expanded} className="bsp-mod">
       <summary>
@@ -162,6 +191,16 @@ function ProcedureCard({ sub, mod, proc, license }: {
         </section>
       )}
 
+      {(() => {
+        const example = extractExample(proc.docstring);
+        return example ? (
+          <section className="bsp-card__section">
+            <h3>Пример</h3>
+            <pre className="bsp-card__example"><code>{example}</code></pre>
+          </section>
+        ) : null;
+      })()}
+
       <p className="bsp-card__attribution">
         Фрагмент шапки процедуры из модуля <code>{mod.name}</code>, БСП. {license.holder}, лицензия{' '}
         <a href={license.url} target="_blank" rel="noreferrer">{license.spdx}</a>. Приведён в сокращении.
@@ -207,7 +246,31 @@ function firstParagraph(text: string): string {
   // Фазы A показываем только summary, полный docstring остаётся в JSON.
   const cutParams = text.split(/\n\s*Параметры:\s*\n/)[0];
   const cutBlank = cutParams.split(/\n\s*\n/)[0];
-  return cutBlank.trim();
+  // Жёсткие переносы шапки БСП по 120 символов — читателю не нужны,
+  // склеиваем в один абзац, CSS сам расставит переносы по ширине.
+  return cutBlank.replace(/\s*\n\s*/g, ' ').trim();
+}
+
+/**
+ * Вырезаем блок «Пример:» из шапки: строка «Пример:» на своей строке и всё
+ * до конца docstring — примеры в БСП идут последней секцией. Если следующей
+ * секции нет, но пример пустой, отдаём null. Общий лидирующий отступ (один
+ * пробел или таб перед каждой строкой) снимаем — код читается ровнее.
+ */
+function extractExample(text: string): string | null {
+  const m = text.match(/^Пример:\s*\n([\s\S]*)$/m);
+  if (!m) return null;
+  const body = m[1].replace(/\s+$/, '');
+  if (!body) return null;
+  const lines = body.split('\n');
+  const nonBlank = lines.filter((l) => l.trim() !== '');
+  const commonIndent = Math.min(
+    ...nonBlank.map((l) => l.match(/^[ \t]*/)![0].length),
+  );
+  if (commonIndent > 0) {
+    return lines.map((l) => l.slice(commonIndent)).join('\n');
+  }
+  return body;
 }
 
 function findActive(data: BspHooksJson | null, sel: Selection | null):
@@ -219,4 +282,62 @@ function findActive(data: BspHooksJson | null, sel: Selection | null):
   const proc = mod?.procedures.find((p) => p.name === sel.procedure);
   if (!sub || !mod || !proc) return null;
   return { subsystem: sub, module: mod, procedure: proc };
+}
+
+/**
+ * Отфильтровать дерево подсистем по подстроке имени процедуры (регистро-
+ * независимо). Модуль показываем, если в нём есть матч; подсистему — если
+ * есть хотя бы один такой модуль. Пустой фильтр возвращает исходное дерево.
+ */
+function filterSubsystems(subsystems: readonly BspSubsystem[], query: string): BspSubsystem[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return subsystems as BspSubsystem[];
+  const out: BspSubsystem[] = [];
+  for (const sub of subsystems) {
+    const modules: BspModule[] = [];
+    for (const mod of sub.modules) {
+      const procedures = mod.procedures.filter((p) => p.name.toLowerCase().includes(q));
+      if (procedures.length > 0) modules.push({ ...mod, procedures });
+    }
+    if (modules.length > 0) out.push({ ...sub, modules });
+  }
+  return out;
+}
+
+function defaultSelection(json: BspHooksJson): Selection | null {
+  const s = json.subsystems[0];
+  const m = s?.modules[0];
+  const p = m?.procedures[0];
+  return s && m && p ? { subsystem: s.name, module: m.name, procedure: p.name } : null;
+}
+
+/**
+ * Deep-link контракт: `#<Подсистема>/<Модуль>/<Процедура>`, каждая часть
+ * URL-энкодится по отдельности. `/` не встречается ни в подсистемах, ни в
+ * модулях, ни в процедурах БСП, так что разделитель безопасный.
+ */
+function formatHash(sel: Selection): string {
+  return '#' + [sel.subsystem, sel.module, sel.procedure].map(encodeURIComponent).join('/');
+}
+
+function parseHash(hash: string): Selection | null {
+  const raw = hash.replace(/^#/, '');
+  if (!raw) return null;
+  const parts = raw.split('/');
+  if (parts.length !== 3) return null;
+  try {
+    const [subsystem, module, procedure] = parts.map(decodeURIComponent);
+    if (!subsystem || !module || !procedure) return null;
+    return { subsystem, module, procedure };
+  } catch {
+    return null;
+  }
+}
+
+/** Обновляем hash через replaceState — без записи в историю и без hashchange. */
+function writeHash(sel: Selection): void {
+  const h = formatHash(sel);
+  if (window.location.hash !== h) {
+    history.replaceState(null, '', h);
+  }
 }
