@@ -9,7 +9,9 @@ import {
   loadTarget,
   saveTarget,
   type ContextKey,
+  type Target,
 } from '../help/target';
+import { TargetSelector } from '../help/TargetSelector';
 
 /**
  * «Поддержка платформы» — витрина в духе caniuse.com для 1С.
@@ -68,13 +70,10 @@ export function App(): JSX.Element {
   const [kindFilter, setKindFilter] = useState<'all' | Kind>('all');
   // Общий Target с тренажёром и /help/: читатель один раз выставил «моя
   // платформа — 8.3.18, Веб-клиент» в тренажёре и видит те же фильтры здесь.
-  const [targetVersion, setTargetVersion] = useState<string>(() => loadTarget().version ?? '');
-  const [targetContexts, setTargetContexts] = useState<ReadonlySet<ContextKey>>(
-    () => loadTarget().contexts,
-  );
-  useEffect(() => {
-    saveTarget({ version: targetVersion || null, contexts: targetContexts });
-  }, [targetVersion, targetContexts]);
+  const [target, setTarget] = useState<Target>(() => loadTarget());
+  const updateTarget = (t: Target): void => { setTarget(t); saveTarget(t); };
+  const targetVersion = target.version ?? '';
+  const targetContexts = target.contexts;
   const pinned = useHashRoute(parsePinned);
   const pinnedRef = useRef<HTMLElement | null>(null);
 
@@ -163,6 +162,7 @@ export function App(): JSX.Element {
       <header className="sup-header">
         <a href={LANDING_URL} className="sup-home">← BSLexicon</a>
         <h1>Поддержка платформы</h1>
+        <TargetSelector versions={versions} target={target} onChange={updateTarget} />
         <a href={HELP_URL} className="sup-link">/help/</a>
       </header>
 
@@ -194,46 +194,6 @@ export function App(): JSX.Element {
             <KindChip label="Всё"       value="all"      current={kindFilter} onPick={setKindFilter} />
             <KindChip label="Функции"   value="function" current={kindFilter} onPick={setKindFilter} />
             <KindChip label="Типы"      value="type"     current={kindFilter} onPick={setKindFilter} />
-          </div>
-        </div>
-
-        <div className="sup-filter">
-          <label htmlFor="sup-v" className="sup-filter__label">Моя версия</label>
-          <select
-            id="sup-v"
-            className="sup-filter__select"
-            value={targetVersion}
-            onChange={(e) => setTargetVersion(e.target.value)}
-          >
-            <option value="">— любая —</option>
-            {versions.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
-        </div>
-
-        <div className="sup-filter sup-filter--contexts">
-          <span className="sup-filter__label">Контексты</span>
-          <div className="sup-chipgroup" role="group">
-            {ALL_CONTEXTS.map((c) => (
-              <ContextChip
-                key={c}
-                ctx={c}
-                selected={targetContexts.has(c)}
-                onToggle={() => {
-                  const next = new Set(targetContexts);
-                  if (next.has(c)) next.delete(c); else next.add(c);
-                  setTargetContexts(next);
-                }}
-              />
-            ))}
-            {targetContexts.size > 0 && (
-              <button
-                type="button"
-                className="sup-chip sup-chip--clear"
-                onClick={() => setTargetContexts(new Set())}
-              >
-                сбросить
-              </button>
-            )}
           </div>
         </div>
       </section>
@@ -300,26 +260,6 @@ function KindChip({
       onClick={() => onPick(value)}
     >
       {label}
-    </button>
-  );
-}
-
-function ContextChip({
-  ctx, selected, onToggle,
-}: {
-  ctx: ContextKey;
-  selected: boolean;
-  onToggle: () => void;
-}): JSX.Element {
-  return (
-    <button
-      type="button"
-      className={'sup-chip' + (selected ? ' sup-chip--active' : '')}
-      aria-pressed={selected}
-      onClick={onToggle}
-      title={CONTEXT_LABELS[ctx]}
-    >
-      {CONTEXT_LABELS[ctx]}
     </button>
   );
 }
