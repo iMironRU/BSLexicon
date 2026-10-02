@@ -120,6 +120,7 @@ export default defineConfig(({ command }) => ({
         notebook: fileURLToPath(new URL('./notebook/index.html', import.meta.url)),
         query: fileURLToPath(new URL('./query/index.html', import.meta.url)),
         book: fileURLToPath(new URL('./book/index.html', import.meta.url)),
+        support: fileURLToPath(new URL('./support/index.html', import.meta.url)),
       },
     },
   },

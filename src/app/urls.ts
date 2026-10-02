@@ -23,3 +23,4 @@ export const HELP_BSP_URL = `${BASE_URL}help/bsp/`;
 export const NOTEBOOK_URL = `${BASE_URL}notebook/`;
 export const QUERY_URL = `${BASE_URL}query/`;
 export const BOOK_URL = `${BASE_URL}book/`;
+export const SUPPORT_URL = `${BASE_URL}support/`;
