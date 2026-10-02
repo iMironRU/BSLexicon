@@ -200,6 +200,37 @@
   overflow-wrap: anywhere;
 }
 
+.sup-row__pin {
+  text-decoration: none;
+  min-width: 0;
+}
+
+.sup-row__pin:hover code {
+  text-decoration: underline;
+  text-decoration-color: var(--border-hi);
+  text-underline-offset: 3px;
+}
+
+.sup-row__help {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+  padding: 0 0.3rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.sup-row__help:hover {
+  color: var(--teal);
+  background: var(--panel-2);
+}
+
+.sup-row--pinned {
+  background: color-mix(in srgb, var(--teal) 10%, transparent);
+  border-left: 2px solid var(--teal);
+  padding-left: calc(0.5rem - 2px);
+}
+
 .sup-row__badge {
   font-size: 0.7rem;
   color: var(--muted);

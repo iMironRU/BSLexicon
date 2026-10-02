@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { errorMessage } from '../app/error-message';
 import { BASE_URL, HELP_FULL_URL, HELP_URL, LANDING_URL } from '../app/urls';
+import { useHashRoute } from '../app/hash-route';
 import {
   ALL_CONTEXTS,
   CONTEXT_LABELS,
@@ -35,6 +36,29 @@ interface Row {
   contexts: ReadonlySet<ContextKey>;
 }
 
+interface Pinned {
+  kind: Kind;
+  name: string;
+}
+
+/** Deep-link: `#function/СокрЛП`, `#type/ТабличныйДокумент`. */
+function parsePinned(hash: string): Pinned | null {
+  const raw = hash.replace(/^#/, '');
+  if (!raw) return null;
+  const [k, ...rest] = raw.split('/');
+  if (k !== 'function' && k !== 'type') return null;
+  try {
+    const name = decodeURIComponent(rest.join('/'));
+    return name ? { kind: k, name } : null;
+  } catch {
+    return null;
+  }
+}
+
+function pinnedHref(p: Pinned): string {
+  return `#${p.kind}/${encodeURIComponent(p.name)}`;
+}
+
 export function App(): JSX.Element {
   const [data, setData] = useState<AvailabilityIndex | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +66,8 @@ export function App(): JSX.Element {
   const [kindFilter, setKindFilter] = useState<'all' | Kind>('all');
   const [targetVersion, setTargetVersion] = useState<string>('');
   const [targetContexts, setTargetContexts] = useState<ReadonlySet<ContextKey>>(new Set());
+  const pinned = useHashRoute(parsePinned);
+  const pinnedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     fetch(`${BASE_URL}reference/syntax-availability.json`)
@@ -81,7 +107,32 @@ export function App(): JSX.Element {
     });
   }, [rows, filter, kindFilter]);
 
-  const displayed = useMemo(() => filtered.slice(0, 300), [filtered]);
+  const displayed = useMemo(() => {
+    const base = filtered.slice(0, 300);
+    // Если пришли по deep-link'у на запись, которую обрезало — всё равно
+    // показываем её наверху, иначе ссылка бы молча перестала работать.
+    if (pinned) {
+      const already = base.some((r) => r.kind === pinned.kind && r.name === pinned.name);
+      if (!already) {
+        const row = rows.find((r) => r.kind === pinned.kind && r.name === pinned.name);
+        if (row) return [row, ...base];
+      }
+    }
+    return base;
+  }, [filtered, pinned, rows]);
+
+  useEffect(() => {
+    if (!pinned) return;
+    // Два RAF подряд: один «пропускаем commit», второй — ждём paint.
+    // Иначе scrollIntoView ловит промежуточную высоту списка и уезжает мимо.
+    let r1 = 0, r2 = 0;
+    r1 = requestAnimationFrame(() => {
+      r2 = requestAnimationFrame(() => {
+        pinnedRef.current?.scrollIntoView({ block: 'center', behavior: 'auto' });
+      });
+    });
+    return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2); };
+  }, [pinned, displayed]);
 
   if (error) {
     return (
@@ -192,14 +243,19 @@ export function App(): JSX.Element {
           <span className="sup-col sup-col--verdict">У меня</span>
           <span className="sup-col sup-col--ctx">Контексты</span>
         </div>
-        {displayed.map((row) => (
-          <RowView
-            key={`${row.kind}:${row.name}`}
-            row={row}
-            targetVersion={targetVersion}
-            targetContexts={targetContexts}
-          />
-        ))}
+        {displayed.map((row) => {
+          const isPinned = pinned?.kind === row.kind && pinned.name === row.name;
+          return (
+            <RowView
+              key={`${row.kind}:${row.name}`}
+              row={row}
+              targetVersion={targetVersion}
+              targetContexts={targetContexts}
+              pinned={isPinned}
+              rowRef={isPinned ? pinnedRef : undefined}
+            />
+          );
+        })}
         {displayed.length === 0 && (
           <p className="sup-empty">По запросу ничего не найдено.</p>
         )}
@@ -260,18 +316,43 @@ function ContextChip({
 }
 
 function RowView({
-  row, targetVersion, targetContexts,
+  row, targetVersion, targetContexts, pinned, rowRef,
 }: {
   row: Row;
   targetVersion: string;
   targetContexts: ReadonlySet<ContextKey>;
+  pinned: boolean;
+  rowRef?: React.MutableRefObject<HTMLElement | null>;
 }): JSX.Element {
   const verdict = computeVerdict(row, targetVersion, targetContexts);
+  // /help/full/ — одна ссылка на обе роли (функция/тип): entryId там это
+  // просто `nameRu` для функций и типов, у нас такой же `name`.
+  const helpHref = `${HELP_FULL_URL}#/${encodeURIComponent(row.name)}`;
   return (
-    <article className={`sup-row sup-row--${verdict.kind}`}>
+    <article
+      ref={rowRef as React.RefObject<HTMLElement>}
+      className={
+        `sup-row sup-row--${verdict.kind}` + (pinned ? ' sup-row--pinned' : '')
+      }
+    >
       <div className="sup-col sup-col--name">
-        <code>{row.name}</code>
+        <a
+          className="sup-row__pin"
+          href={pinnedHref({ kind: row.kind, name: row.name })}
+          title="Прямая ссылка на запись"
+        >
+          <code>{row.name}</code>
+        </a>
         <span className="sup-row__badge">{row.kind === 'function' ? 'ф-ция' : 'тип'}</span>
+        <a
+          className="sup-row__help"
+          href={helpHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Открыть в полном синтакс-помощнике"
+        >
+          ↗
+        </a>
       </div>
       <div className="sup-col sup-col--since">
         <span className="sup-since">{row.since}</span>
