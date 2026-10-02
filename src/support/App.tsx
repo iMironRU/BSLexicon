@@ -6,6 +6,8 @@ import {
   ALL_CONTEXTS,
   CONTEXT_LABELS,
   compareVersion,
+  loadTarget,
+  saveTarget,
   type ContextKey,
 } from '../help/target';
 
@@ -64,8 +66,15 @@ export function App(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   const [kindFilter, setKindFilter] = useState<'all' | Kind>('all');
-  const [targetVersion, setTargetVersion] = useState<string>('');
-  const [targetContexts, setTargetContexts] = useState<ReadonlySet<ContextKey>>(new Set());
+  // Общий Target с тренажёром и /help/: читатель один раз выставил «моя
+  // платформа — 8.3.18, Веб-клиент» в тренажёре и видит те же фильтры здесь.
+  const [targetVersion, setTargetVersion] = useState<string>(() => loadTarget().version ?? '');
+  const [targetContexts, setTargetContexts] = useState<ReadonlySet<ContextKey>>(
+    () => loadTarget().contexts,
+  );
+  useEffect(() => {
+    saveTarget({ version: targetVersion || null, contexts: targetContexts });
+  }, [targetVersion, targetContexts]);
   const pinned = useHashRoute(parsePinned);
   const pinnedRef = useRef<HTMLElement | null>(null);
 
